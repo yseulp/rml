@@ -1,0 +1,15 @@
+[package]
+name = "rml-proc"
+authors = ["Daniel Drodt <daniel.drodt@tu-darmstadt.de>"]
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+proc-macro = true
+
+[dependencies]
+proc-macro2 = "1.0.63"
+quote = "1.0.28"
+syn = "2.0.22"
+uuid = { version = "1.4.0", features = ["v4"] }
+rml-syn = { path = "../rml-syn" }

@@ -1,0 +1,10 @@
+[package]
+name = "rml-syn"
+authors = ["Daniel Drodt <daniel.drodt@tu-darmstadt.de>"]
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+proc-macro2 = "1.0.63"
+quote = "1.0.28"
+syn = { version = "2.0.22", features = ["full", "extra-traits", "visit-mut"] }

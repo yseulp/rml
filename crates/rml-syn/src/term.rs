@@ -1,0 +1,540 @@
+// Adapted from creusot
+
+use syn::{parse::discouraged::AnyDelimiter, punctuated::Punctuated, *};
+
+use proc_macro2::{Delimiter, Span, TokenStream};
+
+use syn::Pat;
+
+#[cfg(feature = "printing")]
+use quote::IdentFragment;
+#[cfg(feature = "printing")]
+use std::fmt::{self, Display};
+use std::hash::{Hash, Hasher};
+#[cfg(feature = "parsing")]
+use std::mem;
+
+pub(crate) mod parsing;
+
+mod kw {
+    syn::custom_keyword!(forall);
+    syn::custom_keyword!(exists);
+}
+
+ast_enum_of_structs! {
+    /// A RML term. Modeled after syn's Term.
+    #[derive(Clone)]
+    #[non_exhaustive]
+    pub enum Term {
+        /// A slice literal expression: `[a, b, c, d]`.
+        Array(TermArray),
+
+        /// A binary operation: `a + b`, `a += b`.
+        Binary(TermBinary),
+
+        /// A blocked scope: `{ ... }`.
+        Block(TermBlock),
+
+        /// A function call expression: `invoke(a, b)`.
+        Call(TermCall),
+
+        /// A cast expression: `foo as f64`.
+        Cast(TermCast),
+
+        /// A closure expression: `|a, b| a + b`.
+        Closure(TermClosure),
+
+        /// Logical existential quantification
+        Exists(TermExists),
+
+        /// Access of a named struct field (`obj.k`) or unnamed tuple struct
+        /// field (`obj.0`).
+        Field(TermField),
+
+        /// Logical universal quantification
+        Forall(TermForall),
+
+        /// An expression contained within invisible delimiters.
+        ///
+        /// This variant is important for faithfully representing the precedence
+        /// of expressions and is related to `None`-delimited spans in a
+        /// `TokenStream`.
+        Group(TermGroup),
+
+        /// An `if` expression with an optional `else` block: `if expr { ... }
+        /// else { ... }`.
+        ///
+        /// The `else` branch expression may only be an `If` or `Block`
+        /// expression, not any of the other types of expression.
+        If(TermIf),
+
+        /// Logical implication
+        Impl(TermImpl),
+
+        /// A square bracketed indexing expression: `vector[2]`.
+        Index(TermIndex),
+
+        /// A `let` guard: `let Some(x) = opt`.
+        Let(TermLet),
+
+        /// A literal in place of an expression: `1`, `"foo"`.
+        Lit(TermLit),
+
+        /// Logical equality
+        LogEq(TermLogEq),
+
+        /// A macro invocation expression: `format!("{}", q)`.
+        Macro(ExprMacro),
+
+        /// A `match` expression: `match n { Some(n) => {}, None => {} }`.
+        Match(TermMatch),
+
+        /// A method call expression: `x.foo::<T>(a, b)`.
+        MethodCall(TermMethodCall),
+
+        /// A parenthesized expression: `(a + b)`.
+        Paren(TermParen),
+
+        /// A path like `std::mem::replace` possibly containing generic
+        /// parameters and a qualified self-type.
+        ///
+        /// A plain identifier like `x` is a path of length 1.
+        Path(TermPath),
+
+        /// A range expression: `1..2`, `1..`, `..2`, `1..=2`, `..=2`.
+        Range(TermRange),
+
+        /// An array literal constructed from one repeated element: `[0u8; N]`.
+        Repeat(TermRepeat),
+
+        /// A struct literal expression: `Point { x: 1, y: 1 }`.
+        ///
+        /// The `rest` provides the value of the remaining fields as in `S { a:
+        /// 1, b: 1, ..rest }`.
+        Struct(TermStruct),
+
+        /// A tuple expression: `(a, b, c, d)`.
+        Tuple(TermTuple),
+
+        /// A type ascription term: `foo: f64`.
+        Type(TermType),
+
+        /// A unary operation: `!x`, `*x`.
+        Unary(TermUnary),
+
+        /// Tokens in expression position not interpreted by Syn.
+        Verbatim(TokenStream),
+
+        // For testing exhaustiveness in downstream code, use the following idiom:
+        //
+        //     match expr {
+        //         Term::Array(expr) => {...}
+        //         Term::Assign(expr) => {...}
+        //         ...
+        //         Term::Yield(expr) => {...}
+        //
+        //         #[cfg_attr(test, deny(non_exhaustive_omitted_patterns))]
+        //         _ => { /* some sane fallback */ }
+        //     }
+        //
+        // This way we fail your tests but don't break your library when adding
+        // a variant. You will be notified by a test failure when a variant is
+        // added, so that you can add code to handle it, but your library will
+        // continue to compile and work for downstream users in the interim.
+    }
+}
+
+ast_struct! {
+    /// A slice literal term: `[a, b, c, d]`.
+    pub struct TermArray {
+        pub bracket_token: token::Bracket,
+        pub elems: Punctuated<Term, Token![,]>,
+    }
+}
+
+ast_struct! {
+    /// A binary operation: `a + b`, `a * b`.
+    pub struct TermBinary {
+        pub left: Box<Term>,
+        pub op: BinOp,
+        pub right: Box<Term>,
+    }
+}
+
+ast_struct! {
+    /// A blocked scope: `{ ... }`.
+    pub struct TermBlock {
+        pub label: Option<Label>,
+        pub block: TBlock,
+    }
+}
+
+ast_struct! {
+    /// A function call term: `invoke(a, b)`.
+    pub struct TermCall {
+        pub func: Box<Term>,
+        pub paren_token: token::Paren,
+        pub args: Punctuated<Term, Token![,]>,
+    }
+}
+
+ast_struct! {
+    /// A cast term: `foo as f64`.
+    pub struct TermCast {
+        pub expr: Box<Term>,
+        pub as_token: Token![as],
+        pub ty: Box<Type>,
+    }
+}
+
+ast_struct! {
+    /// A closure expression: `|a, b| a + b`.
+    pub struct TermClosure {
+        pub attrs: Vec<Attribute>,
+        pub or1_token: Token![|],
+        pub inputs: Punctuated<Pat, Token![,]>,
+        pub or2_token: Token![|],
+        pub output: ReturnType,
+        pub body: Box<Term>,
+    }
+}
+
+ast_struct! {
+    /// Access of a named struct field (`obj.k`) or unnamed tuple struct
+    /// field (`obj.0`).
+    pub struct TermField {
+        pub base: Box<Term>,
+        pub dot_token: Token![.],
+        pub member: Member,
+    }
+}
+
+ast_struct! {
+    /// An term contained within invisible delimiters.
+    ///
+    /// This variant is important for faithfully representing the precedence
+    /// of expressions and is related to `None`-delimited spans in a
+    /// `TokenStream`.
+    pub struct TermGroup {
+        pub group_token: token::Group,
+        pub expr: Box<Term>,
+    }
+}
+
+ast_struct! {
+    /// An `if` term with an optional `else` block: `if expr { ... }
+    /// else { ... }`.
+    ///
+    /// The `else` branch term may only be an `If` or `Block`
+    /// term, not any of the other types of term.
+    pub struct TermIf {
+        pub if_token: Token![if],
+        pub cond: Box<Term>,
+        pub then_branch: TBlock,
+        pub else_branch: Option<(Token![else], Box<Term>)>,
+    }
+}
+
+ast_struct! {
+    /// A square bracketed indexing term: `vector[2]`.
+    pub struct TermIndex {
+        pub expr: Box<Term>,
+        pub bracket_token: token::Bracket,
+        pub index: Box<Term>,
+    }
+}
+
+ast_struct! {
+    pub struct TermForall {
+        pub forall_token: kw::forall,
+        pub lt_token: Token![<],
+        pub args: Punctuated<QuantArg, Token![,]>,
+        pub gt_token: Token![>],
+
+        pub term: Box<Term>
+    }
+}
+
+ast_struct! {
+    pub struct TermExists {
+        pub exists_token: kw::exists,
+        pub lt_token: Token![<],
+        pub args: Punctuated<QuantArg, Token![,]>,
+        pub gt_token: Token![>],
+
+        pub term: Box<Term>
+    }
+}
+
+ast_struct! {
+    pub struct TermImpl {
+        pub hyp: Box<Term>,
+        pub eqeq_token: Token![==],
+        pub gt_token: Token![>],
+        pub cons: Box<Term>,
+    }
+}
+
+ast_struct! {
+    /// A `let` guard: `let Some(x) = opt`.
+    pub struct TermLet {
+        pub let_token: Token![let],
+        pub pat: Pat,
+        pub eq_token: Token![=],
+        pub expr: Box<Term>,
+    }
+}
+
+ast_struct! {
+    /// A literal in place of an term: `1`, `"foo"`.
+    pub struct TermLit {
+        pub lit: Lit,
+    }
+}
+
+ast_struct! {
+    pub struct TermLogEq {
+        pub lhs: Box<Term>,
+        pub eqeq_token: Token![==],
+        pub eq_token: Token![=],
+        pub rhs: Box<Term>,
+    }
+}
+
+ast_struct! {
+    /// A `match` term: `match n { Some(n) => {}, None => {} }`.
+    pub struct TermMatch {
+        pub match_token: Token![match],
+        pub expr: Box<Term>,
+        pub brace_token: token::Brace,
+        pub arms: Vec<TermArm>,
+    }
+}
+
+ast_struct! {
+    /// A method call term: `x.foo::<T>(a, b)`.
+    pub struct TermMethodCall {
+        pub receiver: Box<Term>,
+        pub dot_token: Token![.],
+        pub method: Ident,
+        pub turbofish: Option<TermMethodTurbofish>,
+        pub paren_token: token::Paren,
+        pub args: Punctuated<Term, Token![,]>,
+    }
+}
+
+ast_struct! {
+    /// A parenthesized term: `(a + b)`.
+    pub struct TermParen {
+        pub paren_token: token::Paren,
+        pub expr: Box<Term>,
+    }
+}
+
+ast_struct! {
+    /// A path like `std::mem::replace` possibly containing generic
+    /// parameters and a qualified self-type.
+    ///
+    /// A plain identifier like `x` is a path of length 1.
+    pub struct TermPath {
+        pub inner: ExprPath,
+        // pub qself: Option<QSelf>,
+        // pub path: Path,
+    }
+}
+
+ast_struct! {
+    /// A range term: `1..2`, `1..`, `..2`, `1..=2`, `..=2`.
+    pub struct TermRange {
+        pub from: Option<Box<Term>>,
+        pub limits: RangeLimits,
+        pub to: Option<Box<Term>>,
+    }
+}
+
+ast_struct! {
+    /// An array literal constructed from one repeated element: `[0u8; N]`.
+    pub struct TermRepeat {
+        pub bracket_token: token::Bracket,
+        pub expr: Box<Term>,
+        pub semi_token: Token![;],
+        pub len: Box<Term>,
+    }
+}
+
+ast_struct! {
+    /// A struct literal term: `Point { x: 1, y: 1 }`.
+    ///
+    /// The `rest` provides the value of the remaining fields as in `S { a:
+    /// 1, b: 1, ..rest }`.
+    pub struct TermStruct {
+        pub path: Path,
+        pub brace_token: token::Brace,
+        pub fields: Punctuated<TermFieldValue, Token![,]>,
+        pub dot2_token: Option<Token![..]>,
+        pub rest: Option<Box<Term>>,
+    }
+}
+
+ast_struct! {
+    /// A tuple term: `(a, b, c, d)`.
+    pub struct TermTuple {
+        pub paren_token: token::Paren,
+        pub elems: Punctuated<Term, Token![,]>,
+    }
+}
+
+ast_struct! {
+    /// A type ascription term: `foo: f64`.
+    pub struct TermType {
+        pub expr: Box<Term>,
+        pub colon_token: Token![:],
+        pub ty: Box<Type>,
+    }
+}
+
+ast_struct! {
+    /// A unary operation: `!x`, `*x`.
+    pub struct TermUnary {
+        pub op: UnOp,
+        pub expr: Box<Term>,
+    }
+}
+
+// Auxiliary structs
+
+ast_struct! {
+    /// A braced block containing Pearlite statements.
+    pub struct TBlock {
+        pub brace_token: token::Brace,
+        /// Statements in a block
+        pub stmts: Vec<TermStmt>,
+    }
+}
+
+ast_enum! {
+    /// A statement, usually ending in a semicolon.
+    #[derive(Debug, Clone)]
+    pub enum TermStmt {
+        /// A local (let) binding.
+        Local(TLocal),
+
+        /// An item definition.
+        Item(Item),
+
+        /// Expr without trailing semicolon.
+        Expr(Term),
+
+        /// Expression with trailing semicolon.
+        Semi(Term, Token![;]),
+    }
+}
+
+ast_struct! {
+    /// A local `let` binding: `let x: u64 = s.parse()?`.
+    pub struct TLocal {
+        pub let_token: Token![let],
+        pub pat: Pat,
+        pub init: Option<(Token![=], Box<Term>)>,
+        pub semi_token: Token![;],
+    }
+}
+
+ast_struct! {
+    /// One arm of a `match` term: `0...10 => { return true; }`.
+    ///
+    /// As in:
+    ///
+    /// ```
+    /// # fn f() -> bool {
+    /// #     let n = 0;
+    /// match n {
+    ///     0..=10 => {
+    ///         return true;
+    ///     }
+    ///     // ...
+    ///     # _ => {}
+    /// }
+    /// #   false
+    /// # }
+    /// ```
+    pub struct TermArm {
+        pub pat: Pat,
+        pub guard: Option<(Token![if], Box<Term>)>,
+        pub fat_arrow_token: Token![=>],
+        pub body: Box<Term>,
+        pub comma: Option<Token![,]>,
+    }
+}
+
+ast_struct! {
+    /// A field-value pair in a struct literal.
+    pub struct TermFieldValue {
+        /// Attributes tagged on the field.
+
+        /// Name or index of the field.
+        pub member: Member,
+
+        /// The colon in `Struct { x: x }`. If written in shorthand like
+        /// `Struct { x }`, there is no colon.
+        pub colon_token: Option<Token![:]>,
+
+        /// Value of the field.
+        pub expr: Term,
+    }
+}
+
+ast_struct! {
+    /// The `::<>` explicit type parameters passed to a method call:
+    /// `parse::<u64>()`.
+    pub struct TermMethodTurbofish {
+        pub colon2_token: Token![::],
+        pub lt_token: Token![<],
+        pub args: Punctuated<TermGenericMethodArgument, Token![,]>,
+        pub gt_token: Token![>],
+    }
+}
+
+ast_enum! {
+    /// An individual generic argument to a method, like `T`.
+    ///
+    #[derive(Debug, Clone)]
+    pub enum TermGenericMethodArgument {
+        /// A type argument.
+        Type(Type),
+        /// A const term. Must be inside of a block.
+        ///
+        /// NOTE: Identity expressions are represented as Type arguments, as
+        /// they are indistinguishable syntactically.
+        Const(Term),
+    }
+}
+
+ast_struct! {
+    pub struct QuantArg {
+        pub ident: Ident,
+        pub colon_token: Token![:],
+        pub ty: Box<Type>,
+    }
+}
+
+pub(crate) fn requires_terminator(expr: &Term) -> bool {
+    // see https://github.com/rust-lang/rust/blob/2679c38fc/src/librustc_ast/util/classify.rs#L7-L25
+    match *expr {
+        Term::Block(..) | Term::If(..) | Term::Match(..) => false,
+        _ => true,
+    }
+}
+
+impl Term {
+    const DUMMY: Self = Term::Path(TermPath {
+        inner: ExprPath {
+            attrs: Vec::new(),
+            qself: None,
+            path: Path {
+                leading_colon: None,
+                segments: Punctuated::new(),
+            },
+        },
+    });
+}
