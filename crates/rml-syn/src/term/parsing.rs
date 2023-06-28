@@ -192,7 +192,7 @@ pub(crate) fn term_early(input: ParseStream) -> Result<Term> {
 
 impl Parse for Term {
     fn parse(input: ParseStream) -> Result<Self> {
-        todo!()
+        ambiguous_term(input, AllowStruct(true))
     }
 }
 

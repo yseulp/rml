@@ -56,7 +56,6 @@ macro_rules! ast_enum_of_structs_impl {
             ast_enum_from_struct!($name::$variant, $($member)::+);
         )*)*
 
-        #[cfg(feature = "printing")]
         generate_to_tokens! {
             $($remaining)*
             ()
@@ -86,7 +85,6 @@ macro_rules! ast_enum_from_struct {
     };
 }
 
-#[cfg(feature = "printing")]
 macro_rules! generate_to_tokens {
     (($($arms:tt)*) $tokens:ident $name:ident { $variant:ident, $($next:tt)*}) => {
         generate_to_tokens!(

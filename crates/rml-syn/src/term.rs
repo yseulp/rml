@@ -2,19 +2,12 @@
 
 use syn::{parse::discouraged::AnyDelimiter, punctuated::Punctuated, *};
 
-use proc_macro2::{Delimiter, Span, TokenStream};
+use proc_macro2::{Delimiter, TokenStream};
 
 use syn::Pat;
 
-#[cfg(feature = "printing")]
-use quote::IdentFragment;
-#[cfg(feature = "printing")]
-use std::fmt::{self, Display};
-use std::hash::{Hash, Hasher};
-#[cfg(feature = "parsing")]
-use std::mem;
-
 pub(crate) mod parsing;
+pub(crate) mod printing;
 
 mod kw {
     syn::custom_keyword!(forall);
