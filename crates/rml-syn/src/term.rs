@@ -240,9 +240,10 @@ ast_struct! {
 ast_struct! {
     pub struct TermForall {
         pub forall_token: kw::forall,
-        pub lt_token: Token![<],
+        pub paren_token: token::Paren,
+        pub or1_token: Token![|],
         pub args: Punctuated<QuantArg, Token![,]>,
-        pub gt_token: Token![>],
+        pub or2_token: Token![|],
 
         pub term: Box<Term>
     }
@@ -251,9 +252,10 @@ ast_struct! {
 ast_struct! {
     pub struct TermExists {
         pub exists_token: kw::exists,
-        pub lt_token: Token![<],
+        pub paren_token: token::Paren,
+        pub or1_token: Token![|],
         pub args: Punctuated<QuantArg, Token![,]>,
-        pub gt_token: Token![>],
+        pub or2_token: Token![|],
 
         pub term: Box<Term>
     }

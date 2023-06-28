@@ -198,24 +198,28 @@ impl ToTokens for TermImpl {
 impl ToTokens for TermForall {
     fn to_tokens(&self, tokens: &mut TokenStream) {
         self.forall_token.to_tokens(tokens);
-        self.lt_token.to_tokens(tokens);
-        for input in self.args.pairs() {
-            input.to_tokens(tokens);
-        }
-        self.gt_token.to_tokens(tokens);
-        self.term.to_tokens(tokens);
+        self.paren_token.surround(tokens, |tokens| {
+            self.or1_token.to_tokens(tokens);
+            for input in self.args.pairs() {
+                input.to_tokens(tokens);
+            }
+            self.or2_token.to_tokens(tokens);
+            self.term.to_tokens(tokens);
+        });
     }
 }
 
 impl ToTokens for TermExists {
     fn to_tokens(&self, tokens: &mut TokenStream) {
         self.exists_token.to_tokens(tokens);
-        self.lt_token.to_tokens(tokens);
-        for input in self.args.pairs() {
-            input.to_tokens(tokens);
-        }
-        self.gt_token.to_tokens(tokens);
-        self.term.to_tokens(tokens);
+        self.paren_token.surround(tokens, |tokens| {
+            self.or1_token.to_tokens(tokens);
+            for input in self.args.pairs() {
+                input.to_tokens(tokens);
+            }
+            self.or2_token.to_tokens(tokens);
+            self.term.to_tokens(tokens);
+        });
     }
 }
 

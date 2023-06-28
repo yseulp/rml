@@ -905,29 +905,32 @@ fn term_range(input: ParseStream, allow_struct: AllowStruct) -> Result<TermRange
 impl Parse for TermForall {
     fn parse(input: ParseStream) -> Result<Self> {
         let forall_token = input.parse()?;
-        let lt_token: Token![<] = input.parse()?;
+        let content;
+        let paren_token = parenthesized!(content in input);
+        let or1_token: Token![|] = content.parse()?;
 
         let mut args = Punctuated::new();
-        while !input.peek(Token![>]) {
-            let quantarg = input.parse()?;
+        while !content.peek(Token![|]) {
+            let quantarg = content.parse()?;
             args.push_value(quantarg);
-            if input.peek(Token![>]) {
+            if content.peek(Token![|]) {
                 break;
             }
 
-            let punct = input.parse()?;
+            let punct = content.parse()?;
             args.push_punct(punct);
         }
 
-        let gt_token: Token![>] = input.parse()?;
+        let or2_token: Token![|] = content.parse()?;
 
-        let term = input.parse()?;
+        let term = content.parse()?;
 
         Ok(TermForall {
             forall_token,
-            lt_token,
+            paren_token,
+            or1_token,
             args,
-            gt_token,
+            or2_token,
             term,
         })
     }
@@ -936,29 +939,32 @@ impl Parse for TermForall {
 impl Parse for TermExists {
     fn parse(input: ParseStream) -> Result<Self> {
         let exists_token = input.parse()?;
-        let lt_token: Token![<] = input.parse()?;
+        let content;
+        let paren_token = parenthesized!(content in input);
+        let or1_token: Token![|] = content.parse()?;
 
         let mut args = Punctuated::new();
-        while !input.peek(Token![>]) {
-            let quantarg = input.parse()?;
+        while !content.peek(Token![|]) {
+            let quantarg = content.parse()?;
             args.push_value(quantarg);
-            if input.peek(Token![>]) {
+            if content.peek(Token![|]) {
                 break;
             }
 
-            let punct = input.parse()?;
+            let punct = content.parse()?;
             args.push_punct(punct);
         }
 
-        let gt_token: Token![>] = input.parse()?;
+        let or2_token: Token![|] = content.parse()?;
 
-        let term = input.parse()?;
+        let term = content.parse()?;
 
         Ok(TermExists {
             exists_token,
-            lt_token,
+            paren_token,
+            or1_token,
             args,
-            gt_token,
+            or2_token,
             term,
         })
     }

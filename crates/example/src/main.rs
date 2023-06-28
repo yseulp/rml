@@ -13,8 +13,17 @@ fn div(a: u64, b: u64) -> u64 {
     a / b
 }
 
+#[spec("main", ensures(exists(| i: usize, j: usize | result[i] == 0)))]
+fn all_zero(mut v: Vec<u64>) -> Vec<u64> {
+    for i in 0..v.len() {
+        v[i] = 0;
+    }
+    v
+}
+
 pub fn main() {
     println!("{}", add(2, 8));
     println!("{}", div(8, 4));
+    println!("{:?}", all_zero(vec![1, 2, 3, 4]));
     println!("{}", div(4, 0));
 }
