@@ -4,6 +4,7 @@ extern crate lazy_static;
 extern crate rustc_driver;
 extern crate rustc_errors;
 extern crate rustc_interface;
+extern crate rustc_session;
 
 #[macro_use]
 extern crate log;
@@ -14,6 +15,7 @@ use rml::callbacks::*;
 use rustc_driver::{RunCompiler, DEFAULT_LOCALE_RESOURCES};
 use rustc_errors::{emitter::EmitterWriter, TerminalUrl};
 use rustc_interface::interface::try_print_query_stack;
+use rustc_session::{config::ErrorOutputType, EarlyErrorHandler};
 use std::{env, panic, panic::PanicInfo, process::Command};
 
 const BUG_REPORT_URL: &'static str = &"https://github.com/Drodt/rml/issues/new";
@@ -65,8 +67,12 @@ fn report_panic(info: &PanicInfo) {
     }
 }
 
+struct DefaultCallbacks;
+impl rustc_driver::Callbacks for DefaultCallbacks {}
+
 fn main() {
-    rustc_driver::init_rustc_env_logger();
+    let handler = EarlyErrorHandler::new(ErrorOutputType::default());
+    rustc_driver::init_rustc_env_logger(&handler);
     env_logger::init();
     lazy_static::initialize(&ICE_HOOK);
 
@@ -118,7 +124,9 @@ fn setup_plugin() {
         args.extend(["--cfg", "rml"].into_iter().map(str::to_owned));
         debug!("rml args={:?}", args);
 
-        // RunCompiler::new(&args, &mut callbacks).run().unwrap();
+        let mut callbacks = ExtractSpec::new(());
+
+        RunCompiler::new(&args, &mut callbacks).run().unwrap();
     }
 }
 

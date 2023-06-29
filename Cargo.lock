@@ -325,10 +325,18 @@ dependencies = [
 ]
 
 [[package]]
-name = "rml-example"
+name = "rml-contracts"
 version = "0.1.0"
 dependencies = [
  "rml-proc",
+ "rml-proc-dummy",
+]
+
+[[package]]
+name = "rml-example"
+version = "0.1.0"
+dependencies = [
+ "rml-contracts",
 ]
 
 [[package]]
@@ -341,6 +349,10 @@ dependencies = [
  "syn",
  "uuid",
 ]
+
+[[package]]
+name = "rml-proc-dummy"
+version = "0.1.0"
 
 [[package]]
 name = "rml-syn"

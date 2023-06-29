@@ -1,6 +1,8 @@
 [workspace]
 members = [
+    "crates/rml-contracts",
     "crates/rml-proc",
+    "crates/rml-proc-dummy",
     "crates/rml-syn",
     "crates/example",
     "crates/cargo-rml",

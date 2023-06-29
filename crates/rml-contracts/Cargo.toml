@@ -1,8 +1,9 @@
 [package]
-name = "rml-example"
+name = "rml-contracts"
 authors = ["Daniel Drodt <daniel.drodt@tu-darmstadt.de>"]
 version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-rml-contracts = { path = "../rml-contracts" }
+rml-proc = { path = "../rml-proc" }
+rml-proc-dummy = { path = "../rml-proc-dummy" }
