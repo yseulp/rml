@@ -1,4 +1,4 @@
-// Adapted from creusot
+// Adapted from syn and creusot
 
 use syn::{parse::discouraged::AnyDelimiter, punctuated::Punctuated, *};
 

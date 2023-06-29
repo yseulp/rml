@@ -1,5 +1,10 @@
 [workspace]
-members = ["crates/rml-proc", "crates/rml-syn", "crates/example"]
+members = [
+    "crates/rml-proc",
+    "crates/rml-syn",
+    "crates/example",
+    "crates/cargo-rml",
+]
 resolver = "2"
 
 [profile.release]
