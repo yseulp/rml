@@ -4,6 +4,7 @@ members = [
     "crates/rml-syn",
     "crates/example",
     "crates/cargo-rml",
+    "crates/rml",
 ]
 resolver = "2"
 
