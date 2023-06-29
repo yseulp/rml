@@ -41,6 +41,20 @@ pub struct SpecPartPanics {
     pub term: Option<Term>,
 }
 
+/// A function specification.
+///
+/// # Grammar
+/// spec ::= (name ',')? ((requires-part | ensures-part)* | (requires-part | panics-part)*)
+///
+/// name ::= STRING_LIT
+///
+/// requires-part ::= 'requires' ('(' term ')')?
+///
+/// ensures-part ::= 'ensures' ('(' term ')')?
+///
+/// panics-part ::= 'panics' ('(' term ')')?
+///
+/// term ::= _see [`Term`]_
 #[derive(Debug)]
 pub struct Spec {
     pub name: Option<String>,
