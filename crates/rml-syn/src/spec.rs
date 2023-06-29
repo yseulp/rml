@@ -162,10 +162,12 @@ impl Parse for Spec {
         let mut post_conds = Vec::new();
         let mut kind = None;
 
-        let name = input.parse::<LitStr>()?.value();
-
-        while input.peek(Token![,]) {
+        let name = input.parse::<Option<LitStr>>()?.map(|l| l.value());
+        if name.is_some() {
             let _: Token![,] = input.parse()?;
+        }
+
+        loop {
             let part: SpecPart = input.parse()?;
             match part {
                 SpecPart::Requires(SpecPartRequires { term, .. }) => {
@@ -204,6 +206,10 @@ impl Parse for Spec {
                     }
                 }
             }
+            if !input.peek(Token![,]) {
+                break;
+            }
+            let _: Token![,] = input.parse()?;
         }
 
         if !input.is_empty() {
@@ -221,7 +227,7 @@ impl Parse for Spec {
         };
 
         Ok(Self {
-            name: Some(name),
+            name,
             pre_conds,
             post_conds,
             kind,

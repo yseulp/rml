@@ -21,6 +21,11 @@ fn all_zero(mut v: Vec<u64>) -> Vec<u64> {
     v
 }
 
+#[spec(requires(a + b <= i32::MAX), requires(a + b >= i32::MIN), ensures(result == a + b))]
+fn no_name(a: i32, b: i32) -> i32 {
+    a + b
+}
+
 pub fn main() {
     println!("{}", add(2, 8));
     println!("{}", div(8, 4));
