@@ -6,8 +6,8 @@ use std::iter;
 use syn::{
     braced,
     parse::{self, Parse},
-    parse_macro_input, token, AttrStyle, Attribute, Block, ExprClosure, Ident, Result, Signature,
-    Token, Visibility,
+    parse_macro_input, parse_quote, token, AttrStyle, Attribute, Block, ExprClosure, FnArg, Ident,
+    Item, Result, ReturnType, Signature, Stmt, Token, Visibility,
 };
 
 #[proc_macro_attribute]
@@ -26,10 +26,21 @@ pub fn spec(attr: TS1, item: TS1) -> TS1 {
                 #fn_or_meth
             })
         }
-        ContractSubject::FnOrMethod(fn_or_meth) => TS1::from(quote! {
-            #[rml::specification::spec=#name_tag]
-            #fn_or_meth
-        }),
+        ContractSubject::FnOrMethod(mut fn_or_meth) => {
+            let result = match fn_or_meth.sig.output {
+                ReturnType::Default => parse_quote! { result : () },
+                ReturnType::Type(_, ref ty) => parse_quote! { result : #ty },
+            };
+            let spec_tokens = fn_spec_item(spec_name, result, sp, Span::call_site());
+            fn_or_meth
+                .body
+                .as_mut()
+                .map(|b| b.stmts.insert(0, Stmt::Item(Item::Verbatim(spec_tokens))));
+            TS1::from(quote! {
+                #[rml::specification::spec=#name_tag]
+                #fn_or_meth
+            })
+        }
         ContractSubject::Closure(c) => TS1::from(quote! {
             #c
         }),
@@ -160,5 +171,13 @@ impl Parse for ContractSubject {
             body: brace_token.map(|brace_token| Block { brace_token, stmts }),
             semi_token,
         }));
+    }
+}
+
+fn fn_spec_item(spec_name: Ident, result: FnArg, spec: Spec, span: Span) -> TS2 {
+    let spec_term = spec.encode(result, span);
+    quote! {
+        #[allow(unused_must_use)]
+        let _ = #[rml::item=#spec_name] #spec_term
     }
 }

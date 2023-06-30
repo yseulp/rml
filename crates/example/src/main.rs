@@ -27,6 +27,8 @@ fn _no_name(a: i32, b: i32) -> i32 {
 }
 
 pub fn main() {
+    #[cfg(rml)]
+    println!("RML enabled");
     println!("{}", add(2, 8));
     println!("{}", div(8, 4));
     println!("{:?}", all_zero(vec![1, 2, 3, 4]));

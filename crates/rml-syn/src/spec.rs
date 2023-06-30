@@ -1,8 +1,10 @@
-use proc_macro2::{Delimiter, TokenTree};
+use proc_macro2::{Delimiter, Span, TokenStream as TS2, TokenTree};
+use quote::quote_spanned;
 use syn::{
     parse::Parse,
+    spanned::Spanned,
     token::{Brace, Bracket, Paren},
-    LitStr, MacroDelimiter, Token,
+    FnArg, LitStr, MacroDelimiter, Token,
 };
 
 use crate::Term;
@@ -61,6 +63,52 @@ pub struct Spec {
     pub pre_conds: Vec<Term>,
     pub post_conds: Vec<Term>,
     pub kind: SpecKind,
+}
+
+impl Spec {
+    pub fn encode(&self, result: FnArg, sp: Span) -> TS2 {
+        let pre: Vec<_> = self
+            .pre_conds
+            .iter()
+            .map(|t| {
+                let sp = t.span();
+                let e = t.encode();
+                quote_spanned! {
+                    sp => || { #e }
+                }
+            })
+            .collect();
+        let post: Vec<_> = self
+            .post_conds
+            .iter()
+            .map(|t| {
+                let sp = t.span();
+                let e = t.encode();
+                quote_spanned! {
+                    sp => |#result| { #e }
+                }
+            })
+            .collect();
+        let s = match self.kind {
+            SpecKind::Normal => {
+                quote_spanned! {
+                    sp => rml::SpecificationNormal {
+                        pre: vec![#(#pre,)*],
+                        post: vec![#(#post,)*]
+                    }
+                }
+            }
+            SpecKind::Panic => {
+                quote_spanned! {
+                    sp => rml::SpecificationPanic {
+                        pre: vec![#(#pre,)*],
+                        post: vec![#(#post,)*]
+                    }
+                }
+            }
+        };
+        syn::parse(s.into()).unwrap()
+    }
 }
 
 impl Parse for SpecPartRequires {

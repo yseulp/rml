@@ -3,6 +3,7 @@ use proc_macro::TokenStream as TS1;
 
 #[proc_macro_attribute]
 pub fn spec(_: TS1, item: TS1) -> TS1 {
+    println!("Dummy spec called");
     item
 }
 
