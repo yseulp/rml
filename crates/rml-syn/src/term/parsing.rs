@@ -587,7 +587,7 @@ fn array_or_repeat(input: ParseStream) -> Result<Term> {
     }
 }
 
-fn term_group<'a>(input: ParseStream) -> Result<TermGroup> {
+fn term_group(input: ParseStream) -> Result<TermGroup> {
     input
         .parse_any_delimiter()
         .and_then(|(delim, span, content)| {
