@@ -32,10 +32,9 @@ pub fn spec(attr: TS1, item: TS1) -> TS1 {
                 ReturnType::Type(_, ref ty) => parse_quote! { result : #ty },
             };
             let spec_tokens = fn_spec_item(spec_name, result, sp, Span::call_site());
-            fn_or_meth
+            if let Some(b) = fn_or_meth
                 .body
-                .as_mut()
-                .map(|b| b.stmts.insert(0, Stmt::Item(Item::Verbatim(spec_tokens))));
+                .as_mut() { b.stmts.insert(0, Stmt::Item(Item::Verbatim(spec_tokens))) }
             TS1::from(quote! {
                 #[rml::specification::spec=#name_tag]
                 #fn_or_meth
@@ -163,14 +162,14 @@ impl Parse for ContractSubject {
             return Err(lookahead.error());
         };
 
-        return Ok(ContractSubject::FnOrMethod(FnOrMethod {
+        Ok(ContractSubject::FnOrMethod(FnOrMethod {
             defaultness,
             visibility: vis,
             attrs,
             sig,
             body: brace_token.map(|brace_token| Block { brace_token, stmts }),
             semi_token,
-        }));
+        }))
     }
 }
 

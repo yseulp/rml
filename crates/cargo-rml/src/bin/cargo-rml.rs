@@ -20,7 +20,7 @@ fn main() {
     };
 
     let mut cmd = Command::new(cargo_path);
-    cmd.arg(&cargo_cmd)
+    cmd.arg(cargo_cmd)
         .args(args.rust_flags)
         .env("RUSTC_WRAPPER", rml_rustc_path)
         .env("CARGO_RML", "1");

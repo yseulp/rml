@@ -18,12 +18,12 @@ use rustc_interface::interface::try_print_query_stack;
 use rustc_session::{config::ErrorOutputType, EarlyErrorHandler};
 use std::{env, panic, panic::PanicInfo, process::Command};
 
-const BUG_REPORT_URL: &'static str = &"https://github.com/Drodt/rml/issues/new";
+const BUG_REPORT_URL: &str = "https://github.com/Drodt/rml/issues/new";
 
 lazy_static::lazy_static! {
     static ref ICE_HOOK: Box<dyn Fn(&panic::PanicInfo<'_>) + Sync + Send + 'static> = {
         let hook = panic::take_hook();
-        panic::set_hook(Box::new(|info| report_panic(info)));
+        panic::set_hook(Box::new(report_panic));
         hook
     };
 }
@@ -88,7 +88,7 @@ fn setup_plugin() {
         args.remove(1);
     }
 
-    let rml_args: RmlArgs = if is_wrapper {
+    let _rml_args: RmlArgs = if is_wrapper {
         serde_json::from_str(&std::env::var("RML_ARGS").unwrap()).unwrap()
     } else {
         let all_args = Args::parse_from(&args);
