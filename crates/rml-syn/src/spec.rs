@@ -1,3 +1,5 @@
+use std::fmt;
+
 use proc_macro2::{Delimiter, Span, TokenStream as TS2, TokenTree};
 use quote::quote_spanned;
 use syn::{
@@ -294,5 +296,27 @@ impl Parse for Spec {
             post_conds,
             kind,
         })
+    }
+}
+
+impl fmt::Display for Spec {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let name = match &self.name {
+            Some(n) => n,
+            None => "<UNNAMED>",
+        };
+        let mut r = writeln!(f, "Spec({name}) {{").and(writeln!(f, "\tpre: ["));
+        for p in &self.pre_conds {
+            r = r.and(writeln!(f, "\t\t{},", p));
+        }
+        r = r.and(writeln!(f, "\t],")).and(match &self.kind {
+            SpecKind::Normal => writeln!(f, "\tpost: ["),
+            SpecKind::Panic => writeln!(f, "\tpanics: ["),
+        });
+        for p in &self.post_conds {
+            r = r.and(writeln!(f, "\t\t{p},"))
+        }
+
+        r.and(writeln!(f, "\t]")).and(writeln!(f, "}}"))
     }
 }

@@ -353,6 +353,10 @@ dependencies = [
 [[package]]
 name = "rml-proc-dummy"
 version = "0.1.0"
+dependencies = [
+ "rml-syn",
+ "syn",
+]
 
 [[package]]
 name = "rml-syn"

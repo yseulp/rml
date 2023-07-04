@@ -6,6 +6,7 @@ use proc_macro2::{Delimiter, TokenStream};
 
 use syn::Pat;
 
+pub(crate) mod display;
 pub(crate) mod encoding;
 pub(crate) mod parsing;
 pub(crate) mod printing;

@@ -8,3 +8,5 @@ edition = "2021"
 proc-macro = true
 
 [dependencies]
+syn = { version = "2.0.22", features = ["printing"] }
+rml-syn = { path = "../rml-syn" }
