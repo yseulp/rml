@@ -1,12 +1,12 @@
 use rustc_driver::Callbacks;
 
 pub struct ExtractSpec {
-    opts: (),
+    _opts: (),
 }
 
 impl ExtractSpec {
     pub fn new(opts: ()) -> Self {
-        Self { opts }
+        Self { _opts: opts }
     }
 }
 

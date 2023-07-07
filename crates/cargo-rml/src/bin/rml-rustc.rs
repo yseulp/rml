@@ -109,7 +109,7 @@ fn setup_plugin() {
     let user_asked_for = !is_wrapper || primary_package;
 
     if normal_rustc || !(user_asked_for || has_contracts) {
-        return RunCompiler::new(&args, &mut DefaultCallbacks {})
+        RunCompiler::new(&args, &mut DefaultCallbacks {})
             .run()
             .unwrap();
     } else {

@@ -9,6 +9,7 @@ members = [
     "crates/rml",
 ]
 resolver = "2"
+default-members = ["crates/example"]
 
 [profile.release]
 lto = true
