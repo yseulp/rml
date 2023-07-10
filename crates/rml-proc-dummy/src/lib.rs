@@ -12,6 +12,7 @@ pub fn spec(attr: TS1, item: TS1) -> TS1 {
 }
 
 #[proc_macro_attribute]
-pub fn requires(_: TS1, item: TS1) -> TS1 {
+pub fn pure(attr: TS1, item: TS1) -> TS1 {
+    assert!(attr.is_empty());
     item
 }

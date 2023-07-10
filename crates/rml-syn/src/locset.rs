@@ -1,5 +1,7 @@
 use syn::parse::Parse;
 
+mod print;
+
 ast_enum_of_structs! {
     pub enum LocSetTerm {
         /// A specific field of a term `obj.k` or `obj.0`.
