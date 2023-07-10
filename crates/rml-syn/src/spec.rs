@@ -1,15 +1,17 @@
 use std::fmt;
 
 use proc_macro2::{Delimiter, Span, TokenStream as TS2, TokenTree};
-use quote::quote_spanned;
+use quote::{quote, quote_spanned};
 use syn::{
-    parse::Parse,
+    braced, bracketed, parenthesized,
+    parse::{Parse, ParseStream},
+    punctuated::Punctuated,
     spanned::Spanned,
-    token::{Brace, Bracket, Paren},
+    token::{self, Brace, Bracket, Paren},
     FnArg, LitStr, MacroDelimiter, Token,
 };
 
-use crate::Term;
+use crate::{locset::LocSetTerm, Term};
 
 #[derive(Debug, Clone, Copy)]
 pub enum SpecKind {
@@ -22,6 +24,9 @@ pub enum SpecPart {
     Requires(SpecPartRequires),
     Ensures(SpecPartEnsures),
     Panics(SpecPartPanics),
+    Modifies(SpecPartModifies),
+    Variant(SpecPartVariant),
+    Diverges(SpecPartDiverges),
 }
 
 #[derive(Debug)]
@@ -45,6 +50,27 @@ pub struct SpecPartPanics {
     pub term: Option<Term>,
 }
 
+#[derive(Debug)]
+pub struct SpecPartModifies {
+    pub modifies_token: kw::modifies,
+    pub delimiter: MacroDelimiter,
+    pub terms: Punctuated<LocSetTerm, Token![,]>,
+}
+
+#[derive(Debug)]
+pub struct SpecPartVariant {
+    pub variant_token: kw::variant,
+    pub delimiter: MacroDelimiter,
+    pub term: Term,
+}
+
+#[derive(Debug)]
+pub struct SpecPartDiverges {
+    pub diverges_token: kw::diverges,
+    pub delimiter: Option<MacroDelimiter>,
+    pub term: Option<Term>,
+}
+
 /// A function specification.
 ///
 /// # Grammar
@@ -62,13 +88,20 @@ pub struct SpecPartPanics {
 #[derive(Debug)]
 pub struct Spec {
     pub name: Option<String>,
+    pub kind: SpecKind,
     pub pre_conds: Vec<Term>,
     pub post_conds: Vec<Term>,
-    pub kind: SpecKind,
+    pub modifies: Option<Vec<LocSetTerm>>,
+    pub variant: Option<Term>,
+    pub diverges: Option<Option<Term>>,
 }
 
 impl Spec {
     pub fn encode(&self, result: FnArg, sp: Span) -> TS2 {
+        let name = match &self.name {
+            Some(n) => quote!(Some(#n)),
+            None => quote!(None),
+        };
         let pre: Vec<_> = self
             .pre_conds
             .iter()
@@ -95,6 +128,7 @@ impl Spec {
             SpecKind::Normal => {
                 quote_spanned! {
                     sp => rml::SpecificationNormal {
+                        name: #name,
                         pre: vec![#(#pre,)*],
                         post: vec![#(#post,)*]
                     }
@@ -103,6 +137,7 @@ impl Spec {
             SpecKind::Panic => {
                 quote_spanned! {
                     sp => rml::SpecificationPanic {
+                        name: #name,
                         pre: vec![#(#pre,)*],
                         post: vec![#(#post,)*]
                     }
@@ -179,10 +214,79 @@ impl Parse for SpecPartPanics {
     }
 }
 
+impl Parse for SpecPartModifies {
+    fn parse(input: syn::parse::ParseStream) -> syn::Result<Self> {
+        let modifies_token = input.parse()?;
+        let content;
+        let delimiter = if input.peek(token::Paren) {
+            MacroDelimiter::Paren(parenthesized!(content in input))
+        } else if input.peek(token::Brace) {
+            MacroDelimiter::Brace(braced!(content in input))
+        } else if input.peek(token::Bracket) {
+            MacroDelimiter::Bracket(bracketed!(content in input))
+        } else {
+            return Err(syn::Error::new(input.span(), "Expeted delimiter"));
+        };
+        let mut terms = Punctuated::new();
+        terms.push_value(content.parse()?);
+
+        while input.peek(Token![,]) {
+            terms.push_punct(content.parse()?);
+            terms.push_value(content.parse()?);
+        }
+
+        Ok(Self {
+            modifies_token,
+            delimiter,
+            terms,
+        })
+    }
+}
+
+impl Parse for SpecPartVariant {
+    fn parse(input: ParseStream) -> syn::Result<Self> {
+        let variant_token = input.parse()?;
+        let (delimiter, tokens) = parse_delimiter(input)?;
+        let term = syn::parse(tokens.into())?;
+
+        Ok(Self {
+            variant_token,
+            delimiter,
+            term,
+        })
+    }
+}
+
+impl Parse for SpecPartDiverges {
+    fn parse(input: ParseStream) -> syn::Result<Self> {
+        let diverges_token = input.parse()?;
+        let (delimiter, term) = if input.peek(Paren) || input.peek(Bracket) || input.peek(Brace) {
+            let (del, tokens) = parse_delimiter(input)?;
+            if tokens.is_empty() {
+                (Some(del), None)
+            } else {
+                let term = syn::parse(tokens.into())?;
+                (Some(del), Some(term))
+            }
+        } else {
+            (None, None)
+        };
+
+        Ok(Self {
+            diverges_token,
+            delimiter,
+            term,
+        })
+    }
+}
+
 mod kw {
     syn::custom_keyword!(requires);
     syn::custom_keyword!(ensures);
     syn::custom_keyword!(panics);
+    syn::custom_keyword!(modifies);
+    syn::custom_keyword!(variant);
+    syn::custom_keyword!(diverges);
 }
 
 impl Parse for SpecPart {
@@ -193,8 +297,15 @@ impl Parse for SpecPart {
             Ok(Self::Ensures(input.parse()?))
         } else if input.peek(kw::panics) {
             Ok(Self::Panics(input.parse()?))
+        } else if input.peek(kw::modifies) {
+            Ok(Self::Modifies(input.parse()?))
+        } else if input.peek(kw::variant) {
+            Ok(Self::Variant(input.parse()?))
+        } else if input.peek(kw::diverges) {
+            Ok(Self::Diverges(input.parse()?))
         } else {
-            Err(input.error("expected one of requires, ensures, or panics"))
+            Err(input
+                .error("expected one of requires, ensures, panics, modifies, variant, or diverges"))
         }
     }
 }
@@ -224,6 +335,9 @@ impl Parse for Spec {
     fn parse(input: syn::parse::ParseStream) -> syn::Result<Self> {
         let mut pre_conds = Vec::new();
         let mut post_conds = Vec::new();
+        let mut modifies = None;
+        let mut variant = None;
+        let mut diverges = None;
         let mut kind = None;
 
         let name = input.parse::<Option<LitStr>>()?.map(|l| l.value());
@@ -269,6 +383,36 @@ impl Parse for Spec {
                         post_conds.push(t)
                     }
                 }
+                SpecPart::Modifies(SpecPartModifies { terms, .. }) => {
+                    if modifies.is_some() {
+                        return Err(syn::Error::new(
+                            input.span(),
+                            "The specification has multiple declarations of 'modifies'",
+                        ));
+                    } else {
+                        modifies = Some(terms.into_iter().collect())
+                    }
+                }
+                SpecPart::Variant(SpecPartVariant { term, .. }) => {
+                    if variant.is_some() {
+                        return Err(syn::Error::new(
+                            input.span(),
+                            "The specification has multiple declarations of 'variant'",
+                        ));
+                    } else {
+                        variant = Some(term)
+                    }
+                }
+                SpecPart::Diverges(SpecPartDiverges { term, .. }) => {
+                    if diverges.is_some() {
+                        return Err(syn::Error::new(
+                            input.span(),
+                            "The specification has multiple declarations of 'diverges'",
+                        ));
+                    } else {
+                        diverges = Some(term)
+                    }
+                }
             }
             if !input.peek(Token![,]) {
                 break;
@@ -294,6 +438,9 @@ impl Parse for Spec {
             name,
             pre_conds,
             post_conds,
+            modifies,
+            variant,
+            diverges,
             kind,
         })
     }
