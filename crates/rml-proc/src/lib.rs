@@ -1,13 +1,13 @@
 use proc_macro::TokenStream as TS1;
 use proc_macro2::{Span, TokenStream as TS2};
 use quote::quote;
-use rml_syn::Spec;
+use rml_syn::{Spec, Term};
 
 use syn::{parse_macro_input, parse_quote, FnArg, Ident, Item, ReturnType, Stmt};
 
 mod subject;
 
-use subject::ContractSubject;
+use subject::{ContractSubject, InvariantSubject};
 
 #[proc_macro_attribute]
 pub fn spec(attr: TS1, item: TS1) -> TS1 {
@@ -53,6 +53,42 @@ pub fn pure(attr: TS1, item: TS1) -> TS1 {
         #[rml::decl::pure]
         #toks
     })
+}
+
+#[proc_macro_attribute]
+pub fn invariant(attr: TS1, item: TS1) -> TS1 {
+    let term = parse_macro_input!(attr as Term);
+    let subject = parse_macro_input!(item as InvariantSubject);
+    let ts = match subject {
+        InvariantSubject::ForLoop(l) => {
+            quote! {#l}
+        }
+        InvariantSubject::Loop(l) => {
+            let inv = term.encode();
+            quote! {
+                #inv
+                #l
+            }
+        }
+        InvariantSubject::While(l) => quote! {
+            #l
+        },
+        InvariantSubject::Trait(i) => quote! {#i},
+        InvariantSubject::Struct(i) => quote! {#i},
+        InvariantSubject::Enum(i) => quote! {#i},
+    };
+
+    TS1::from(ts)
+}
+
+#[proc_macro_attribute]
+pub fn variant(attr: TS1, item: TS1) -> TS1 {
+    item
+}
+
+#[proc_macro_attribute]
+pub fn modifies(attr: TS1, item: TS1) -> TS1 {
+    item
 }
 
 fn generate_unique_ident(prefix: &str) -> Ident {

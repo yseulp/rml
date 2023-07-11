@@ -5,7 +5,8 @@ use quote::{ToTokens, TokenStreamExt};
 use syn::{
     braced,
     parse::{self, Parse},
-    token, AttrStyle, Attribute, Block, ExprClosure, Result, Signature, Token, Visibility,
+    token, AttrStyle, Attribute, Block, Expr, ExprClosure, ExprForLoop, ExprLoop, ExprWhile,
+    ItemEnum, ItemStruct, ItemTrait, Label, Lifetime, Result, Signature, Token, Visibility,
 };
 
 pub(crate) struct FnOrMethod {
@@ -120,5 +121,83 @@ impl<'a> FilterAttrs<'a> for &'a [Attribute] {
             }
         }
         self.iter().filter(is_inner)
+    }
+}
+
+#[derive(Debug)]
+pub enum InvariantSubject {
+    ForLoop(ExprForLoop),
+    Loop(ExprLoop),
+    While(ExprWhile),
+    Trait(ItemTrait),
+    Struct(ItemStruct),
+    Enum(ItemEnum),
+}
+
+impl Parse for InvariantSubject {
+    fn parse(input: parse::ParseStream) -> Result<Self> {
+        let ahead = input.fork();
+        ahead.call(Attribute::parse_outer)?;
+        let vis = ahead.parse::<Visibility>()?;
+
+        let lookahead = ahead.lookahead1();
+
+        if lookahead.peek(Token![struct]) {
+            Ok(Self::Struct(input.parse()?))
+        } else if lookahead.peek(Token![enum]) {
+            Ok(Self::Enum(input.parse()?))
+        } else if lookahead.peek(Token![unsafe]) {
+            ahead.parse::<Token![unsafe]>()?;
+            let lookahead = ahead.lookahead1();
+            if lookahead.peek(Token![trait])
+                || lookahead.peek(Token![auto]) && ahead.peek2(Token![trait])
+            {
+                Ok(Self::Trait(input.parse()?))
+            } else {
+                Err(lookahead.error())
+            }
+        } else if lookahead.peek(Token![trait]) {
+            Ok(Self::Trait(input.parse()?))
+        } else {
+            if !matches!(vis, Visibility::Inherited) {
+                return Err(syn::Error::new(
+                    input.span(),
+                    "Loop constructs must not have a visibility",
+                ));
+            }
+            if lookahead.peek(Token![for]) {
+                Ok(Self::ForLoop(input.parse()?))
+            } else if lookahead.peek(Token![loop]) {
+                Ok(Self::Loop(input.parse()?))
+            } else if lookahead.peek(Token![while]) {
+                Ok(Self::While(input.parse()?))
+            } else if lookahead.peek(Lifetime) {
+                let the_label: Label = input.parse()?;
+                let lookahead = input.lookahead1();
+                let mut expr = if lookahead.peek(Token![while]) {
+                    Expr::While(input.parse()?)
+                } else if lookahead.peek(Token![for]) {
+                    Expr::ForLoop(input.parse()?)
+                } else if lookahead.peek(Token![loop]) {
+                    Expr::Loop(input.parse()?)
+                } else {
+                    return Err(lookahead.error());
+                };
+                match &mut expr {
+                    Expr::While(ExprWhile { label, .. })
+                    | Expr::ForLoop(ExprForLoop { label, .. })
+                    | Expr::Loop(ExprLoop { label, .. }) => *label = Some(the_label),
+                    _ => unreachable!(),
+                }
+                Ok(match expr {
+                    Expr::While(w) => Self::While(w),
+                    Expr::ForLoop(f) => Self::ForLoop(f),
+                    Expr::Loop(l) => Self::Loop(l),
+                    _ => unreachable!(),
+                })
+            } else {
+                Err(lookahead.error())
+            }
+        }
     }
 }
