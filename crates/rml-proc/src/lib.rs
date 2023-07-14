@@ -101,7 +101,7 @@ fn generate_unique_ident(prefix: &str) -> Ident {
 fn fn_spec_item(spec_name: Ident, result: FnArg, spec: Spec, span: Span) -> TS2 {
     let spec_term = spec.encode(result, span);
     quote! {
-        #[allow(unused_must_use)]
-        let _ = #[rml::item=#spec_name] #spec_term
+        #[allow(unused_must_use, unused_variables, dead_code)]
+        let _ = #[rml::spec=#spec_name] #spec_term;
     }
 }

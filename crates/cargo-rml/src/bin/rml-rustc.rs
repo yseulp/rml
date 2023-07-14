@@ -88,7 +88,7 @@ fn setup_plugin() {
         args.remove(1);
     }
 
-    let _rml_args: RmlArgs = if is_wrapper {
+    let rml_args: RmlArgs = if is_wrapper {
         serde_json::from_str(&std::env::var("RML_ARGS").unwrap()).unwrap()
     } else {
         let all_args = Args::parse_from(&args);
@@ -118,13 +118,13 @@ fn setup_plugin() {
         args.push("-Zcrate-attr=feature(register_tool)".to_owned());
         args.push("-Zcrate-attr=register_tool(rml)".to_owned());
         args.push("-Zcrate-attr=feature(stmt_expr_attributes)".to_owned());
-        args.push("-Zcrate-attr=feature(proc_macro_hygiene)".to_owned());
+        // args.push("-Zcrate-attr=feature(proc_macro_hygiene)".to_owned());
         args.push("-Zcrate-attr=feature(rustc_attrs)".to_owned());
         args.push("-Zcrate-attr=feature(unsized_fn_params)".to_owned());
         args.extend(["--cfg", "rml"].into_iter().map(str::to_owned));
         debug!("rml args={:?}", args);
 
-        let mut callbacks = ExtractSpec::new(());
+        let mut callbacks = ExtractSpec::new(rml_args.to_options());
 
         RunCompiler::new(&args, &mut callbacks).run().unwrap();
     }
