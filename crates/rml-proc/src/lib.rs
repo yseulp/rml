@@ -1,11 +1,11 @@
 use proc_macro::TokenStream as TS1;
 use proc_macro2::{Span, TokenStream as TS2};
 use quote::{quote, quote_spanned};
-use rml_syn::{Encode, Spec, Term, TermPath};
+use rml_syn::{Encode, Spec, Term};
 
 use syn::{
-    parse_macro_input, parse_quote, parse_quote_spanned, Attribute, FnArg, Ident, ItemFn,
-    ReturnType, Signature,
+    parse_macro_input, parse_quote, parse_quote_spanned, Attribute, FnArg, Ident, ItemFn, Pat,
+    ReturnType, Signature, Type,
 };
 
 mod subject;
@@ -136,12 +136,14 @@ fn fn_spec_item(
         .map(|(i, p)| {
             let id = &pre_idents[i];
             let t = p.encode();
-            let mut res: ItemFn = parse_quote_spanned! { span => fn #id() -> bool {
-                let cond: bool = !!(#t);
-                cond
-            } };
-            res.sig.generics = sig.generics.clone();
-            res.sig.inputs = sig.inputs.clone();
+            let mut res: ItemFn = parse_quote_spanned! { span =>
+                #[allow(unused_variables)]
+                fn #id() -> bool {
+                    let cond: bool = !!(#t);
+                    cond
+                }
+            };
+            adapt_sig(&mut res.sig, &sig);
 
             res
         })
@@ -158,12 +160,14 @@ fn fn_spec_item(
     let post = spec.post_conds.into_iter().enumerate().map(|(i, p)| {
         let id = &post_idents[i];
         let t = p.encode();
-        let mut res: ItemFn = parse_quote_spanned! { span => fn #id() -> bool {
-            let cond: bool = !!(#t);
-            cond
-        } };
-        res.sig.generics = post_sig.generics.clone();
-        res.sig.inputs = post_sig.inputs.clone();
+        let mut res: ItemFn = parse_quote_spanned! { span =>
+            #[allow(unused_variables)]
+            fn #id() -> bool {
+                let cond: bool = !!(#t);
+                cond
+            }
+        };
+        adapt_sig(&mut res.sig, &post_sig);
 
         res
     });
@@ -175,12 +179,13 @@ fn fn_spec_item(
     let (var_attr, var) = if let Some(v) = spec.variant {
         let t = v.encode();
         let id = generate_unique_ident("spec_part_var");
-        let mut item: ItemFn = parse_quote_spanned! { span => fn #id() -> impl ::rml_contracts::WellFounded {
+        let mut item: ItemFn = parse_quote_spanned! { span =>
+            #[allow(unused_variables)]
+            fn #id() -> impl ::rml_contracts::WellFounded {
                 #t
             }
         };
-        item.sig.generics = sig.generics.clone();
-        item.sig.inputs = sig.inputs.clone();
+        adapt_sig(&mut item.sig, &sig);
         let id_str = id.to_string();
         let var_attr: Attribute = parse_quote_spanned! { span => #[rml::spec_part_var=#id_str] };
         (Some(var_attr), Some(item))
@@ -197,13 +202,14 @@ fn fn_spec_item(
         let id = generate_unique_ident("spec_part_div");
         let t = diverges.encode();
 
-        let mut item: ItemFn = parse_quote_spanned! { span => fn #id() -> bool {
+        let mut item: ItemFn = parse_quote_spanned! { span =>
+            #[allow(unused_variables)]
+            fn #id() -> bool {
                 let b: bool = #t;
                 b
             }
         };
-        item.sig.generics = sig.generics;
-        item.sig.inputs = sig.inputs;
+        adapt_sig(&mut item.sig, &sig);
         let id_str = id.to_string();
         let attr: Attribute = parse_quote_spanned! { span => #[rml::spec_part_div=#id_str] };
         (item, attr)
@@ -223,4 +229,38 @@ fn fn_spec_item(
         #div_attr
         const #spec_name: bool = false;
     }
+}
+
+fn adapt_sig(sig: &mut Signature, old_sig: &Signature) {
+    for p in old_sig.inputs.pairs() {
+        let (arg, punct) = p.into_tuple();
+        match arg.clone() {
+            FnArg::Receiver(mut r) => {
+                r.mutability = None;
+                sig.inputs.push_value(FnArg::Receiver(r));
+            }
+            FnArg::Typed(mut a) => {
+                a.pat = match *a.pat {
+                    Pat::Ident(mut p) => {
+                        p.mutability = None;
+                        Pat::Ident(p).into()
+                    }
+                    p => p.into(),
+                };
+                a.ty = match *a.ty {
+                    Type::Reference(mut r) => {
+                        r.mutability = None;
+                        Type::Reference(r).into()
+                    }
+                    ty => ty.into(),
+                };
+                sig.inputs.push_value(FnArg::Typed(a));
+            }
+        }
+        if let Some(punct) = punct {
+            sig.inputs.push_punct(*punct);
+        }
+    }
+
+    sig.generics = old_sig.generics.clone();
 }

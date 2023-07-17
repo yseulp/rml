@@ -26,8 +26,18 @@ fn all_zero(mut v: Vec<u64>) -> Vec<u64> {
 }
 
 #[spec(requires(a + b <= i32::MAX), requires(a + b >= i32::MIN), ensures(result == a + b))]
-fn _no_name(a: i32, b: i32) -> i32 {
+fn no_name(a: i32, b: i32) -> i32 {
     a + b
+}
+
+#[spec("anchor", requires(n == 0), ensures(result == 0))]
+#[spec("step", requires(n > 0), variant(n), ensures(result == 0))]
+fn rec(n: u128) -> u128 {
+    if n == 0 {
+        0
+    } else {
+        rec(n - 1)
+    }
 }
 
 pub fn main() {
@@ -39,4 +49,6 @@ pub fn main() {
     println!("{}", div(8, 4));
     println!("{:?}", all_zero(vec![1, 2, 3, 4]));
     println!("{}", div(4, 0));
+    println!("{}", no_name(1, 1));
+    println!("{}", rec(100))
 }

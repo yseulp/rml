@@ -2,6 +2,10 @@ extern crate self as rml_contracts;
 
 pub use crate::macros::*;
 
+pub mod well_founded;
+
+pub use well_founded::WellFounded;
+
 #[cfg(rml)]
 mod macros {
     pub use rml_proc::spec;
@@ -15,12 +19,12 @@ mod macros {
     pub use rml_proc::variant;
 
     pub mod stubs {
-        #[rustc_diagnostic_item = "exists"]
+        #[rustc_diagnostic_item = "rml_exists"]
         pub fn exists<T, F: Fn(T) -> bool>(_: F) -> bool {
             panic!()
         }
 
-        #[rustc_diagnostic_item = "forall"]
+        #[rustc_diagnostic_item = "rml_forall"]
         pub fn forall<T, F: Fn(T) -> bool>(_: F) -> bool {
             panic!()
         }
