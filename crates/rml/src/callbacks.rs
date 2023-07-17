@@ -18,7 +18,7 @@ impl Callbacks for ExtractSpec {
         config.override_queries = Some(|_, providers, _| {
             providers.mir_built = |tcx, did| {
                 let mir = (rustc_interface::DEFAULT_QUERY_PROVIDERS.mir_built)(tcx, did);
-                let mut mir = mir.steal();
+                let mir = mir.steal();
                 tcx.alloc_steal_mir(mir)
             }
         });
