@@ -7,7 +7,7 @@ use crate::{
     TBlock, TermArray, TermBinary, TermBlock, TermCall, TermCast, TermClosure, TermExists,
     TermField, TermForall, TermGroup, TermIf, TermImpl, TermIndex, TermLet, TermLit, TermLogEq,
     TermMatch, TermMethodCall, TermParen, TermPath, TermRange, TermRepeat, TermStmt, TermStruct,
-    TermTuple, TermType, TermUnary,
+    TermTuple, TermUnary,
 };
 
 use super::Term;
@@ -40,7 +40,6 @@ impl fmt::Display for Term {
             Term::Repeat(t) => fmt::Display::fmt(t, f),
             Term::Struct(t) => fmt::Display::fmt(t, f),
             Term::Tuple(t) => fmt::Display::fmt(t, f),
-            Term::Type(t) => fmt::Display::fmt(t, f),
             Term::Unary(t) => fmt::Display::fmt(t, f),
             Term::Verbatim(t) => fmt::Display::fmt(t, f),
         }
@@ -133,7 +132,7 @@ impl fmt::Display for TermStmt {
                 }
             }
             TermStmt::Item(s) => writeln!(f, "{}", s.into_token_stream()),
-            TermStmt::Expr(t) => writeln!(f, "{t}"),
+            TermStmt::Term(t) => writeln!(f, "{t}"),
             TermStmt::Semi(t, _) => writeln!(f, "{t};"),
         }
     }
@@ -159,7 +158,7 @@ impl fmt::Display for TermCast {
         write!(
             f,
             "{} as {}",
-            self.expr,
+            self.term,
             self.ty.clone().into_token_stream()
         )
     }
@@ -191,7 +190,7 @@ impl fmt::Display for TermForall {
 
 impl fmt::Display for TermGroup {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        fmt::Display::fmt(&self.expr, f)
+        fmt::Display::fmt(&self.term, f)
     }
 }
 
@@ -213,7 +212,7 @@ impl fmt::Display for TermImpl {
 
 impl fmt::Display for TermIndex {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}[{}]", self.expr, self.index)
+        write!(f, "{}[{}]", self.term, self.index)
     }
 }
 
@@ -223,7 +222,7 @@ impl fmt::Display for TermLet {
             f,
             "let {} = {}",
             self.pat.clone().into_token_stream(),
-            self.expr
+            self.term
         )
     }
 }
@@ -245,7 +244,7 @@ impl fmt::Display for TermMatch {
         write!(
             f,
             "match {} {{{}}}",
-            self.expr,
+            self.term,
             self.arms
                 .iter()
                 .map(|a| format!("\n{} => {}", a.pat.clone().into_token_stream(), a.body))
@@ -273,7 +272,7 @@ impl fmt::Display for TermMethodCall {
 
 impl fmt::Display for TermParen {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "({})", self.expr)
+        write!(f, "({})", self.term)
     }
 }
 
@@ -300,7 +299,7 @@ impl fmt::Display for TermRange {
 
 impl fmt::Display for TermRepeat {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "[{};{}]", self.expr, self.len)
+        write!(f, "[{};{}]", self.term, self.len)
     }
 }
 
@@ -339,12 +338,6 @@ impl fmt::Display for TermTuple {
     }
 }
 
-impl fmt::Display for TermType {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}: {}", self.expr, self.ty.clone().into_token_stream())
-    }
-}
-
 impl fmt::Display for TermUnary {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let op = match self.op {
@@ -353,6 +346,6 @@ impl fmt::Display for TermUnary {
             syn::UnOp::Neg(_) => "-",
             _ => todo!(),
         };
-        write!(f, "{op}{}", self.expr)
+        write!(f, "{op}{}", self.term)
     }
 }

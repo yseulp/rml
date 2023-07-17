@@ -47,7 +47,7 @@ impl ToTokens for TermStmt {
     fn to_tokens(&self, tokens: &mut TokenStream) {
         match self {
             TermStmt::Local(local) => local.to_tokens(tokens),
-            TermStmt::Expr(term) => term.to_tokens(tokens),
+            TermStmt::Term(term) => term.to_tokens(tokens),
             TermStmt::Semi(term, semi) => {
                 term.to_tokens(tokens);
                 semi.to_tokens(tokens);
@@ -109,7 +109,7 @@ impl ToTokens for TermClosure {
     }
 }
 
-impl ToTokens for TermMethodTurbofish {
+impl ToTokens for TermAngleBracketedGenericArguments {
     fn to_tokens(&self, tokens: &mut TokenStream) {
         self.colon2_token.to_tokens(tokens);
         self.lt_token.to_tokens(tokens);
@@ -151,7 +151,7 @@ impl ToTokens for TermBinary {
 impl ToTokens for TermUnary {
     fn to_tokens(&self, tokens: &mut TokenStream) {
         self.op.to_tokens(tokens);
-        self.expr.to_tokens(tokens);
+        self.term.to_tokens(tokens);
     }
 }
 
@@ -163,16 +163,8 @@ impl ToTokens for TermLit {
 
 impl ToTokens for TermCast {
     fn to_tokens(&self, tokens: &mut TokenStream) {
-        self.expr.to_tokens(tokens);
+        self.term.to_tokens(tokens);
         self.as_token.to_tokens(tokens);
-        self.ty.to_tokens(tokens);
-    }
-}
-
-impl ToTokens for TermType {
-    fn to_tokens(&self, tokens: &mut TokenStream) {
-        self.expr.to_tokens(tokens);
-        self.colon_token.to_tokens(tokens);
         self.ty.to_tokens(tokens);
     }
 }
@@ -236,7 +228,7 @@ impl ToTokens for TermLet {
         self.let_token.to_tokens(tokens);
         self.pat.to_tokens(tokens);
         self.eq_token.to_tokens(tokens);
-        wrap_bare_struct(tokens, &self.expr);
+        wrap_bare_struct(tokens, &self.term);
     }
 }
 
@@ -252,7 +244,7 @@ impl ToTokens for TermIf {
 impl ToTokens for TermMatch {
     fn to_tokens(&self, tokens: &mut TokenStream) {
         self.match_token.to_tokens(tokens);
-        wrap_bare_struct(tokens, &self.expr);
+        wrap_bare_struct(tokens, &self.term);
         self.brace_token.surround(tokens, |tokens| {
             for (i, arm) in self.arms.iter().enumerate() {
                 arm.to_tokens(tokens);
@@ -286,7 +278,7 @@ impl ToTokens for TermField {
 
 impl ToTokens for TermIndex {
     fn to_tokens(&self, tokens: &mut TokenStream) {
-        self.expr.to_tokens(tokens);
+        self.term.to_tokens(tokens);
         self.bracket_token.surround(tokens, |tokens| {
             self.index.to_tokens(tokens);
         });
@@ -327,7 +319,7 @@ impl ToTokens for TermStruct {
 impl ToTokens for TermRepeat {
     fn to_tokens(&self, tokens: &mut TokenStream) {
         self.bracket_token.surround(tokens, |tokens| {
-            self.expr.to_tokens(tokens);
+            self.term.to_tokens(tokens);
             self.semi_token.to_tokens(tokens);
             self.len.to_tokens(tokens);
         })
@@ -337,7 +329,7 @@ impl ToTokens for TermRepeat {
 impl ToTokens for TermGroup {
     fn to_tokens(&self, tokens: &mut TokenStream) {
         self.group_token.surround(tokens, |tokens| {
-            self.expr.to_tokens(tokens);
+            self.term.to_tokens(tokens);
         });
     }
 }
@@ -345,7 +337,7 @@ impl ToTokens for TermGroup {
 impl ToTokens for TermParen {
     fn to_tokens(&self, tokens: &mut TokenStream) {
         self.paren_token.surround(tokens, |tokens| {
-            self.expr.to_tokens(tokens);
+            self.term.to_tokens(tokens);
         });
     }
 }
@@ -355,7 +347,7 @@ impl ToTokens for TermFieldValue {
         self.member.to_tokens(tokens);
         if let Some(colon_token) = &self.colon_token {
             colon_token.to_tokens(tokens);
-            self.expr.to_tokens(tokens);
+            self.term.to_tokens(tokens);
         }
     }
 }

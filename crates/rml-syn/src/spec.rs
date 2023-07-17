@@ -1,14 +1,12 @@
 use std::fmt;
 
-use proc_macro2::{Delimiter, Span, TokenStream as TS2, TokenTree};
-use quote::{quote, quote_spanned};
+use proc_macro2::{Delimiter, TokenTree};
 use syn::{
     braced, bracketed, parenthesized,
     parse::{Parse, ParseStream},
     punctuated::Punctuated,
-    spanned::Spanned,
     token::{self, Brace, Bracket, Paren},
-    FnArg, LitStr, MacroDelimiter, Token,
+    LitStr, MacroDelimiter, Token,
 };
 
 use crate::{locset::LocSetTerm, Term};
@@ -17,6 +15,11 @@ use crate::{locset::LocSetTerm, Term};
 pub enum SpecKind {
     Normal,
     Panic,
+}
+impl SpecKind {
+    fn is_normal(&self) -> bool {
+        matches!(self, Self::Normal)
+    }
 }
 
 #[derive(Debug)]
@@ -97,54 +100,8 @@ pub struct Spec {
 }
 
 impl Spec {
-    pub fn encode(&self, result: FnArg, sp: Span) -> TS2 {
-        let name = match &self.name {
-            Some(n) => quote!(Some(#n)),
-            None => quote!(None),
-        };
-        let pre: Vec<_> = self
-            .pre_conds
-            .iter()
-            .map(|t| {
-                let sp = t.span();
-                let e = t.encode();
-                quote_spanned! {
-                    sp => || { #e }
-                }
-            })
-            .collect();
-        let post: Vec<_> = self
-            .post_conds
-            .iter()
-            .map(|t| {
-                let sp = t.span();
-                let e = t.encode();
-                quote_spanned! {
-                    sp => |#result| { #e }
-                }
-            })
-            .collect();
-        let s = match self.kind {
-            SpecKind::Normal => {
-                quote_spanned! {
-                    sp => rml::SpecificationNormal {
-                        name: #name,
-                        pre: vec![#(#pre,)*],
-                        post: vec![#(#post,)*]
-                    }
-                }
-            }
-            SpecKind::Panic => {
-                quote_spanned! {
-                    sp => rml::SpecificationPanic {
-                        name: #name,
-                        pre: vec![#(#pre,)*],
-                        post: vec![#(#post,)*]
-                    }
-                }
-            }
-        };
-        syn::parse(s.into()).unwrap()
+    pub fn is_normal(&self) -> bool {
+        self.kind.is_normal()
     }
 }
 

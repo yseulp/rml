@@ -13,6 +13,18 @@ mod macros {
     pub use rml_proc::modifies;
 
     pub use rml_proc::variant;
+
+    pub mod stubs {
+        #[rustc_diagnostic_item = "exists"]
+        pub fn exists<T, F: Fn(T) -> bool>(_: F) -> bool {
+            panic!()
+        }
+
+        #[rustc_diagnostic_item = "forall"]
+        pub fn forall<T, F: Fn(T) -> bool>(_: F) -> bool {
+            panic!()
+        }
+    }
 }
 
 #[cfg(not(rml))]

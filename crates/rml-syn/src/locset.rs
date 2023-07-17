@@ -45,7 +45,7 @@ ast_struct! {
 }
 
 impl Parse for LocSetTerm {
-    fn parse(input: syn::parse::ParseStream) -> syn::Result<Self> {
+    fn parse(_input: syn::parse::ParseStream) -> syn::Result<Self> {
         todo!()
     }
 }

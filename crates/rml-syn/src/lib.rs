@@ -12,3 +12,8 @@ pub use term::*;
 pub fn l() -> bool {
     true
 }
+
+pub trait Encode {
+    type Target;
+    fn encode(self) -> Self::Target;
+}

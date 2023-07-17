@@ -94,7 +94,7 @@ impl TBlock {
                 break;
             }
             let s = parse_stmt(input, true)?;
-            let requires_semicolon = if let TermStmt::Expr(s) = &s {
+            let requires_semicolon = if let TermStmt::Term(s) = &s {
                 super::requires_terminator(s)
             } else {
                 false
@@ -160,7 +160,7 @@ fn stmt_expr(input: ParseStream, allow_nosemi: bool) -> Result<TermStmt> {
     }
 
     if allow_nosemi || !super::requires_terminator(&e) {
-        Ok(TermStmt::Expr(e))
+        Ok(TermStmt::Term(e))
     } else {
         Err(input.error("expected semicolon"))
     }
@@ -256,7 +256,7 @@ impl Parse for TermMatch {
 
         Ok(TermMatch {
             match_token,
-            expr: Box::new(expr),
+            term: Box::new(expr),
             brace_token,
             arms,
         })
@@ -330,7 +330,7 @@ fn unary_term(input: ParseStream, allow_struct: AllowStruct) -> Result<Term> {
         // <UnOp> <trailer>
         Ok(Term::Unary(TermUnary {
             op: input.parse()?,
-            expr: Box::new(unary_term(input, allow_struct)?),
+            term: Box::new(unary_term(input, allow_struct)?),
         }))
     } else {
         trailer_term(input, allow_struct)
@@ -370,7 +370,7 @@ fn trailer_helper(input: ParseStream, mut e: Term) -> Result<Term> {
 
             let member: Member = input.parse()?;
             let turbofish = if matches!(member, Member::Named(_)) && input.peek(Token![::]) {
-                Some(TermMethodTurbofish {
+                Some(TermAngleBracketedGenericArguments {
                     colon2_token: input.parse()?,
                     lt_token: input.parse()?,
                     args: {
@@ -418,7 +418,7 @@ fn trailer_helper(input: ParseStream, mut e: Term) -> Result<Term> {
         } else if input.peek(token::Bracket) {
             let content;
             e = Term::Index(TermIndex {
-                expr: Box::new(e),
+                term: Box::new(e),
                 bracket_token: bracketed!(content in input),
                 index: content.parse()?,
             });
@@ -528,7 +528,7 @@ fn paren_or_tuple(input: ParseStream) -> Result<Term> {
     if content.is_empty() {
         return Ok(Term::Paren(TermParen {
             paren_token,
-            expr: Box::new(first),
+            term: Box::new(first),
         }));
     }
 
@@ -578,7 +578,7 @@ fn array_or_repeat(input: ParseStream) -> Result<Term> {
         let len: Term = content.parse()?;
         Ok(Term::Repeat(TermRepeat {
             bracket_token,
-            expr: Box::new(first),
+            term: Box::new(first),
             semi_token,
             len: Box::new(len),
         }))
@@ -594,7 +594,7 @@ fn term_group(input: ParseStream) -> Result<TermGroup> {
             assert_eq!(delim, Delimiter::None);
             Ok(TermGroup {
                 group_token: token::Group(span.join()),
-                expr: content.parse()?,
+                term: content.parse()?,
             })
         })
 }
@@ -677,7 +677,7 @@ impl Parse for TermFieldValue {
         Ok(TermFieldValue {
             member,
             colon_token,
-            expr: value,
+            term: value,
         })
     }
 }
@@ -835,16 +835,8 @@ fn parse_term(
             let as_token: Token![as] = input.parse()?;
             let ty = input.call(Type::without_plus)?;
             lhs = Term::Cast(TermCast {
-                expr: Box::new(lhs),
+                term: Box::new(lhs),
                 as_token,
-                ty: Box::new(ty),
-            });
-        } else if Precedence::Cast >= base && input.peek(Token![:]) && !input.peek(Token![::]) {
-            let colon_token: Token![:] = input.parse()?;
-            let ty = input.call(Type::without_plus)?;
-            lhs = Term::Type(TermType {
-                expr: Box::new(lhs),
-                colon_token,
                 ty: Box::new(ty),
             });
         } else {
@@ -879,7 +871,7 @@ fn term_let(input: ParseStream) -> Result<TermLet> {
         pat: Pat::parse_single(input)?,
         // pat: pat::parsing::multi_pat_with_leading_vert(input)?,
         eq_token: input.parse()?,
-        expr: Box::new(input.call(Term::parse_without_eager_brace)?),
+        term: Box::new(input.call(Term::parse_without_eager_brace)?),
     })
 }
 

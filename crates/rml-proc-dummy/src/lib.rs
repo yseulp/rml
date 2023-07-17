@@ -30,6 +30,6 @@ pub fn variant(attr: TS1, item: TS1) -> TS1 {
 }
 
 #[proc_macro_attribute]
-pub fn modifies(attr: TS1, item: TS1) -> TS1 {
+pub fn modifies(_attr: TS1, item: TS1) -> TS1 {
     item
 }
