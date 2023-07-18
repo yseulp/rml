@@ -155,6 +155,33 @@ pub fn rml(tokens: TS1) -> TS1 {
     )
 }
 
+#[proc_macro]
+pub fn proof_assert(assertion: TS1) -> TS1 {
+    let assertion = parse_macro_input!(assertion with TBlock::parse_within);
+    let body = assertion
+        .into_iter()
+        .map(|ts| {
+            let sp = ts.span();
+            let stmt = ts.encode();
+            quote_spanned! { sp => #stmt }
+        })
+        .collect::<TS2>();
+    TS1::from(quote! {
+        {
+            #[allow(unused_must_use, unused_variables)]
+            let _ = {
+                #[rml::spec::assert]
+                || {
+                    let b: bool = {
+                        #body
+                    }
+                    b
+                }
+            }
+        }
+    })
+}
+
 fn generate_unique_ident(prefix: &str) -> Ident {
     let uuid = uuid::Uuid::new_v4();
     let ident = format!("{}_{}", prefix, uuid).replace('-', "_");

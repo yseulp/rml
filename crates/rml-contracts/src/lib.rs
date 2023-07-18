@@ -26,6 +26,8 @@ mod macros {
 
     pub use rml_proc::trusted;
 
+    pub use rml_proc::proof_assert;
+
     pub mod stubs {
         #[rustc_diagnostic_item = "rml_exists"]
         pub fn exists<T, F: Fn(T) -> bool>(_: F) -> bool {
@@ -58,4 +60,6 @@ mod macros {
     pub use rml_proc_dummy::rml;
 
     pub use rml_proc_dummy::trusted;
+
+    pub use rml_proc_dummy::proof_assert;
 }

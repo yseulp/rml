@@ -58,3 +58,8 @@ pub fn trusted(attr: TS1, item: TS1) -> TS1 {
 pub fn rml(_: TS1) -> TS1 {
     TS1::new()
 }
+
+#[proc_macro]
+pub fn proof_assert(_: TS1) -> TS1 {
+    TS1::new()
+}
