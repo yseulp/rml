@@ -12,11 +12,19 @@ mod macros {
 
     pub use rml_proc::pure;
 
+    pub use rml_proc::strictly_pure;
+
     pub use rml_proc::invariant;
 
     pub use rml_proc::modifies;
 
     pub use rml_proc::variant;
+
+    pub use rml_proc::logic;
+
+    pub use rml_proc::rml;
+
+    pub use rml_proc::trusted;
 
     pub mod stubs {
         #[rustc_diagnostic_item = "rml_exists"]
@@ -37,9 +45,17 @@ mod macros {
 
     pub use rml_proc_dummy::pure;
 
+    pub use rml_proc_dummy::strictly_pure;
+
     pub use rml_proc_dummy::invariant;
 
     pub use rml_proc_dummy::modifies;
 
     pub use rml_proc_dummy::variant;
+
+    pub use rml_proc_dummy::logic;
+
+    pub use rml_proc_dummy::rml;
+
+    pub use rml_proc_dummy::trusted;
 }

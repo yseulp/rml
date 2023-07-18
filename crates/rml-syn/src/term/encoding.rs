@@ -1,9 +1,9 @@
 use crate::{
-    Encode, TBlock, TermAngleBracketedGenericArguments, TermArm, TermArray, TermBinary, TermBlock,
-    TermCall, TermCast, TermClosure, TermExists, TermField, TermFieldValue, TermForall,
+    Encode, TBlock, TLocal, TermAngleBracketedGenericArguments, TermArm, TermArray, TermBinary,
+    TermBlock, TermCall, TermCast, TermClosure, TermExists, TermField, TermFieldValue, TermForall,
     TermGenericMethodArgument, TermGroup, TermIf, TermImpl, TermIndex, TermLet, TermLit, TermLogEq,
-    TermMatch, TermMethodCall, TermParen, TermPath, TermRange, TermRepeat, TermStruct, TermTuple,
-    TermUnary,
+    TermMatch, TermMethodCall, TermParen, TermPath, TermRange, TermRepeat, TermStmt, TermStruct,
+    TermTuple, TermUnary,
 };
 
 use super::Term;
@@ -15,7 +15,7 @@ use syn::{
     AngleBracketedGenericArguments, Arm, Block, Expr, ExprArray, ExprBinary, ExprBlock, ExprCall,
     ExprCast, ExprClosure, ExprField, ExprGroup, ExprIf, ExprIndex, ExprLet, ExprLit, ExprMatch,
     ExprMethodCall, ExprParen, ExprRange, ExprRepeat, ExprStruct, ExprTuple, ExprUnary, FieldValue,
-    GenericArgument,
+    GenericArgument, Local, LocalInit, Stmt,
 };
 
 impl Encode for Term {
@@ -292,6 +292,34 @@ impl Encode for TermFieldValue {
             member: self.member,
             colon_token: self.colon_token,
             expr: self.term.encode(),
+        }
+    }
+}
+
+impl Encode for TermStmt {
+    type Target = Stmt;
+
+    fn encode(self) -> Self::Target {
+        match self {
+            TermStmt::Local(TLocal {
+                let_token,
+                pat,
+                init,
+                semi_token,
+            }) => Stmt::Local(Local {
+                attrs: Vec::new(),
+                let_token,
+                pat,
+                init: init.map(|(eq, t)| LocalInit {
+                    eq_token: eq,
+                    expr: t.encode().into(),
+                    diverge: None,
+                }),
+                semi_token,
+            }),
+            TermStmt::Item(i) => Stmt::Item(i),
+            TermStmt::Term(t) => Stmt::Expr(t.encode(), None),
+            TermStmt::Semi(t, semi) => Stmt::Expr(t.encode(), Some(semi)),
         }
     }
 }

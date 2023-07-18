@@ -7,12 +7,14 @@ use rml_contracts::*;
     requires(a + b >= i32::MIN), 
     ensures(result == a + b) 
 }]
+#[strictly_pure]
 fn add(a: i32, b: i32) -> i32 {
     a + b
 }
 
 #[spec("b is not zero", requires(b != 0), ensures(result == a / b))]
 #[spec("b is zero", requires(b == 0), panics)]
+#[pure]
 fn div(a: u64, b: u64) -> u64 {
     a / b
 }

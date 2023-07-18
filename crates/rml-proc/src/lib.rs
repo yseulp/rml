@@ -1,11 +1,11 @@
 use proc_macro::TokenStream as TS1;
 use proc_macro2::{Span, TokenStream as TS2};
 use quote::{quote, quote_spanned};
-use rml_syn::{Encode, Spec, Term};
+use rml_syn::{subject::LogicSubject, Encode, Spec, TBlock, Term};
 
 use syn::{
-    parse_macro_input, parse_quote, parse_quote_spanned, Attribute, FnArg, Ident, ItemFn, Pat,
-    ReturnType, Signature, Type,
+    parse_macro_input, parse_quote, parse_quote_spanned, spanned::Spanned, Attribute, FnArg, Ident,
+    ItemFn, Pat, ReturnType, Signature, Type,
 };
 
 mod subject;
@@ -53,8 +53,18 @@ pub fn spec(attr: TS1, item: TS1) -> TS1 {
 }
 
 #[proc_macro_attribute]
+pub fn strictly_pure(attr: TS1, item: TS1) -> TS1 {
+    assert!(attr.is_empty(), "`strictly_pure` takes no arguments");
+    let toks = TS2::from(item);
+    TS1::from(quote! {
+        #[rml::decl::strictly_pure]
+        #toks
+    })
+}
+
+#[proc_macro_attribute]
 pub fn pure(attr: TS1, item: TS1) -> TS1 {
-    assert!(attr.is_empty());
+    assert!(attr.is_empty(), "`pure` takes no arguments");
     let toks = TS2::from(item);
     TS1::from(quote! {
         #[rml::decl::pure]
@@ -96,6 +106,53 @@ pub fn variant(_attr: TS1, item: TS1) -> TS1 {
 #[proc_macro_attribute]
 pub fn modifies(_attr: TS1, item: TS1) -> TS1 {
     item
+}
+
+#[proc_macro_attribute]
+pub fn logic(attr: TS1, item: TS1) -> TS1 {
+    assert!(attr.is_empty(), "`logic` takes no arguments");
+    let subject = parse_macro_input!(item as LogicSubject);
+    match subject {
+        LogicSubject::WithBody(f) => {
+            let sp = f.span();
+            TS1::from(quote_spanned! { sp =>
+                #[rml::decl::logic]
+                #f
+            })
+        }
+        LogicSubject::WithoutBody(t) => {
+            let sp = t.span();
+            TS1::from(quote_spanned! { sp =>
+                #[rml::decl::logic]
+                #t
+            })
+        }
+    }
+}
+
+#[proc_macro_attribute]
+pub fn trusted(attr: TS1, item: TS1) -> TS1 {
+    assert!(attr.is_empty(), "`trusted` takes no arguments");
+    let toks = TS2::from(item);
+    TS1::from(quote! {
+        #[rml::delc::trusted]
+        #toks
+    })
+}
+
+#[proc_macro]
+pub fn rml(tokens: TS1) -> TS1 {
+    let block = parse_macro_input!(tokens with TBlock::parse_within);
+    TS1::from(
+        block
+            .into_iter()
+            .map(|ts| {
+                let sp = ts.span();
+                let stmt = ts.encode();
+                quote_spanned! { sp => #stmt }
+            })
+            .collect::<TS2>(),
+    )
 }
 
 fn generate_unique_ident(prefix: &str) -> Ident {
