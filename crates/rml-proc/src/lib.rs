@@ -42,7 +42,7 @@ pub fn spec(attr: TS1, item: TS1) -> TS1 {
             );
             TS1::from(quote! {
                 #spec_tokens
-                #[rml::specification::spec=#name_tag]
+                #[rml::spec_case_ref=#name_tag]
                 #fn_or_meth
             })
         }
@@ -219,10 +219,11 @@ fn fn_spec_item(
         .enumerate()
         .map(|(i, p)| {
             let id = &pre_idents[i];
+            let id_str = id.to_string();
             let t = p.encode();
             let mut res: ItemFn = parse_quote_spanned! { span =>
                 #[allow(unused_variables)]
-                #[rml::spec::pre]
+                #[rml::spec::pre=#id_str]
                 fn #id() -> bool {
                     let cond: bool = !!(#t);
                     cond
@@ -244,10 +245,11 @@ fn fn_spec_item(
         .collect();
     let post = spec.post_conds.into_iter().enumerate().map(|(i, p)| {
         let id = &post_idents[i];
+        let id_str = id.to_string();
         let t = p.encode();
         let mut res: ItemFn = parse_quote_spanned! { span =>
             #[allow(unused_variables)]
-            #[rml::spec::post]
+            #[rml::spec::post=#id_str]
             fn #id() -> bool {
                 let cond: bool = !!(#t);
                 cond
@@ -265,9 +267,10 @@ fn fn_spec_item(
     let (var_attr, var) = if let Some(v) = spec.variant {
         let t = v.encode();
         let id = generate_unique_ident("spec_part_var");
+        let id_str = id.to_string();
         let mut item: ItemFn = parse_quote_spanned! { span =>
             #[allow(unused_variables)]
-            #[rml::spec::var]
+            #[rml::spec::var=#id_str]
             fn #id() -> impl ::rml_contracts::WellFounded {
                 #t
             }
@@ -287,11 +290,12 @@ fn fn_spec_item(
         .unwrap_or_else(|| parse_quote_spanned! { span => false });
     let (div, div_attr) = {
         let id = generate_unique_ident("spec_part_div");
+        let id_str = id.to_string();
         let t = diverges.encode();
 
         let mut item: ItemFn = parse_quote_spanned! { span =>
             #[allow(unused_variables)]
-            #[rml::spec::div]
+            #[rml::spec::div=#id_str]
             fn #id() -> bool {
                 let b: bool = #t;
                 b

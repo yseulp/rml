@@ -5,6 +5,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+rml-syn = { path = "../rml-syn" }
 serde = { version = "1.0", features = ["derive"] }
 
 [package.metadata.rust-analyzer]

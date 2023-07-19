@@ -6,14 +6,18 @@ extern crate rustc_driver;
 extern crate rustc_errors;
 extern crate rustc_hir;
 extern crate rustc_interface;
+extern crate rustc_macros;
 extern crate rustc_middle;
+extern crate rustc_serialize;
 extern crate rustc_session;
 extern crate rustc_span;
+extern crate rustc_type_ir;
 
 pub mod callbacks;
 pub(crate) mod check;
 pub(crate) mod ctx;
 pub mod error;
+pub mod spec;
 pub(crate) mod util;
 
 #[derive(Debug, Clone)]

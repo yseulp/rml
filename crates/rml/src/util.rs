@@ -1,6 +1,31 @@
-use rustc_ast::{AttrItem, Attribute};
+use rustc_ast::{AttrItem, AttrKind, Attribute};
 use rustc_hir::def_id::DefId;
 use rustc_middle::ty::TyCtxt;
+
+pub(crate) fn is_attr(attr: &Attribute, str: &str) -> bool {
+    match &attr.kind {
+        AttrKind::DocComment(..) => false,
+        AttrKind::Normal(attr) => {
+            let segments = &attr.item.path.segments;
+            segments.len() >= 2
+                && segments[0].ident.as_str() == "rml"
+                && segments[1].ident.as_str() == str
+        }
+    }
+}
+
+pub(crate) fn is_spec_part(attr: &Attribute, str: &str) -> bool {
+    match &attr.kind {
+        AttrKind::DocComment(..) => false,
+        AttrKind::Normal(attr) => {
+            let segments = &attr.item.path.segments;
+            segments.len() >= 3
+                && segments[0].ident.as_str() == "rml"
+                && segments[1].ident.as_str() == "spec"
+                && segments[2].ident.as_str() == str
+        }
+    }
+}
 
 pub(crate) fn is_logic(tcx: TyCtxt, def_id: DefId) -> bool {
     get_attr(tcx.get_attrs_unchecked(def_id), &["rml", "decl", "logic"]).is_some()

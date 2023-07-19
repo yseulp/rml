@@ -1,7 +1,13 @@
 use rustc_driver::{Callbacks, Compilation};
 use rustc_interface::{interface::Compiler, Config, Queries};
 
+use std::{cell::RefCell, thread_local};
+
 use crate::{ctx::RmlCtxt, Options};
+
+thread_local! {
+    static RML_CTXT: RefCell<Option<RmlCtxt<'static>>> = RefCell::new(None);
+}
 
 pub struct ExtractSpec {
     opts: Options,
@@ -58,6 +64,10 @@ impl Callbacks for ExtractSpec {
         queries.global_ctxt().unwrap().enter(|tcx| {
             let mut rcx = RmlCtxt::new(tcx, self.opts.clone());
             rcx.validate();
+            RML_CTXT.with(|ctx| {
+                let rcx = unsafe { std::mem::transmute(rcx) };
+                ctx.borrow_mut().replace(rcx)
+            });
         });
 
         c.session().abort_if_errors();
@@ -71,7 +81,9 @@ impl Callbacks for ExtractSpec {
         _compiler: &rustc_interface::interface::Compiler,
         _queries: &'tcx Queries<'tcx>,
     ) -> Compilation {
-        println!("After analysis");
+        let rcx = RML_CTXT.with(|ctx| ctx.take().unwrap());
+        let specs = rcx.get_specs();
+        println!("{specs:?}");
 
         Compilation::Continue
     }
