@@ -1,10 +1,20 @@
 #![feature(rustc_private, register_tool)]
 
+extern crate rustc_ast;
 extern crate rustc_ast_pretty;
 extern crate rustc_driver;
+extern crate rustc_errors;
+extern crate rustc_hir;
 extern crate rustc_interface;
+extern crate rustc_middle;
+extern crate rustc_session;
+extern crate rustc_span;
 
 pub mod callbacks;
+pub(crate) mod check;
+pub(crate) mod ctx;
+pub mod error;
+pub(crate) mod util;
 
 #[derive(Debug, Clone)]
 pub struct Options {

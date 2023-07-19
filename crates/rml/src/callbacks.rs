@@ -1,7 +1,7 @@
 use rustc_driver::{Callbacks, Compilation};
 use rustc_interface::{interface::Compiler, Config, Queries};
 
-use crate::Options;
+use crate::{ctx::RmlCtxt, Options};
 
 pub struct ExtractSpec {
     opts: Options,
@@ -55,10 +55,24 @@ impl Callbacks for ExtractSpec {
             );
         });
 
-        if self.opts.in_cargo {
-            Compilation::Continue
-        } else {
-            Compilation::Stop
-        }
+        queries.global_ctxt().unwrap().enter(|tcx| {
+            let mut rcx = RmlCtxt::new(tcx, self.opts.clone());
+            rcx.validate();
+        });
+
+        c.session().abort_if_errors();
+
+        Compilation::Continue
+    }
+
+    fn after_analysis<'tcx>(
+        &mut self,
+        _handler: &rustc_session::EarlyErrorHandler,
+        _compiler: &rustc_interface::interface::Compiler,
+        _queries: &'tcx Queries<'tcx>,
+    ) -> Compilation {
+        println!("After analysis");
+
+        Compilation::Continue
     }
 }

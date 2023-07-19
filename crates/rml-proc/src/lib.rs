@@ -222,6 +222,7 @@ fn fn_spec_item(
             let t = p.encode();
             let mut res: ItemFn = parse_quote_spanned! { span =>
                 #[allow(unused_variables)]
+                #[rml::spec::pre]
                 fn #id() -> bool {
                     let cond: bool = !!(#t);
                     cond
@@ -246,6 +247,7 @@ fn fn_spec_item(
         let t = p.encode();
         let mut res: ItemFn = parse_quote_spanned! { span =>
             #[allow(unused_variables)]
+            #[rml::spec::post]
             fn #id() -> bool {
                 let cond: bool = !!(#t);
                 cond
@@ -265,6 +267,7 @@ fn fn_spec_item(
         let id = generate_unique_ident("spec_part_var");
         let mut item: ItemFn = parse_quote_spanned! { span =>
             #[allow(unused_variables)]
+            #[rml::spec::var]
             fn #id() -> impl ::rml_contracts::WellFounded {
                 #t
             }
@@ -288,6 +291,7 @@ fn fn_spec_item(
 
         let mut item: ItemFn = parse_quote_spanned! { span =>
             #[allow(unused_variables)]
+            #[rml::spec::div]
             fn #id() -> bool {
                 let b: bool = #t;
                 b
@@ -295,7 +299,7 @@ fn fn_spec_item(
         };
         adapt_sig(&mut item.sig, &sig);
         let id_str = id.to_string();
-        let attr: Attribute = parse_quote_spanned! { span => #[rml::spec_part_div=#id_str] };
+        let attr: Attribute = parse_quote_spanned! { span => #[rml::spec_part_div_ref=#id_str] };
         (item, attr)
     };
 
