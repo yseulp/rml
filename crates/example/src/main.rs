@@ -53,6 +53,6 @@ pub fn main() {
     println!("{}", div(8, 4));
     println!("{:?}", all_zero(vec![1, 2, 3, 4]));
     println!("{}", div(4, 0));
-    println!("{}", no_name(1, 1));
+    //println!("{}", no_name(1, 1));
     println!("{}", rec(100))
 }
