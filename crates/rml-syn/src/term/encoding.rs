@@ -29,7 +29,7 @@ impl Encode for Term {
                 elems,
             }) => Expr::Array(ExprArray {
                 attrs: Vec::new(),
-                bracket_token: bracket_token,
+                bracket_token,
                 elems: encode_punctuated(elems),
             }),
             Term::Binary(TermBinary { left, op, right }) => Expr::Binary(ExprBinary {
@@ -121,7 +121,7 @@ impl Encode for Term {
                 attrs: Vec::new(),
                 if_token,
                 cond: cond.encode().into(),
-                then_branch: then_branch.encode().into(),
+                then_branch: then_branch.encode(),
                 else_branch: else_branch.map(|(e, b)| (e, b.encode().into())),
             }),
             Term::Impl(TermImpl { hyp, cons, .. }) => {

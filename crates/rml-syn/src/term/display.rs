@@ -260,7 +260,7 @@ impl fmt::Display for TermMethodCall {
             f,
             "{}.{}({})",
             self.receiver,
-            self.method.to_string(),
+            self.method,
             self.args
                 .iter()
                 .map(ToString::to_string)

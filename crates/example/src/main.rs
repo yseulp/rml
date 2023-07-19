@@ -19,6 +19,7 @@ fn div(a: u64, b: u64) -> u64 {
     a / b
 }
 
+#[allow(clippy::needless_range_loop)]
 #[spec("main", ensures(exists(| i: usize, j: usize | result[i] == 0)))]
 fn all_zero(mut v: Vec<u64>) -> Vec<u64> {
     for i in 0..v.len() {
