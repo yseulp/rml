@@ -75,7 +75,7 @@ ast_enum_of_structs! {
         /// A literal in place of an term: `1`, `"foo"`.
         Lit(TermLit),
 
-        /// Logical equality
+        /// Logical equality: a === b
         LogEq(TermLogEq),
 
         /// A macro invocation term: `format!("{}", q)`.

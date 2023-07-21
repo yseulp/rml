@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use rml_syn::SpecKind;
 use rustc_middle::ty::TyCtxt;
-use rustc_span::def_id::DefId;
+use rustc_span::{def_id::DefId, Symbol};
 
 use crate::util;
 
@@ -10,6 +10,7 @@ use crate::util;
 pub struct HirSpecCase {
     pub did: DefId,
     pub kind: SpecKind,
+    pub name: Option<Symbol>,
     pub pre: Vec<DefId>,
     pub post: Vec<DefId>,
     pub variant: Option<DefId>,
@@ -21,6 +22,7 @@ impl HirSpecCase {
         Self {
             did,
             kind,
+            name: None,
             pre: Default::default(),
             post: Default::default(),
             variant: Default::default(),
@@ -33,7 +35,12 @@ impl HirSpecCase {
     }
 
     pub fn push_post(&mut self, did: DefId) {
-        self.pre.push(did)
+        self.post.push(did)
+    }
+
+    pub fn add_name(&mut self, name: Symbol) {
+        debug_assert!(self.name.is_none());
+        self.name = Some(name);
     }
 
     pub fn add_variant(&mut self, did: DefId) {
@@ -142,6 +149,9 @@ pub fn collect_hir_specs<'tcx>(tcx: TyCtxt<'tcx>) -> HirSpecMap {
                 } else if util::is_attr(attr, "spec_part_div_ref") {
                     let name = attr.value_str().unwrap();
                     case.add_diverges(all_diverges.remove(&name).unwrap());
+                } else if util::is_attr(attr, "spec_name") {
+                    let name = attr.value_str().unwrap();
+                    case.add_name(name);
                 }
             }
             hs.push_case(case);

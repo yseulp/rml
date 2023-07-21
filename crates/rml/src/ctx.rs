@@ -21,7 +21,7 @@ impl<'tcx> RmlCtxt<'tcx> {
         }
     }
 
-    pub fn get_specs(&self) -> SpecMap {
+    pub fn get_specs(&self) -> SpecMap<'tcx> {
         SpecMap::new(self.tcx, &self.specs)
     }
 }

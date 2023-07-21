@@ -1,5 +1,6 @@
 use rustc_driver::{Callbacks, Compilation};
 use rustc_interface::{interface::Compiler, Config, Queries};
+use rustc_middle::ty::TyCtxt;
 
 use std::{cell::RefCell, thread_local};
 
@@ -64,10 +65,7 @@ impl Callbacks for ExtractSpec {
         queries.global_ctxt().unwrap().enter(|tcx| {
             let mut rcx = RmlCtxt::new(tcx, self.opts.clone());
             rcx.validate();
-            RML_CTXT.with(|ctx| {
-                let rcx = unsafe { std::mem::transmute(rcx) };
-                ctx.borrow_mut().replace(rcx)
-            });
+            unsafe { store_rcx(rcx) };
         });
 
         c.session().abort_if_errors();
@@ -79,12 +77,28 @@ impl Callbacks for ExtractSpec {
         &mut self,
         _handler: &rustc_session::EarlyErrorHandler,
         _compiler: &rustc_interface::interface::Compiler,
-        _queries: &'tcx Queries<'tcx>,
+        queries: &'tcx Queries<'tcx>,
     ) -> Compilation {
-        let rcx = RML_CTXT.with(|ctx| ctx.take().unwrap());
-        let specs = rcx.get_specs();
-        println!("{specs:?}");
+        queries.global_ctxt().unwrap().enter(|tcx| {
+            let rcx = unsafe { retrieve_rcx(tcx) };
+            let specs = rcx.get_specs();
+            for spec in specs.0.values() {
+                println!("{:#?}", spec)
+            }
+        });
 
         Compilation::Continue
     }
+}
+
+pub unsafe fn store_rcx<'tcx>(rcx: RmlCtxt<'tcx>) {
+    RML_CTXT.with(|ctx| {
+        let rcx = unsafe { std::mem::transmute(rcx) };
+        ctx.borrow_mut().replace(rcx)
+    });
+}
+
+pub unsafe fn retrieve_rcx<'tcx>(_tcx: TyCtxt<'tcx>) -> RmlCtxt<'tcx> {
+    let rcx: RmlCtxt<'static> = RML_CTXT.with(|ctx| ctx.replace(None).unwrap());
+    unsafe { std::mem::transmute(rcx) }
 }

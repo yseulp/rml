@@ -189,13 +189,7 @@ fn generate_unique_ident(prefix: &str) -> Ident {
     Ident::new(&ident, Span::call_site())
 }
 
-fn fn_spec_item(
-    spec_name: Ident,
-    sig: Signature,
-    result: FnArg,
-    mut spec: Spec,
-    span: Span,
-) -> TS2 {
+fn fn_spec_item(spec_id: Ident, sig: Signature, result: FnArg, mut spec: Spec, span: Span) -> TS2 {
     let is_normal = spec.is_normal();
     let spec_attr = if is_normal {
         "spec_normal"
@@ -277,7 +271,8 @@ fn fn_spec_item(
         };
         adapt_sig(&mut item.sig, &sig);
         let id_str = id.to_string();
-        let var_attr: Attribute = parse_quote_spanned! { span => #[rml::spec_part_var=#id_str] };
+        let var_attr: Attribute =
+            parse_quote_spanned! { span => #[rml::spec_part_var_ref=#id_str] };
         (Some(var_attr), Some(item))
     } else {
         (None, None)
@@ -297,7 +292,7 @@ fn fn_spec_item(
             #[allow(unused_variables)]
             #[rml::spec::div=#id_str]
             fn #id() -> bool {
-                let b: bool = #t;
+                let b: bool = !!(#t);
                 b
             }
         };
@@ -307,7 +302,12 @@ fn fn_spec_item(
         (item, attr)
     };
 
-    let spec_name_str = spec_name.to_string();
+    // name
+    let spec_name: Option<Attribute> = spec
+        .name
+        .map(|n| parse_quote_spanned! { span => #[rml::spec_name=#n] });
+
+    let spec_name_str = spec_id.to_string();
     quote_spanned! { span =>
         #(#pre)*
         #(#post)*
@@ -319,7 +319,8 @@ fn fn_spec_item(
         #(#[rml::spec_part_post_ref=#post_strs])*
         #var_attr
         #div_attr
-        const #spec_name: bool = false;
+        #spec_name
+        const #spec_id: bool = false;
     }
 }
 
