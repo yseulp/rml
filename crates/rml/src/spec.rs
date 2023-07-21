@@ -1,35 +1,41 @@
-use std::collections::HashMap;
-
-pub(crate) use hir::{collect_hir_specs, HirSpecMap};
-use rml_syn::SpecKind;
 use rustc_hir::{Block, Body, Expr, ExprKind, Local, StmtKind};
 use rustc_middle::{hir::map::Map, ty::TyCtxt};
 use rustc_span::def_id::DefId;
 
-use crate::term::{HirInto, Term};
+use std::collections::HashMap;
+
+use serde::{Deserialize, Serialize};
 
 use self::hir::{HirSpec, HirSpecCase};
+use crate::term::{translation::HirInto, Term};
+pub(crate) use hir::{collect_hir_specs, HirSpecMap};
 
 pub(crate) mod hir;
+pub(crate) mod serialize;
 
-#[derive(Debug, Clone)]
-pub struct SpecCase<'hir> {
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+pub enum SpecKind {
+    Normal,
+    Panic,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SpecCase {
+    #[serde(
+        serialize_with = "serialize::serialize_did",
+        deserialize_with = "serialize::deserialize_did"
+    )]
     pub did: DefId,
     pub kind: SpecKind,
     pub name: String,
-    pub pre: Vec<Term<'hir>>,
-    pub post: Vec<Term<'hir>>,
-    pub variant: Option<Term<'hir>>,
-    pub diverges: Term<'hir>,
+    pub pre: Vec<Term>,
+    pub post: Vec<Term>,
+    pub variant: Option<Term>,
+    pub diverges: Term,
 }
 
-impl<'hir> SpecCase<'hir> {
-    pub fn new(
-        hir: Map<'hir>,
-        hcase: &HirSpecCase,
-        normal: &mut u64,
-        panic: &mut u64,
-    ) -> SpecCase<'hir> {
+impl<'hir> SpecCase {
+    pub fn new(hir: Map<'hir>, hcase: &HirSpecCase, normal: &mut u64, panic: &mut u64) -> SpecCase {
         let pre = hcase
             .pre
             .iter()
@@ -78,13 +84,13 @@ impl<'hir> SpecCase<'hir> {
 }
 
 #[derive(Debug, Clone)]
-pub struct Spec<'hir> {
+pub struct Spec {
     pub target: DefId,
-    pub cases: Vec<SpecCase<'hir>>,
+    pub cases: Vec<SpecCase>,
 }
 
-impl<'hir> Spec<'hir> {
-    pub fn new(target: DefId, hir: Map<'hir>, hspec: &HirSpec) -> Spec<'hir> {
+impl<'hir> Spec {
+    pub fn new(target: DefId, hir: Map<'hir>, hspec: &HirSpec) -> Spec {
         let mut normal_count = 0;
         let mut panic_count = 0;
         Self {
@@ -97,16 +103,16 @@ impl<'hir> Spec<'hir> {
         }
     }
 
-    pub fn push_case(&mut self, case: SpecCase<'hir>) {
+    pub fn push_case(&mut self, case: SpecCase) {
         self.cases.push(case)
     }
 }
 
 #[derive(Debug, Clone)]
-pub struct SpecMap<'hir>(pub HashMap<DefId, Spec<'hir>>);
+pub struct SpecMap(pub HashMap<DefId, Spec>);
 
-impl<'hir> SpecMap<'hir> {
-    pub fn new(tcx: TyCtxt<'hir>, hir_smap: &HirSpecMap) -> SpecMap<'hir> {
+impl<'hir> SpecMap {
+    pub fn new(tcx: TyCtxt<'hir>, hir_smap: &HirSpecMap) -> SpecMap {
         let mut map = HashMap::with_capacity(hir_smap.len());
         let hir = tcx.hir();
 

@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use rml_syn::SpecKind;
+use super::SpecKind;
 use rustc_middle::ty::TyCtxt;
 use rustc_span::{def_id::DefId, Symbol};
 
