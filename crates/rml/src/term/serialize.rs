@@ -1,6 +1,4 @@
-use std::rc::Rc;
-
-use rustc_hir::{def_id::LocalDefId, ConstArg, HirId, InferArg, ItemId};
+use rustc_hir::{def_id::LocalDefId, HirId, ItemId};
 use rustc_span::{symbol::Ident, Span, Symbol};
 
 use serde::{ser::SerializeStruct, Deserializer, Serializer};
@@ -17,7 +15,7 @@ where
     state.end()
 }
 
-pub(crate) fn deserialize_hir_id<'de, D>(d: D) -> Result<HirId, D::Error>
+pub(crate) fn deserialize_hir_id<'de, D>(_d: D) -> Result<HirId, D::Error>
 where
     D: Deserializer<'de>,
 {
@@ -42,7 +40,7 @@ where
     state.end()
 }
 
-pub(crate) fn deserialize_span<'de, D>(d: D) -> Result<Span, D::Error>
+pub(crate) fn deserialize_span<'de, D>(_d: D) -> Result<Span, D::Error>
 where
     D: Deserializer<'de>,
 {
@@ -59,7 +57,7 @@ where
     state.end()
 }
 
-pub(crate) fn deserialize_ident<'de, D>(d: D) -> Result<Ident, D::Error>
+pub(crate) fn deserialize_ident<'de, D>(_d: D) -> Result<Ident, D::Error>
 where
     D: Deserializer<'de>,
 {
@@ -70,38 +68,12 @@ pub(crate) fn serialize_local_def_id<S>(id: &LocalDefId, s: S) -> Result<S::Ok, 
 where
     S: Serializer,
 {
-    todo!()
+    let mut state = s.serialize_struct("LocalDefId", 1)?;
+    state.serialize_field("local_def_index", &id.local_def_index.as_usize())?;
+    state.end()
 }
 
-pub(crate) fn deserialize_local_def_id<'de, D>(d: D) -> Result<LocalDefId, D::Error>
-where
-    D: Deserializer<'de>,
-{
-    todo!()
-}
-
-pub(crate) fn serialize_const_arg<S>(id: &ConstArg, s: S) -> Result<S::Ok, S::Error>
-where
-    S: Serializer,
-{
-    todo!()
-}
-
-pub(crate) fn deserialize_const_arg<'de, D>(d: D) -> Result<ConstArg, D::Error>
-where
-    D: Deserializer<'de>,
-{
-    todo!()
-}
-
-pub(crate) fn serialize_infer_arg<S>(id: &InferArg, s: S) -> Result<S::Ok, S::Error>
-where
-    S: Serializer,
-{
-    todo!()
-}
-
-pub(crate) fn deserialize_infer_arg<'de, D>(d: D) -> Result<InferArg, D::Error>
+pub(crate) fn deserialize_local_def_id<'de, D>(_d: D) -> Result<LocalDefId, D::Error>
 where
     D: Deserializer<'de>,
 {
@@ -112,10 +84,10 @@ pub(crate) fn serialize_symbol<S>(id: &Symbol, s: S) -> Result<S::Ok, S::Error>
 where
     S: Serializer,
 {
-    todo!()
+    s.serialize_newtype_struct("Symbol", &id.as_u32())
 }
 
-pub(crate) fn deserialize_symbol<'de, D>(d: D) -> Result<Symbol, D::Error>
+pub(crate) fn deserialize_symbol<'de, D>(_d: D) -> Result<Symbol, D::Error>
 where
     D: Deserializer<'de>,
 {
@@ -126,24 +98,12 @@ pub(crate) fn serialize_item_id<S>(id: &ItemId, s: S) -> Result<S::Ok, S::Error>
 where
     S: Serializer,
 {
-    todo!()
+    let mut state = s.serialize_struct("ItemId", 1)?;
+    state.serialize_field("owner_id", &id.owner_id.def_id.local_def_index.as_usize())?;
+    state.end()
 }
 
-pub(crate) fn deserialize_item_id<'de, D>(d: D) -> Result<ItemId, D::Error>
-where
-    D: Deserializer<'de>,
-{
-    todo!()
-}
-
-pub(crate) fn serialize_rc_u8_slice<S>(id: &Rc<[u8]>, s: S) -> Result<S::Ok, S::Error>
-where
-    S: Serializer,
-{
-    todo!()
-}
-
-pub(crate) fn deserialize_rc_u8_slice<'de, D>(d: D) -> Result<Rc<[u8]>, D::Error>
+pub(crate) fn deserialize_item_id<'de, D>(_d: D) -> Result<ItemId, D::Error>
 where
     D: Deserializer<'de>,
 {

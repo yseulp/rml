@@ -12,7 +12,7 @@ where
     state.end()
 }
 
-pub(crate) fn deserialize_did<'de, D>(d: D) -> Result<DefId, D::Error>
+pub(crate) fn deserialize_did<'de, D>(_d: D) -> Result<DefId, D::Error>
 where
     D: Deserializer<'de>,
 {

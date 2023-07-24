@@ -1,10 +1,10 @@
+use std::rc::Rc;
+
 use serde::{Deserialize, Serialize};
 
-use wrappers::{ConstArgWrapper, InferArgWrapper, LocalDefIdWrapper, SpanWrapper};
+use wrappers::{LocalDefIdWrapper, SpanWrapper};
 
-use self::wrappers::{
-    DefIdWrapper, HirIdWrapper, IdentWrapper, ItemIdWrapper, RcU8SliceWrapper, SymbolWrapper,
-};
+use self::wrappers::{DefIdWrapper, HirIdWrapper, IdentWrapper, ItemIdWrapper, SymbolWrapper};
 
 mod serialize;
 pub mod translation;
@@ -88,8 +88,8 @@ pub struct TermLit {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum TermLitKind {
     Str(SymbolWrapper, TermStrStyle),
-    ByteStr(RcU8SliceWrapper, TermStrStyle),
-    CStr(RcU8SliceWrapper, TermStrStyle),
+    ByteStr(Rc<[u8]>, TermStrStyle),
+    CStr(Rc<[u8]>, TermStrStyle),
     Byte(u8),
     Char(char),
     Int(u128, TermLitIntType),
@@ -279,22 +279,22 @@ pub enum TermPatKind {
         Option<Box<TermPat>>,
     ),
     Struct(TermQPath, Vec<TermPatField>, bool),
-    TupleStruct(TermQPath, Vec<TermPat>, DotDotPos),
+    TupleStruct(TermQPath, Vec<TermPat>, TermDotDotPos),
     Or(Vec<TermPat>),
     Path(TermQPath),
-    Tuple(Vec<TermPat>, DotDotPos),
+    Tuple(Vec<TermPat>, TermDotDotPos),
     Box(Box<TermPat>),
     Ref(Box<TermPat>, TermMutability),
     Lit(Box<Term>),
-    Range(Option<Box<Term>>, Option<Box<Term>>, RangeEnd),
+    Range(Option<Box<Term>>, Option<Box<Term>>, TermRangeEnd),
     Slice(Vec<TermPat>, Option<Box<TermPat>>, Vec<TermPat>),
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct DotDotPos(pub u32);
+pub struct TermDotDotPos(pub u32);
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum RangeEnd {
+pub enum TermRangeEnd {
     Included,
     Excluded,
 }
@@ -353,7 +353,13 @@ pub struct TermTypeBinding {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum TermTypeBindingKind {
     Constraint { bounds: Vec<TermGenericBound> },
-    Equality { term: Term },
+    Equality { hir_term: HirTerm },
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum HirTerm {
+    Ty(TermTy),
+    Const(TermAnonConst),
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -390,8 +396,20 @@ pub enum TermGenericArgsParentheses {
 pub enum TermGenericArg {
     Lifetime(TermLifetime),
     Type(TermTy),
-    Const(ConstArgWrapper),
-    Infer(InferArgWrapper),
+    Const(TermConstArg),
+    Infer(TermInferArg),
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TermConstArg {
+    pub value: TermAnonConst,
+    pub span: SpanWrapper,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TermInferArg {
+    pub hir_id: HirIdWrapper,
+    pub span: SpanWrapper,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -451,7 +469,7 @@ pub struct TermFnDecl {
     pub inputs: Vec<TermTy>,
     pub output: TermFnRetTy,
     pub c_variadic: bool,
-    pub implicit_self: ImplicitSelfKind,
+    pub implicit_self: TermImplicitSelfKind,
     pub lifetime_elision_allowed: bool,
 }
 
@@ -462,7 +480,7 @@ pub enum TermFnRetTy {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum ImplicitSelfKind {
+pub enum TermImplicitSelfKind {
     Imm,
     Mut,
     ImmRef,
@@ -526,13 +544,6 @@ pub enum TermTraitObjectSyntax {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct PolyTraitRef {
-    pub bound_generic_params: Vec<TermGenericParam>,
-    pub trait_ref: TermTraitRef,
-    pub span: SpanWrapper,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TermTraitRef {
     pub path: TermPath,
     pub hir_ref_id: HirIdWrapper,
@@ -561,7 +572,6 @@ pub struct TermGenericParam {
 pub enum TermParamName {
     Plain(IdentWrapper),
     Fresh,
-    Error,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -622,7 +632,6 @@ pub enum TermRes<Id = HirIdWrapper> {
     Local(Id),
     ToolMod,
     NonMacroAttr(TermNonMacroAttrKind),
-    Err,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -815,6 +824,7 @@ pub enum TermLangItem {
     EhPersonality,
     EhCatchTypeinfo,
     OwnedBox,
+    PtrUnique,
     PhantomData,
     ManuallyDrop,
     MaybeUninit,

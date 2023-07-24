@@ -1,6 +1,4 @@
-use std::rc::Rc;
-
-use rustc_hir::{def_id::LocalDefId, ConstArg, HirId, InferArg, ItemId};
+use rustc_hir::{def_id::LocalDefId, HirId, ItemId};
 use rustc_span::{def_id::DefId, symbol::Ident, Span, Symbol};
 
 use serde::{Deserialize, Serialize};
@@ -83,36 +81,6 @@ impl From<DefId> for DefIdWrapper {
 }
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
-pub struct ConstArgWrapper(
-    #[serde(
-        serialize_with = "serialize::serialize_const_arg",
-        deserialize_with = "serialize::deserialize_const_arg"
-    )]
-    pub ConstArg,
-);
-
-impl From<ConstArg> for ConstArgWrapper {
-    fn from(value: ConstArg) -> Self {
-        Self(value)
-    }
-}
-
-#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
-pub struct InferArgWrapper(
-    #[serde(
-        serialize_with = "serialize::serialize_infer_arg",
-        deserialize_with = "serialize::deserialize_infer_arg"
-    )]
-    pub InferArg,
-);
-
-impl From<InferArg> for InferArgWrapper {
-    fn from(value: InferArg) -> Self {
-        Self(value)
-    }
-}
-
-#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 pub struct IdentWrapper(
     #[serde(
         serialize_with = "serialize::serialize_ident",
@@ -141,12 +109,3 @@ impl From<Symbol> for SymbolWrapper {
         Self(value)
     }
 }
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct RcU8SliceWrapper(
-    #[serde(
-        serialize_with = "serialize::serialize_rc_u8_slice",
-        deserialize_with = "serialize::deserialize_rc_u8_slice"
-    )]
-    pub Rc<[u8]>,
-);
