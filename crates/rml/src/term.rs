@@ -632,6 +632,7 @@ pub enum TermRes<Id = HirIdWrapper> {
     Local(Id),
     ToolMod,
     NonMacroAttr(TermNonMacroAttrKind),
+    Err,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

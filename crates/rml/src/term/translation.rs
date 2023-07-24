@@ -1016,7 +1016,7 @@ where
             Res::Local(l) => Self::Local(l.into()),
             Res::ToolMod => Self::ToolMod,
             Res::NonMacroAttr(n) => Self::NonMacroAttr(n.into()),
-            Res::Err => unreachable!(),
+            Res::Err => Self::Err,
         }
     }
 }

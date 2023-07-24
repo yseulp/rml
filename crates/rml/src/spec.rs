@@ -7,7 +7,7 @@ use std::collections::HashMap;
 use serde::{Deserialize, Serialize};
 
 use self::hir::{HirSpec, HirSpecCase};
-use crate::term::{translation::HirInto, Term};
+use crate::term::{translation::HirInto, wrappers::DefIdWrapper, Term};
 pub(crate) use hir::{collect_hir_specs, HirSpecMap};
 
 pub(crate) mod hir;
@@ -21,11 +21,7 @@ pub enum SpecKind {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SpecCase {
-    #[serde(
-        serialize_with = "serialize::serialize_did",
-        deserialize_with = "serialize::deserialize_did"
-    )]
-    pub did: DefId,
+    pub did: DefIdWrapper,
     pub kind: SpecKind,
     pub name: String,
     pub pre: Vec<Term>,
@@ -72,7 +68,7 @@ impl<'hir> SpecCase {
         };
 
         Self {
-            did: hcase.did,
+            did: hcase.did.into(),
             kind: hcase.kind,
             name,
             pre,
@@ -83,9 +79,9 @@ impl<'hir> SpecCase {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize)]
 pub struct Spec {
-    pub target: DefId,
+    pub target: DefIdWrapper,
     pub cases: Vec<SpecCase>,
 }
 
@@ -94,7 +90,7 @@ impl<'hir> Spec {
         let mut normal_count = 0;
         let mut panic_count = 0;
         Self {
-            target,
+            target: target.into(),
             cases: hspec
                 .cases
                 .iter()
