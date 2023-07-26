@@ -96,14 +96,27 @@ impl Callbacks for ExtractSpec {
     }
 }
 
-pub unsafe fn store_rcx<'tcx>(rcx: RmlCtxt<'tcx>) {
+/// Stores the [`RmlCtxt`] between compiler phases so we can access both AST and HIR where necessary.
+///
+/// # Safety
+///
+/// We extend the lifetime of `rcx` to `'static` but this is safe as long as we only retrieve
+/// the context (using [`retrieve_rcx`]) with the compiler's `tcx`, which has the correct lifetime `'tcx`.
+pub unsafe fn store_rcx(rcx: RmlCtxt<'_>) {
     RML_CTXT.with(|ctx| {
         let rcx = unsafe { std::mem::transmute(rcx) };
         ctx.borrow_mut().replace(rcx)
     });
 }
 
-pub unsafe fn retrieve_rcx<'tcx>(_tcx: TyCtxt<'tcx>) -> RmlCtxt<'tcx> {
+/// Retrieves the stored [`RmlCtxt`] stored in the last compiler phase so we can access both AST and HIR where necessary.
+/// Leaves an empty [Option] in its place.
+///
+/// # Safety
+///
+/// We constrain the lifetime of `rcx` from `'static` to `'tcx` but this is safe because the context originally had
+/// the lifetime `'tcx` when we stored it.
+pub unsafe fn retrieve_rcx(_tcx: TyCtxt<'_>) -> RmlCtxt<'_> {
     let rcx: RmlCtxt<'static> = RML_CTXT.with(|ctx| ctx.replace(None).unwrap());
     unsafe { std::mem::transmute(rcx) }
 }

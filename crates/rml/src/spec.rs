@@ -122,7 +122,7 @@ impl<'hir> SpecMap {
     }
 }
 
-fn get_expr_from_did<'hir>(hir: Map<'hir>, did: DefId) -> &'hir Expr {
+fn get_expr_from_did(hir: Map<'_>, did: DefId) -> &Expr {
     let body = get_body(hir, did);
     match body.value.kind {
         ExprKind::Block(Block { stmts, .. }, None) => match stmts[0].kind {
@@ -133,7 +133,7 @@ fn get_expr_from_did<'hir>(hir: Map<'hir>, did: DefId) -> &'hir Expr {
     }
 }
 
-fn get_body<'hir>(hir: Map<'hir>, did: DefId) -> &'hir Body<'hir> {
+fn get_body(hir: Map<'_>, did: DefId) -> &Body<'_> {
     let bid = hir.body_owned_by(did.expect_local());
     hir.body(bid)
 }

@@ -34,7 +34,7 @@ impl<'tcx> RmlCtxt<'tcx> {
     }
 }
 
-pub(crate) fn is_in_logic_ctx<'tcx>(tcx: TyCtxt<'tcx>, did: DefId) -> bool {
+pub(crate) fn is_in_logic_ctx(tcx: TyCtxt<'_>, did: DefId) -> bool {
     util::is_spec(tcx, did) || util::is_logic(tcx, did)
 }
 
@@ -50,26 +50,24 @@ impl<'a, 'tcx> thir::visit::Visitor<'a, 'tcx> for LogicCallVisitor<'a, 'tcx> {
     }
 
     fn visit_expr(&mut self, expr: &thir::Expr<'tcx>) {
-        match expr.kind {
-            ExprKind::Call { fun, .. } => {
-                if let &ty::FnDef(func_did, _) = self.thir[fun].ty.kind() {
-                    let called_is_logic = is_in_logic_ctx(self.tcx, func_did);
-                    if !self.in_logic_ctx && called_is_logic {
-                        let name = self.tcx.def_path_str(func_did);
-                        let msg = format!("called logical function '{name}' in program function");
+        if let ExprKind::Call { fun, .. } = expr.kind {
+            if let &ty::FnDef(func_did, _) = self.thir[fun].ty.kind() {
+                let called_is_logic = is_in_logic_ctx(self.tcx, func_did);
+                if !self.in_logic_ctx && called_is_logic {
+                    let name = self.tcx.def_path_str(func_did);
+                    let msg = format!("called logical function '{name}' in program function");
 
-                        self.tcx.sess.span_err_with_code(
-                            self.thir[fun].span,
-                            msg,
-                            rustc_errors::DiagnosticId::Error(String::from("rml")),
-                        );
-                    }
-                } else {
-                    todo!("Why is this an error? {fun:?}")
+                    self.tcx.sess.span_err_with_code(
+                        self.thir[fun].span,
+                        msg,
+                        rustc_errors::DiagnosticId::Error(String::from("rml")),
+                    );
                 }
+            } else {
+                todo!("Why is this an error? {fun:?}")
             }
-            _ => {}
         }
+
         thir::visit::walk_expr(self, expr)
     }
 }

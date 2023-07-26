@@ -69,9 +69,7 @@ impl<'hir> FromHir<'hir, &'hir Expr<'hir>> for Term {
 impl<'hir> FromHir<'hir, ExprKind<'hir>> for TermKind {
     fn from_hir(value: ExprKind<'hir>, hir: Map<'hir>) -> Self {
         match value {
-            ExprKind::Array(exprs) => {
-                Self::Array(exprs.into_iter().map(|e| e.hir_into(hir)).collect())
-            }
+            ExprKind::Array(exprs) => Self::Array(exprs.iter().map(|e| e.hir_into(hir)).collect()),
             ExprKind::Call(recv, args) => match recv.kind {
                 ExprKind::Path(QPath::Resolved(None, Path { segments, .. }))
                     if is_stub(segments) =>
@@ -109,16 +107,16 @@ impl<'hir> FromHir<'hir, ExprKind<'hir>> for TermKind {
                 }
                 _ => Self::Call(
                     Box::new(recv.hir_into(hir)),
-                    args.into_iter().map(|a| a.hir_into(hir)).collect(),
+                    args.iter().map(|a| a.hir_into(hir)).collect(),
                 ),
             },
             ExprKind::MethodCall(path, recv, args, span) => Self::MethodCall(
                 path.hir_into(hir),
                 Box::new(recv.hir_into(hir)),
-                args.into_iter().map(|a| a.hir_into(hir)).collect(),
+                args.iter().map(|a| a.hir_into(hir)).collect(),
                 span.into(),
             ),
-            ExprKind::Tup(exprs) => Self::Tup(exprs.into_iter().map(|e| e.hir_into(hir)).collect()),
+            ExprKind::Tup(exprs) => Self::Tup(exprs.iter().map(|e| e.hir_into(hir)).collect()),
             ExprKind::Binary(op, left, right) => Self::Binary(
                 op.into(),
                 Box::new(left.hir_into(hir)),
@@ -135,7 +133,7 @@ impl<'hir> FromHir<'hir, ExprKind<'hir>> for TermKind {
             ),
             ExprKind::Match(expr, arms, source) => Self::Match(
                 Box::new(expr.hir_into(hir)),
-                arms.into_iter().map(|a| a.hir_into(hir)).collect(),
+                arms.iter().map(|a| a.hir_into(hir)).collect(),
                 source.into(),
             ),
             ExprKind::Closure(c) => Self::Closure(c.hir_into(hir)),
@@ -150,7 +148,7 @@ impl<'hir> FromHir<'hir, ExprKind<'hir>> for TermKind {
             }
             ExprKind::Struct(p, fields, rest) => Self::Struct(
                 p.hir_into(hir),
-                fields.into_iter().map(|f| f.hir_into(hir)).collect(),
+                fields.iter().map(|f| f.hir_into(hir)).collect(),
                 rest.map(|r| Box::new(r.hir_into(hir))),
             ),
             ExprKind::Repeat(expr, len) => {
@@ -212,7 +210,7 @@ impl<'hir> FromHir<'hir, &'hir Closure<'hir>> for TermClosure {
             capture_clause: value.capture_clause.into(),
             bound_generic_params: value
                 .bound_generic_params
-                .into_iter()
+                .iter()
                 .map(|p| p.hir_into(hir))
                 .collect(),
             fn_decl: value.fn_decl.hir_into(hir),
@@ -254,7 +252,7 @@ impl From<CaptureBy> for TermCaptureBy {
 impl<'hir> FromHir<'hir, &'hir FnDecl<'hir>> for TermFnDecl {
     fn from_hir(value: &'hir FnDecl<'hir>, hir: Map<'hir>) -> Self {
         Self {
-            inputs: value.inputs.into_iter().map(|i| i.hir_into(hir)).collect(),
+            inputs: value.inputs.iter().map(|i| i.hir_into(hir)).collect(),
             output: value.output.hir_into(hir),
             c_variadic: value.c_variadic,
             implicit_self: value.implicit_self.into(),
@@ -296,7 +294,7 @@ impl From<Movability> for TermMovability {
 impl<'hir> FromHir<'hir, &'hir Block<'hir>> for TermBlock {
     fn from_hir(value: &'hir Block<'hir>, hir: Map<'hir>) -> Self {
         Self {
-            stmts: value.stmts.into_iter().map(|s| s.hir_into(hir)).collect(),
+            stmts: value.stmts.iter().map(|s| s.hir_into(hir)).collect(),
             term: value.expr.map(|e| Box::new(e.hir_into(hir))),
             hir_id: value.hir_id.into(),
             rules: value.rules.into(),
@@ -380,7 +378,7 @@ impl<'hir> FromHir<'hir, &'hir Local<'hir>> for TermLocal {
 impl<'hir> FromHir<'hir, &'hir Body<'hir>> for TermBody {
     fn from_hir(value: &'hir Body<'hir>, hir: Map<'hir>) -> Self {
         Self {
-            params: value.params.into_iter().map(|p| p.hir_into(hir)).collect(),
+            params: value.params.iter().map(|p| p.hir_into(hir)).collect(),
             value: Box::new(value.value.hir_into(hir)),
         }
     }
@@ -420,20 +418,19 @@ impl<'hir> FromHir<'hir, PatKind<'hir>> for TermPatKind {
             ),
             PatKind::Struct(qp, fields, rest) => Self::Struct(
                 qp.hir_into(hir),
-                fields.into_iter().map(|f| f.hir_into(hir)).collect(),
+                fields.iter().map(|f| f.hir_into(hir)).collect(),
                 rest,
             ),
             PatKind::TupleStruct(qp, elems, ddp) => Self::TupleStruct(
                 qp.hir_into(hir),
-                elems.into_iter().map(|e| e.hir_into(hir)).collect(),
+                elems.iter().map(|e| e.hir_into(hir)).collect(),
                 ddp.into(),
             ),
-            PatKind::Or(pats) => Self::Or(pats.into_iter().map(|p| p.hir_into(hir)).collect()),
+            PatKind::Or(pats) => Self::Or(pats.iter().map(|p| p.hir_into(hir)).collect()),
             PatKind::Path(qp) => Self::Path(qp.hir_into(hir)),
-            PatKind::Tuple(pats, ddp) => Self::Tuple(
-                pats.into_iter().map(|p| p.hir_into(hir)).collect(),
-                ddp.into(),
-            ),
+            PatKind::Tuple(pats, ddp) => {
+                Self::Tuple(pats.iter().map(|p| p.hir_into(hir)).collect(), ddp.into())
+            }
             PatKind::Box(p) => Self::Box(Box::new(p.hir_into(hir))),
             PatKind::Ref(p, m) => Self::Ref(Box::new(p.hir_into(hir)), m.into()),
             PatKind::Lit(e) => Self::Lit(Box::new(e.hir_into(hir))),
@@ -443,9 +440,9 @@ impl<'hir> FromHir<'hir, PatKind<'hir>> for TermPatKind {
                 re.into(),
             ),
             PatKind::Slice(start, mid, end) => Self::Slice(
-                start.into_iter().map(|p| p.hir_into(hir)).collect(),
+                start.iter().map(|p| p.hir_into(hir)).collect(),
                 mid.map(|m| Box::new(m.hir_into(hir))),
-                end.into_iter().map(|p| p.hir_into(hir)).collect(),
+                end.iter().map(|p| p.hir_into(hir)).collect(),
             ),
         }
     }
@@ -526,15 +523,15 @@ impl<'hir> FromHir<'hir, TyKind<'hir>> for TermTyKind {
             TyKind::Ref(l, mty) => Self::Ref(l.into(), Box::new(mty.hir_into(hir))),
             TyKind::BareFn(f) => Self::BareFn(f.hir_into(hir)),
             TyKind::Never => Self::Never,
-            TyKind::Tup(tys) => Self::Tup(tys.into_iter().map(|ty| ty.hir_into(hir)).collect()),
+            TyKind::Tup(tys) => Self::Tup(tys.iter().map(|ty| ty.hir_into(hir)).collect()),
             TyKind::Path(p) => Self::Path(p.hir_into(hir)),
             TyKind::OpaqueDef(id, args, in_def) => Self::OpaqueDef(
                 id.into(),
-                args.into_iter().map(|a| a.hir_into(hir)).collect(),
+                args.iter().map(|a| a.hir_into(hir)).collect(),
                 in_def,
             ),
             TyKind::TraitObject(prefs, l, syn) => Self::TraitObject(
-                prefs.into_iter().map(|r| r.hir_into(hir)).collect(),
+                prefs.iter().map(|r| r.hir_into(hir)).collect(),
                 l.into(),
                 syn.into(),
             ),
@@ -560,13 +557,13 @@ impl<'hir> FromHir<'hir, &'hir BareFnTy<'hir>> for TermBareFnTy {
             abi: value.abi.into(),
             generic_params: value
                 .generic_params
-                .into_iter()
+                .iter()
                 .map(|p| p.hir_into(hir))
                 .collect(),
             decl: value.decl.hir_into(hir),
             param_names: value
                 .param_names
-                .into_iter()
+                .iter()
                 .map(|ident| (*ident).into())
                 .collect(),
         }
@@ -672,8 +669,8 @@ impl<'hir> From<&'hir LitKind> for TermLitKind {
     fn from(value: &'hir LitKind) -> Self {
         match value {
             LitKind::Str(sym, style) => Self::Str((*sym).into(), style.into()),
-            LitKind::ByteStr(sl, style) => Self::ByteStr((sl.clone()).into(), style.into()),
-            LitKind::CStr(sl, style) => Self::CStr((sl.clone()).into(), style.into()),
+            LitKind::ByteStr(sl, style) => Self::ByteStr(sl.clone(), style.into()),
+            LitKind::CStr(sl, style) => Self::CStr(sl.clone(), style.into()),
             LitKind::Byte(b) => Self::Byte(*b),
             LitKind::Char(c) => Self::Char(*c),
             LitKind::Int(i, t) => Self::Int(*i, t.into()),
@@ -749,12 +746,8 @@ impl<'hir> FromHir<'hir, &'hir QPath<'hir>> for TermQPath {
 impl<'hir> FromHir<'hir, &'hir GenericArgs<'hir>> for TermGenericArgs {
     fn from_hir(value: &'hir GenericArgs<'hir>, hir: Map<'hir>) -> Self {
         Self {
-            args: value.args.into_iter().map(|a| a.hir_into(hir)).collect(),
-            bindings: value
-                .bindings
-                .into_iter()
-                .map(|b| b.hir_into(hir))
-                .collect(),
+            args: value.args.iter().map(|a| a.hir_into(hir)).collect(),
+            bindings: value.bindings.iter().map(|b| b.hir_into(hir)).collect(),
             parenthesized: value.parenthesized.into(),
             span_ext: value.span_ext.into(),
         }
@@ -838,7 +831,7 @@ impl<'hir> FromHir<'hir, TypeBindingKind<'hir>> for TermTypeBindingKind {
     fn from_hir(value: TypeBindingKind<'hir>, hir: Map<'hir>) -> Self {
         match value {
             TypeBindingKind::Constraint { bounds } => Self::Constraint {
-                bounds: bounds.into_iter().map(|b| b.hir_into(hir)).collect(),
+                bounds: bounds.iter().map(|b| b.hir_into(hir)).collect(),
             },
             TypeBindingKind::Equality { term } => Self::Equality {
                 hir_term: term.hir_into(hir),
@@ -887,7 +880,7 @@ impl<'hir> FromHir<'hir, &'hir PolyTraitRef<'hir>> for TermPolyTraitRef {
         Self {
             bound_generic_params: value
                 .bound_generic_params
-                .into_iter()
+                .iter()
                 .map(|p| p.hir_into(hir))
                 .collect(),
             trait_ref: value.trait_ref.hir_into(hir),
@@ -983,16 +976,12 @@ where
         Self {
             span: value.span.into(),
             res: value.res.into(),
-            segments: value
-                .segments
-                .into_iter()
-                .map(|s| s.hir_into(hir))
-                .collect(),
+            segments: value.segments.iter().map(|s| s.hir_into(hir)).collect(),
         }
     }
 }
 
-impl<'hir, Id1, Id2> From<Res<Id1>> for TermRes<Id2>
+impl<Id1, Id2> From<Res<Id1>> for TermRes<Id2>
 where
     Id1: Into<Id2>,
 {
@@ -1009,8 +998,8 @@ where
                 is_trait_impl,
             } => Self::SelfTyAlias {
                 alias_to: alias_to.into(),
-                forbid_generic: forbid_generic,
-                is_trait_impl: is_trait_impl,
+                forbid_generic,
+                is_trait_impl,
             },
             Res::SelfCtor(c) => Self::SelfCtor(c.into()),
             Res::Local(l) => Self::Local(l.into()),
@@ -1302,14 +1291,9 @@ fn is_stub(segments: &[PathSegment]) -> bool {
         return false;
     }
 
-    if segments[0].ident.name == Symbol::intern("{{root}}")
+    segments[0].ident.name == Symbol::intern("{{root}}")
         && segments[1].ident.name == Symbol::intern("rml_contracts")
         && segments[2].ident.name == Symbol::intern("stubs")
-    {
-        true
-    } else {
-        false
-    }
 }
 
 fn get_stub_kind(segments: &[PathSegment]) -> Option<StubKind> {

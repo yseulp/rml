@@ -66,7 +66,7 @@ impl<'tcx> RmlCtxt<'tcx> {
     }
 }
 
-pub(crate) fn get_purity<'tcx>(tcx: TyCtxt<'tcx>, did: DefId) -> Purity {
+pub(crate) fn get_purity(tcx: TyCtxt<'_>, did: DefId) -> Purity {
     // Theoretically, since logic and spec functions may call pure functions, they are not strictly pure.
     // But, because they are not "really" called, they do not change the memory and are, thus, strictly pure
     if util::is_spec(tcx, did)
@@ -93,29 +93,26 @@ impl<'a, 'tcx> thir::visit::Visitor<'a, 'tcx> for PurityVisitor<'a, 'tcx> {
     }
 
     fn visit_expr(&mut self, expr: &thir::Expr<'tcx>) {
-        match expr.kind {
-            ExprKind::Call { fun, .. } => {
-                if let &ty::FnDef(func_did, _) = self.thir[fun].ty.kind() {
-                    let called_purity = get_purity(self.tcx, func_did);
-                    if !self.purity.may_call(called_purity) {
-                        let msg = format!(
-                            "called {} function '{}' from {} function",
-                            called_purity,
-                            self.tcx.def_path_str(func_did),
-                            self.purity
-                        );
+        if let ExprKind::Call { fun, .. } = expr.kind {
+            if let &ty::FnDef(func_did, _) = self.thir[fun].ty.kind() {
+                let called_purity = get_purity(self.tcx, func_did);
+                if !self.purity.may_call(called_purity) {
+                    let msg = format!(
+                        "called {} function '{}' from {} function",
+                        called_purity,
+                        self.tcx.def_path_str(func_did),
+                        self.purity
+                    );
 
-                        self.tcx.sess.span_err_with_code(
-                            self.thir[fun].span,
-                            msg,
-                            rustc_errors::DiagnosticId::Error(String::from("rml")),
-                        );
-                    }
-                } else {
-                    todo!("Why is this an error? {fun:?}")
+                    self.tcx.sess.span_err_with_code(
+                        self.thir[fun].span,
+                        msg,
+                        rustc_errors::DiagnosticId::Error(String::from("rml")),
+                    );
                 }
+            } else {
+                todo!("Why is this an error? {fun:?}")
             }
-            _ => {}
         }
         thir::visit::walk_expr(self, expr)
     }

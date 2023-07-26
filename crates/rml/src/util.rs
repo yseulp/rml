@@ -66,7 +66,7 @@ pub(crate) fn get_attr<'a>(attrs: &'a [Attribute], path: &[&str]) -> Option<&'a 
             .segments
             .iter()
             .zip(path.iter())
-            .fold(true, |acc, (seg, s)| acc && &*seg.ident.as_str() == *s);
+            .fold(true, |acc, (seg, s)| acc && seg.ident.as_str() == *s);
 
         if matches {
             return Some(attr);

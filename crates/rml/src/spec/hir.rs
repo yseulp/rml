@@ -87,7 +87,7 @@ impl HirSpecMap {
     }
 }
 
-pub fn collect_hir_specs<'tcx>(tcx: TyCtxt<'tcx>) -> HirSpecMap {
+pub fn collect_hir_specs(tcx: TyCtxt<'_>) -> HirSpecMap {
     let mut all_spec_case_refs = HashMap::new();
     let mut all_cases = HashMap::new();
     let mut all_pres = HashMap::new();
@@ -100,8 +100,8 @@ pub fn collect_hir_specs<'tcx>(tcx: TyCtxt<'tcx>) -> HirSpecMap {
 
         for attr in tcx.get_attrs_unchecked(did) {
             if util::is_attr(attr, "spec_case_ref") {
-                if !all_spec_case_refs.contains_key(&did) {
-                    all_spec_case_refs.insert(did, vec![attr.value_str().unwrap()]);
+                if let std::collections::hash_map::Entry::Vacant(e) = all_spec_case_refs.entry(did) {
+                    e.insert(vec![attr.value_str().unwrap()]);
                 } else {
                     all_spec_case_refs
                         .get_mut(&did)
@@ -142,7 +142,7 @@ pub fn collect_hir_specs<'tcx>(tcx: TyCtxt<'tcx>) -> HirSpecMap {
                     case.push_pre(all_pres.remove(&name).unwrap());
                 } else if util::is_attr(attr, "spec_part_post_ref") {
                     let name = attr.value_str().unwrap();
-                    case.push_post(all_posts.remove(&name).expect(name.as_str()));
+                    case.push_post(all_posts.remove(&name).unwrap_or_else(|| { panic!("{}", name.as_str().to_string()) }));
                 } else if util::is_attr(attr, "spec_part_var_ref") {
                     let name = attr.value_str().unwrap();
                     case.add_variant(all_variants.remove(&name).unwrap());
