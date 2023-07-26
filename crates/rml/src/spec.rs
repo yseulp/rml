@@ -104,8 +104,8 @@ impl<'hir> Spec {
     }
 }
 
-#[derive(Debug, Clone)]
-pub struct SpecMap(pub HashMap<DefId, Spec>);
+#[derive(Debug, Clone, Serialize)]
+pub struct SpecMap(pub HashMap<DefIdWrapper, Spec>);
 
 impl<'hir> SpecMap {
     pub fn new(tcx: TyCtxt<'hir>, hir_smap: &HirSpecMap) -> SpecMap {
@@ -114,8 +114,8 @@ impl<'hir> SpecMap {
 
         for (did, hspec) in &hir_smap.0 {
             let spec = Spec::new(*did, hir, hspec);
-
-            map.insert(*did, spec);
+            let did_w = (*did).into();
+            map.insert(did_w, spec);
         }
 
         Self(map)

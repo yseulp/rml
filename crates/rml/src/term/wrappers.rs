@@ -65,7 +65,7 @@ impl From<LocalDefId> for LocalDefIdWrapper {
     }
 }
 
-#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct DefIdWrapper(
     #[serde(
         serialize_with = "crate::spec::serialize::serialize_did",

@@ -83,11 +83,13 @@ impl Callbacks for ExtractSpec {
             let rcx = unsafe { retrieve_rcx(tcx) };
             let specs = rcx.get_specs();
             for spec in specs.0.values() {
-                println!(
-                    "{}",
-                    serde_json::to_string_pretty(spec).expect("expected no serialization errors")
-                )
+                println!("{spec:#?}");
             }
+            let specs: Vec<_> = specs.0.values().collect();
+            println!(
+                "{}",
+                serde_json::to_string_pretty(&specs).expect("expected no serialization errors")
+            )
         });
 
         Compilation::Continue
