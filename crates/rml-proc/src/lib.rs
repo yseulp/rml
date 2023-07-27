@@ -214,6 +214,7 @@ fn fn_spec_item(spec_id: Ident, sig: Signature, result: FnArg, mut spec: Spec, s
         .map(|(i, p)| {
             let id = &pre_idents[i];
             let id_str = id.to_string();
+            let span = p.span();
             let t = p.encode();
             let mut res: ItemFn = parse_quote_spanned! { span =>
                 #[allow(unused_variables)]
@@ -240,6 +241,7 @@ fn fn_spec_item(spec_id: Ident, sig: Signature, result: FnArg, mut spec: Spec, s
     let post = spec.post_conds.into_iter().enumerate().map(|(i, p)| {
         let id = &post_idents[i];
         let id_str = id.to_string();
+        let span = p.span();
         let t = p.encode();
         let mut res: ItemFn = parse_quote_spanned! { span =>
             #[allow(unused_variables)]
@@ -259,6 +261,7 @@ fn fn_spec_item(spec_id: Ident, sig: Signature, result: FnArg, mut spec: Spec, s
 
     // variant
     let (var_attr, var) = if let Some(v) = spec.variant {
+        let span = v.span();
         let t = v.encode();
         let id = generate_unique_ident("spec_part_var");
         let id_str = id.to_string();
@@ -286,6 +289,7 @@ fn fn_spec_item(spec_id: Ident, sig: Signature, result: FnArg, mut spec: Spec, s
     let (div, div_attr) = {
         let id = generate_unique_ident("spec_part_div");
         let id_str = id.to_string();
+        let span = diverges.span();
         let t = diverges.encode();
 
         let mut item: ItemFn = parse_quote_spanned! { span =>
