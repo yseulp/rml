@@ -4,7 +4,7 @@ use rustc_middle::ty::TyCtxt;
 
 use std::{cell::RefCell, fs, thread_local};
 
-use crate::{ctx::RmlCtxt, spec::Spec, Options, OutputFile};
+use crate::{ctx::RmlCtxt, spec::Spec, suppress_borrowck::suppress_borrowck, Options, OutputFile};
 
 thread_local! {
     static RML_CTXT: RefCell<Option<RmlCtxt<'static>>> = RefCell::new(None);
@@ -25,7 +25,8 @@ impl Callbacks for ExtractSpec {
         config.override_queries = Some(|_, providers, _| {
             providers.mir_built = |tcx, did| {
                 let mir = (rustc_interface::DEFAULT_QUERY_PROVIDERS.mir_built)(tcx, did);
-                let mir = mir.steal();
+                let mut mir = mir.steal();
+                suppress_borrowck(tcx, did.to_def_id(), &mut mir);
                 tcx.alloc_steal_mir(mir)
             }
         });

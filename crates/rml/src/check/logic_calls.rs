@@ -1,7 +1,7 @@
 use crate::{
     ctx::RmlCtxt,
     error::{Error, RmlErr},
-    util,
+    util::{self, is_internal},
 };
 use rustc_hir::def_id::{DefId, LocalDefId};
 use rustc_middle::{
@@ -21,11 +21,16 @@ impl<'tcx> RmlCtxt<'tcx> {
         }
 
         let did = did.to_def_id();
+        // Internal items (e.g., the `exists` and `forall` functions) should not be checked
+        if is_internal(tcx, did) {
+            return;
+        }
         let in_logic_ctx = is_in_logic_ctx(tcx, did);
 
         thir::visit::walk_expr(
             &mut LogicCallVisitor {
                 tcx,
+                did,
                 thir: &thir,
                 in_logic_ctx,
             },
@@ -42,6 +47,7 @@ pub(crate) struct LogicCallVisitor<'a, 'tcx> {
     pub(crate) tcx: TyCtxt<'tcx>,
     pub(crate) thir: &'a Thir<'tcx>,
     pub(crate) in_logic_ctx: bool,
+    pub(crate) did: DefId,
 }
 
 impl<'a, 'tcx> thir::visit::Visitor<'a, 'tcx> for LogicCallVisitor<'a, 'tcx> {
@@ -55,7 +61,9 @@ impl<'a, 'tcx> thir::visit::Visitor<'a, 'tcx> for LogicCallVisitor<'a, 'tcx> {
                 let called_is_logic = is_in_logic_ctx(self.tcx, func_did);
                 if !self.in_logic_ctx && called_is_logic {
                     let name = self.tcx.def_path_str(func_did);
-                    let msg = format!("called logical function '{name}' in program function");
+                    let caller = self.tcx.def_path_str(self.did);
+                    let msg =
+                        format!("called logical function '{name}' in program function {caller}");
 
                     self.tcx.sess.span_err_with_code(
                         self.thir[fun].span,

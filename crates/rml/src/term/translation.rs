@@ -72,12 +72,12 @@ impl<'hir> FromHir<'hir, ExprKind<'hir>> for TermKind {
             ExprKind::Array(exprs) => Self::Array(exprs.iter().map(|e| e.hir_into(hir)).collect()),
             ExprKind::Call(recv, args) => match recv.kind {
                 ExprKind::Path(QPath::Resolved(None, Path { segments, .. }))
-                    if is_stub(segments) =>
+                    if is_rml_fn(segments) =>
                 {
-                    let kind = get_stub_kind(segments).expect("expected valid stub function");
+                    let kind = get_rml_fn_kind(segments).expect("expected valid stub function");
                     let qkind = match kind {
-                        StubKind::Exists => QuantorKind::Exists,
-                        StubKind::Forall => QuantorKind::Forall,
+                        RmlFnKind::Exists => QuantorKind::Exists,
+                        RmlFnKind::Forall => QuantorKind::Forall,
                     };
 
                     let clo: TermClosure = match args[0].kind {
@@ -1284,24 +1284,57 @@ impl<'hir> From<&'hir LangItem> for TermLangItem {
 enum StubKind {
     Exists,
     Forall,
+    Equiv,
 }
 
-fn is_stub(segments: &[PathSegment]) -> bool {
-    if segments.len() != 4 {
-        return false;
-    }
+enum TraitFn {
+    OrdLt,
+    OrdLe,
+    OrdGe,
+    OrdGt,
+    Index,
+    ShallowModel,
+    DeepModel,
+}
 
-    segments[0].ident.name == Symbol::intern("{{root}}")
+enum RmlFnKind {
+    Stub(StubKind),
+    TraitFn(TraitFn),
+}
+
+fn is_rml_fn(segments: &[PathSegment]) -> bool {
+    (segments.len() == 4
+        && segments[0].ident.name == Symbol::intern("{{root}}")
         && segments[1].ident.name == Symbol::intern("rml_contracts")
-        && segments[2].ident.name == Symbol::intern("stubs")
+        && segments[2].ident.name == Symbol::intern("stubs"))
+        || (segments.len() == 5
+            && segments[0].ident.name == Symbol::intern("{{root}}")
+            && segments[1].ident.name == Symbol::intern("rml_contracts")
+            && segments[2].ident.name == Symbol::intern("logic"))
 }
 
-fn get_stub_kind(segments: &[PathSegment]) -> Option<StubKind> {
-    let name = segments[3].ident.name;
-    if name == Symbol::intern("exists") {
-        Some(StubKind::Exists)
-    } else if name == Symbol::intern("forall") {
-        Some(StubKind::Forall)
+fn get_rml_fn_kind(segments: &[PathSegment]) -> Option<RmlFnKind> {
+    let kind = segments[2].ident.name;
+    if kind == Symbol::intern("stubs") {
+        let name = segments[3].ident.name;
+        if name == Symbol::intern("exists") {
+            Some(RmlFnKind::Stub(StubKind::Exists))
+        } else if name == Symbol::intern("forall") {
+            Some(RmlFnKind::Stub(StubKind::Forall))
+        } else if name == Symbol::intern("equiv") {
+            Some(RmlFnKind::Stub(StubKind::Equiv))
+        } else {
+            None
+        }
+    }
+    if kind == Symbol::intern("logic") {
+        let r#trait = segments[3].ident.as_str();
+        let r#fn = segments[4].ident.as_str();
+
+        match (r#trait, r#fn) {
+            ("OrdLogic", "lt_logic") => Some(RmlFnKind::TraitFn(TraitFn::OrdLt)),
+            _ => panic!(),
+        }
     } else {
         None
     }

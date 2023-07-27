@@ -118,7 +118,7 @@ fn setup_plugin() {
         args.push("-Zcrate-attr=feature(register_tool)".to_owned());
         args.push("-Zcrate-attr=register_tool(rml)".to_owned());
         args.push("-Zcrate-attr=feature(stmt_expr_attributes)".to_owned());
-        // args.push("-Zcrate-attr=feature(proc_macro_hygiene)".to_owned());
+        args.push("-Zcrate-attr=feature(proc_macro_hygiene)".to_owned());
         args.push("-Zcrate-attr=feature(rustc_attrs)".to_owned());
         args.push("-Zcrate-attr=feature(unsized_fn_params)".to_owned());
         args.extend(["--cfg", "rml"].into_iter().map(str::to_owned));

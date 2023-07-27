@@ -13,7 +13,7 @@ use syn::{
     punctuated::{Pair, Punctuated},
     spanned::Spanned,
     AngleBracketedGenericArguments, Arm, Block, Expr, ExprArray, ExprBinary, ExprBlock, ExprCall,
-    ExprCast, ExprClosure, ExprField, ExprGroup, ExprIf, ExprIndex, ExprLet, ExprLit, ExprMatch,
+    ExprCast, ExprClosure, ExprField, ExprGroup, ExprIf, ExprLet, ExprLit, ExprMatch,
     ExprMethodCall, ExprParen, ExprRange, ExprRepeat, ExprStruct, ExprTuple, ExprUnary, FieldValue,
     GenericArgument, Local, LocalInit, Stmt,
 };
@@ -32,12 +32,32 @@ impl Encode for Term {
                 bracket_token,
                 elems: encode_punctuated(elems),
             }),
-            Term::Binary(TermBinary { left, op, right }) => Expr::Binary(ExprBinary {
-                attrs: Vec::new(),
-                left: left.encode().into(),
-                op,
-                right: right.encode().into(),
-            }),
+            Term::Binary(TermBinary { left, op, right }) => {
+                use syn::BinOp::*;
+
+                let left = left.encode();
+                let right = right.encode();
+                match op {
+                    Lt(_) => {
+                        parse_quote_spanned! { sp => ::rml_contracts::logic::OrdLogic::lt_log(#left, #right) }
+                    }
+                    Le(_) => {
+                        parse_quote_spanned! { sp => ::rml_contracts::logic::OrdLogic::le_log(#left, #right) }
+                    }
+                    Ge(_) => {
+                        parse_quote_spanned! { sp => ::rml_contracts::logic::OrdLogic::ge_log(#left, #right) }
+                    }
+                    Gt(_) => {
+                        parse_quote_spanned! { sp => ::rml_contracts::logic::OrdLogic::gt_log(#left, #right) }
+                    }
+                    _ => Expr::Binary(ExprBinary {
+                        attrs: Vec::new(),
+                        left: left.into(),
+                        op,
+                        right: right.into(),
+                    }),
+                }
+            }
             Term::Block(TermBlock { label, block }) => Expr::Block(ExprBlock {
                 attrs: Vec::new(),
                 label,
@@ -84,7 +104,7 @@ impl Encode for Term {
                 for arg in args.into_iter().rev() {
                     let id = arg.ident;
                     let ty = arg.ty;
-                    body = parse_quote_spanned! { sp => ::rml_contracts::stubs::exists(|#id: #ty| #body) }
+                    body = parse_quote_spanned! { sp => ::rml_contracts::stubs::exists(#[rml::decl::logic] |#id: #ty| #body) }
                 }
                 body
             }
@@ -103,7 +123,7 @@ impl Encode for Term {
                 for arg in args.into_iter().rev() {
                     let id = arg.ident;
                     let ty = arg.ty;
-                    body = parse_quote_spanned! { sp => ::rml_contracts::stubs::forall(|#id: #ty| #body) }
+                    body = parse_quote_spanned! { sp => ::rml_contracts::stubs::forall(#[rml::decl::logic] |#id: #ty| #body) }
                 }
                 body
             }
@@ -129,16 +149,12 @@ impl Encode for Term {
                 let cons = cons.encode();
                 parse_quote_spanned! { sp => ::rml_contracts::stubs::impl(#hyp, #cons)}
             }
-            Term::Index(TermIndex {
-                term,
-                bracket_token,
-                index,
-            }) => Expr::Index(ExprIndex {
-                attrs: Vec::new(),
-                expr: term.encode().into(),
-                bracket_token,
-                index: index.encode().into(),
-            }),
+            Term::Index(TermIndex { term, index, .. }) => {
+                let expr = term.encode();
+                let index = index.encode();
+
+                parse_quote_spanned! { sp => ::rml_contracts::IndexLogic::index_logic(#expr, #index) }
+            }
             Term::Let(TermLet {
                 let_token,
                 pat,
@@ -247,7 +263,10 @@ impl Encode for TBlock {
     type Target = Block;
 
     fn encode(self) -> Block {
-        todo!()
+        syn::Block {
+            brace_token: self.brace_token,
+            stmts: self.stmts.into_iter().map(|s| s.encode()).collect(),
+        }
     }
 }
 
@@ -255,7 +274,14 @@ impl Encode for TermArm {
     type Target = Arm;
 
     fn encode(self) -> Arm {
-        todo!()
+        syn::Arm {
+            attrs: Vec::new(),
+            pat: self.pat,
+            guard: self.guard.map(|(r#if, t)| (r#if, t.encode().into())),
+            fat_arrow_token: self.fat_arrow_token,
+            body: self.body.encode().into(),
+            comma: self.comma,
+        }
     }
 }
 

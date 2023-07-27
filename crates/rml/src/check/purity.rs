@@ -9,7 +9,7 @@ use rustc_middle::{
 use crate::{
     ctx::RmlCtxt,
     error::{Error, RmlErr},
-    util,
+    util::{self, is_internal},
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -53,6 +53,10 @@ impl<'tcx> RmlCtxt<'tcx> {
         }
 
         let did = did.to_def_id();
+        // Internal items (e.g., the `exists` and `forall` functions) should not be checked
+        if is_internal(tcx, did) {
+            return;
+        }
         let purity = get_purity(tcx, did);
 
         thir::visit::walk_expr(

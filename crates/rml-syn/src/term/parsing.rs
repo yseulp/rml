@@ -808,6 +808,27 @@ fn parse_term(
                 gt_token,
                 cons: Box::new(rhs),
             });
+        } else if Precedence::Compare >= base && input.peek(Token![==]) && input.peek3(Token![=]) {
+            // a === b
+            let eqeq_token: Token![==] = input.parse()?;
+            let eq_token: Token![=] = input.parse()?;
+            let precedence = Precedence::Compare;
+            let mut rhs = unary_term(input, allow_struct)?;
+            loop {
+                let next = peek_precedence(input);
+                if next >= precedence {
+                    rhs = parse_term(input, rhs, allow_struct, next)?;
+                } else {
+                    break;
+                }
+            }
+
+            lhs = Term::LogEq(TermLogEq {
+                lhs: Box::new(lhs),
+                eqeq_token,
+                eq_token,
+                rhs: Box::new(rhs),
+            })
         } else if input
             .fork()
             .parse::<BinOp>()

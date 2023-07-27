@@ -6,6 +6,7 @@ extern crate rustc_driver;
 extern crate rustc_errors;
 extern crate rustc_hir;
 extern crate rustc_hir_pretty;
+extern crate rustc_index;
 extern crate rustc_interface;
 extern crate rustc_macros;
 extern crate rustc_middle;
@@ -20,6 +21,7 @@ pub(crate) mod check;
 pub(crate) mod ctx;
 pub mod error;
 pub mod spec;
+pub(crate) mod suppress_borrowck;
 pub mod term;
 pub(crate) mod util;
 
