@@ -6,9 +6,12 @@ use std::{
 };
 
 fn main() {
-    // println!("Cargo RML!");
-
     let args = Args::parse_from(std::env::args().skip(1));
+
+    println!(
+        r"=== Running Cargo RML! ===
+"
+    );
 
     let rml_rustc_path = env::current_exe()
         .expect("current executable path invalid")
@@ -23,6 +26,7 @@ fn main() {
         .args(args.rust_flags)
         .env("RUSTC_WRAPPER", rml_rustc_path)
         .env("CARGO_RML", "1")
+        .env("CARGO_INCREMENTAL", "0")
         .env("RUST_LOG", "debug")
         .env("RUST_BACKTRACE", "1");
 
@@ -34,4 +38,9 @@ fn main() {
     if !exit_status.success() {
         exit(exit_status.code().unwrap_or(-1));
     }
+    println!(
+        r"
+=== Cargo RML succeeded. === 
+=== Remember to run `cargo clean` before compiling your code for other purposes! ==="
+    )
 }

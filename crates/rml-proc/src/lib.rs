@@ -217,7 +217,7 @@ fn fn_spec_item(spec_id: Ident, sig: Signature, result: FnArg, mut spec: Spec, s
             let span = p.span();
             let t = p.encode();
             let mut res: ItemFn = parse_quote_spanned! { span =>
-                #[allow(unused_variables)]
+                #[allow(unused_variables, dead_code)]
                 #[rml::spec::pre=#id_str]
                 fn #id() -> bool {
                     let cond: bool = !!(#t);
@@ -244,7 +244,7 @@ fn fn_spec_item(spec_id: Ident, sig: Signature, result: FnArg, mut spec: Spec, s
         let span = p.span();
         let t = p.encode();
         let mut res: ItemFn = parse_quote_spanned! { span =>
-            #[allow(unused_variables)]
+            #[allow(unused_variables, dead_code)]
             #[rml::spec::post=#id_str]
             fn #id() -> bool {
                 let cond: bool = !!(#t);
@@ -266,7 +266,7 @@ fn fn_spec_item(spec_id: Ident, sig: Signature, result: FnArg, mut spec: Spec, s
         let id = generate_unique_ident("spec_part_var");
         let id_str = id.to_string();
         let mut item: ItemFn = parse_quote_spanned! { span =>
-            #[allow(unused_variables)]
+            #[allow(unused_variables, dead_code)]
             #[rml::spec::var=#id_str]
             fn #id() -> impl ::rml_contracts::WellFounded {
                 #t
@@ -293,7 +293,7 @@ fn fn_spec_item(spec_id: Ident, sig: Signature, result: FnArg, mut spec: Spec, s
         let t = diverges.encode();
 
         let mut item: ItemFn = parse_quote_spanned! { span =>
-            #[allow(unused_variables)]
+            #[allow(unused_variables, dead_code)]
             #[rml::spec::div=#id_str]
             fn #id() -> bool {
                 let b: bool = !!(#t);

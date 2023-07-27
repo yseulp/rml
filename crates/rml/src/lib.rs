@@ -28,6 +28,9 @@ pub struct Options {
     pub should_output: bool,
     pub output_file: Option<OutputFile>,
     pub in_cargo: bool,
+    pub print_expanded: bool,
+    pub print_specs_debug: bool,
+    pub pretty_print: bool,
 }
 
 #[derive(Debug, Clone)]

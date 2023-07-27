@@ -2,9 +2,9 @@ use rustc_driver::{Callbacks, Compilation};
 use rustc_interface::{interface::Compiler, Config, Queries};
 use rustc_middle::ty::TyCtxt;
 
-use std::{cell::RefCell, thread_local};
+use std::{cell::RefCell, fs, thread_local};
 
-use crate::{ctx::RmlCtxt, Options};
+use crate::{ctx::RmlCtxt, spec::Spec, Options, OutputFile};
 
 thread_local! {
     static RML_CTXT: RefCell<Option<RmlCtxt<'static>>> = RefCell::new(None);
@@ -34,33 +34,35 @@ impl Callbacks for ExtractSpec {
     fn after_expansion<'tcx>(&mut self, c: &Compiler, queries: &'tcx Queries<'tcx>) -> Compilation {
         c.session().abort_if_errors();
 
-        // based on the implementation of rustc_driver::pretty::print_after_parsing
-        queries.global_ctxt().unwrap().enter(|tcx| {
-            let sess = c.session();
-            let krate = &tcx.resolver_for_lowering(()).borrow().1;
-            let src_name = sess.io.input.source_name();
-            let src = sess
-                .source_map()
-                .get_source_file(&src_name)
-                .expect("get_source_file")
-                .src
-                .as_ref()
-                .expect("src")
-                .to_string();
-            print!(
-                "{}",
-                rustc_ast_pretty::pprust::print_crate(
-                    sess.source_map(),
-                    krate,
-                    src_name,
-                    src,
-                    &rustc_ast_pretty::pprust::state::NoAnn,
-                    false,
-                    sess.edition(),
-                    &sess.parse_sess.attr_id_generator,
-                )
-            );
-        });
+        if self.opts.print_expanded {
+            // based on the implementation of rustc_driver::pretty::print_after_parsing
+            queries.global_ctxt().unwrap().enter(|tcx| {
+                let sess = c.session();
+                let krate = &tcx.resolver_for_lowering(()).borrow().1;
+                let src_name = sess.io.input.source_name();
+                let src = sess
+                    .source_map()
+                    .get_source_file(&src_name)
+                    .expect("get_source_file")
+                    .src
+                    .as_ref()
+                    .expect("src")
+                    .to_string();
+                print!(
+                    "{}",
+                    rustc_ast_pretty::pprust::print_crate(
+                        sess.source_map(),
+                        krate,
+                        src_name,
+                        src,
+                        &rustc_ast_pretty::pprust::state::NoAnn,
+                        false,
+                        sess.edition(),
+                        &sess.parse_sess.attr_id_generator,
+                    )
+                );
+            });
+        }
 
         queries.global_ctxt().unwrap().enter(|tcx| {
             let mut rcx = RmlCtxt::new(tcx, self.opts.clone());
@@ -82,14 +84,16 @@ impl Callbacks for ExtractSpec {
         queries.global_ctxt().unwrap().enter(|tcx| {
             let rcx = unsafe { retrieve_rcx(tcx) };
             let specs = rcx.get_specs();
-            for spec in specs.0.values() {
-                println!("{spec:#?}");
+            if self.opts.print_specs_debug {
+                for spec in specs.0.values() {
+                    println!("{spec:#?}");
+                }
             }
             let specs: Vec<_> = specs.0.values().collect();
-            println!(
-                "{}",
-                serde_json::to_string_pretty(&specs).expect("expected no serialization errors")
-            )
+
+            if let Some(of) = &self.opts.output_file {
+                output_specs(&specs, of, self.opts.pretty_print);
+            }
         });
 
         Compilation::Continue
@@ -119,4 +123,20 @@ pub unsafe fn store_rcx(rcx: RmlCtxt<'_>) {
 pub unsafe fn retrieve_rcx(_tcx: TyCtxt<'_>) -> RmlCtxt<'_> {
     let rcx: RmlCtxt<'static> = RML_CTXT.with(|ctx| ctx.replace(None).unwrap());
     unsafe { std::mem::transmute(rcx) }
+}
+
+fn output_specs(specs: &Vec<&Spec>, out_file: &OutputFile, pretty_print: bool) {
+    let json = if pretty_print {
+        serde_json::to_string_pretty(specs)
+    } else {
+        serde_json::to_string(specs)
+    }
+    .expect("expected no serialization errors");
+
+    match out_file {
+        OutputFile::File(file) => {
+            fs::write(file, json).unwrap();
+        }
+        OutputFile::Stdout => println!("{json}"),
+    }
 }
