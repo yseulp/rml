@@ -1,6 +1,12 @@
+use crate::PatType;
+
 use super::*;
 use std::{cmp::Ordering, mem};
-use syn::parse::{Parse, ParseStream, Result};
+use syn::{
+    braced, bracketed, parenthesized,
+    parse::{Parse, ParseStream, Result},
+    Error, Lifetime, LitFloat, PathArguments,
+};
 
 syn::custom_keyword!(raw);
 
@@ -131,7 +137,6 @@ fn stmt_local(input: ParseStream) -> Result<TLocal> {
                 let colon_token: Token![:] = input.parse()?;
                 let ty: Type = input.parse()?;
                 pat = Pat::Type(PatType {
-                    attrs: Vec::new(),
                     pat: Box::new(pat),
                     colon_token,
                     ty: Box::new(ty),
@@ -358,7 +363,7 @@ fn trailer_helper(input: ParseStream, mut e: Term) -> Result<Term> {
                 paren_token: parenthesized!(content in input),
                 args: content.parse_terminated(Term::parse, Token![,])?,
             });
-        } else if input.peek(Token![.]) && !input.peek(Token![..]) {
+        } else if input.peek(Token![.]) && !input.peek(Token![..]) && !matches!(e, Term::Range(_)) {
             let mut dot_token: Token![.] = input.parse()?;
 
             let float_token: Option<LitFloat> = input.parse()?;
@@ -746,37 +751,15 @@ fn term_closure(input: ParseStream, allow_struct: AllowStruct) -> Result<TermClo
 }
 
 fn closure_arg(input: ParseStream) -> Result<Pat> {
-    let attrs = input.call(Attribute::parse_outer)?;
-    let mut pat = Pat::parse_single(input)?;
+    let pat = Pat::parse_single(input)?;
 
     if input.peek(Token![:]) {
         Ok(Pat::Type(PatType {
-            attrs,
             pat: Box::new(pat),
             colon_token: input.parse()?,
             ty: input.parse()?,
         }))
     } else {
-        match &mut pat {
-            Pat::Const(pat) => pat.attrs = attrs,
-            Pat::Ident(pat) => pat.attrs = attrs,
-            Pat::Lit(pat) => pat.attrs = attrs,
-            Pat::Macro(pat) => pat.attrs = attrs,
-            Pat::Or(pat) => pat.attrs = attrs,
-            Pat::Paren(pat) => pat.attrs = attrs,
-            Pat::Path(pat) => pat.attrs = attrs,
-            Pat::Range(pat) => pat.attrs = attrs,
-            Pat::Reference(pat) => pat.attrs = attrs,
-            Pat::Rest(pat) => pat.attrs = attrs,
-            Pat::Slice(pat) => pat.attrs = attrs,
-            Pat::Struct(pat) => pat.attrs = attrs,
-            Pat::Tuple(pat) => pat.attrs = attrs,
-            Pat::TupleStruct(pat) => pat.attrs = attrs,
-            Pat::Type(_) => unreachable!(),
-            Pat::Verbatim(_) => {}
-            Pat::Wild(pat) => pat.attrs = attrs,
-            _ => unimplemented!(),
-        }
         Ok(pat)
     }
 }
@@ -852,6 +835,33 @@ fn parse_term(
                 op,
                 right: Box::new(rhs),
             });
+        } else if Precedence::Range >= base && input.peek(Token![..]) {
+            let limits: RangeLimits = input.parse()?;
+            let rhs = if matches!(limits, RangeLimits::HalfOpen(_))
+                && (input.is_empty()
+                    || input.peek(Token![,])
+                    || input.peek(Token![;])
+                    || input.peek(Token![.]) && !input.peek(Token![..])
+                    || !allow_struct.0 && input.peek(token::Brace))
+            {
+                None
+            } else {
+                let mut rhs = unary_term(input, allow_struct)?;
+                loop {
+                    let next = peek_precedence(input);
+                    if next > Precedence::Range {
+                        rhs = parse_term(input, rhs, allow_struct, next)?;
+                    } else {
+                        break;
+                    }
+                }
+                Some(rhs)
+            };
+            lhs = Term::Range(TermRange {
+                start: Some(Box::new(lhs)),
+                limits,
+                end: rhs.map(Box::new),
+            });
         } else if Precedence::Cast >= base && input.peek(Token![as]) {
             let as_token: Token![as] = input.parse()?;
             let ty = input.call(Type::without_plus)?;
@@ -879,7 +889,7 @@ fn peek_precedence(input: ParseStream) -> Precedence {
         Precedence::Assign
     } else if input.peek(Token![..]) {
         Precedence::Range
-    } else if input.peek(Token![as]) || input.peek(Token![:]) && !input.peek(Token![::]) {
+    } else if input.peek(Token![as]) {
         Precedence::Cast
     } else {
         Precedence::Any
@@ -898,9 +908,9 @@ fn term_let(input: ParseStream) -> Result<TermLet> {
 
 fn term_range(input: ParseStream, allow_struct: AllowStruct) -> Result<TermRange> {
     Ok(TermRange {
-        from: None,
+        start: None,
         limits: input.parse()?,
-        to: {
+        end: {
             if input.is_empty()
                 || input.peek(Token![,])
                 || input.peek(Token![;])

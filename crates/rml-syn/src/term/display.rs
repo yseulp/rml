@@ -284,7 +284,7 @@ impl fmt::Display for TermPath {
 
 impl fmt::Display for TermRange {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match (&self.from, self.limits, &self.to) {
+        match (&self.start, self.limits, &self.end) {
             (None, syn::RangeLimits::HalfOpen(_), None) => write!(f, ".."),
             (None, syn::RangeLimits::HalfOpen(_), Some(to)) => write!(f, "..{to}"),
             (None, syn::RangeLimits::Closed(_), None) => write!(f, "..="),

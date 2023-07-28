@@ -287,12 +287,12 @@ impl ToTokens for TermIndex {
 
 impl ToTokens for TermRange {
     fn to_tokens(&self, tokens: &mut TokenStream) {
-        self.from.to_tokens(tokens);
+        self.start.to_tokens(tokens);
         match &self.limits {
             RangeLimits::HalfOpen(t) => t.to_tokens(tokens),
             RangeLimits::Closed(t) => t.to_tokens(tokens),
         }
-        self.to.to_tokens(tokens);
+        self.end.to_tokens(tokens);
     }
 }
 

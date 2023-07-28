@@ -1,10 +1,13 @@
 // Adapted from syn and creusot
 
-use syn::{parse::discouraged::AnyDelimiter, punctuated::Punctuated, *};
+use syn::{
+    parse::discouraged::AnyDelimiter, punctuated::Punctuated, token, Attribute, BinOp, ExprMacro,
+    ExprPath, Ident, Item, Label, Lit, Member, Path, RangeLimits, ReturnType, Token, Type, UnOp,
+};
 
 use proc_macro2::{Delimiter, TokenStream};
 
-use syn::Pat;
+use crate::Pat;
 
 pub(crate) mod display;
 pub(crate) mod encoding;
@@ -17,7 +20,7 @@ mod kw {
 }
 
 ast_enum_of_structs! {
-    /// A RML term. Modeled after syn's Term.
+    /// A RML term. Modeled after syn's Expr.
     #[derive(Clone)]
     #[non_exhaustive]
     pub enum Term {
@@ -340,9 +343,9 @@ ast_struct! {
 ast_struct! {
     /// A range term: `1..2`, `1..`, `..2`, `1..=2`, `..=2`.
     pub struct TermRange {
-        pub from: Option<Box<Term>>,
+        pub start: Option<Box<Term>>,
         pub limits: RangeLimits,
-        pub to: Option<Box<Term>>,
+        pub end: Option<Box<Term>>,
     }
 }
 

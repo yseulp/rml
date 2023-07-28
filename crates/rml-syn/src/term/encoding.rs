@@ -94,7 +94,7 @@ impl Encode for Term {
                 asyncness: None,
                 capture: None,
                 or1_token,
-                inputs,
+                inputs: encode_punctuated(inputs),
                 or2_token,
                 output,
                 body: body.encode().into(),
@@ -163,7 +163,7 @@ impl Encode for Term {
             }) => Expr::Let(ExprLet {
                 attrs: Vec::new(),
                 let_token,
-                pat: pat.into(),
+                pat: pat.encode().into(),
                 eq_token,
                 expr: term.encode().into(),
             }),
@@ -211,7 +211,11 @@ impl Encode for Term {
                 expr: term.encode().into(),
             }),
             Term::Path(TermPath { inner }) => Expr::Path(inner),
-            Term::Range(TermRange { from, limits, to }) => Expr::Range(ExprRange {
+            Term::Range(TermRange {
+                start: from,
+                limits,
+                end: to,
+            }) => Expr::Range(ExprRange {
                 attrs: Vec::new(),
                 start: from.map(|s| s.encode().into()),
                 limits,
@@ -276,7 +280,7 @@ impl Encode for TermArm {
     fn encode(self) -> Arm {
         syn::Arm {
             attrs: Vec::new(),
-            pat: self.pat,
+            pat: self.pat.encode(),
             guard: self.guard.map(|(r#if, t)| (r#if, t.encode().into())),
             fat_arrow_token: self.fat_arrow_token,
             body: self.body.encode().into(),
@@ -335,7 +339,7 @@ impl Encode for TermStmt {
             }) => Stmt::Local(Local {
                 attrs: Vec::new(),
                 let_token,
-                pat,
+                pat: pat.encode(),
                 init: init.map(|(eq, t)| LocalInit {
                     eq_token: eq,
                     expr: t.encode().into(),
@@ -350,7 +354,7 @@ impl Encode for TermStmt {
     }
 }
 
-fn encode_punctuated<T, P>(punct: Punctuated<T, P>) -> Punctuated<T::Target, P>
+pub(crate) fn encode_punctuated<T, P>(punct: Punctuated<T, P>) -> Punctuated<T::Target, P>
 where
     T: Encode,
 {

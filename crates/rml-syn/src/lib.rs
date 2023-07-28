@@ -5,12 +5,14 @@ pub(crate) mod macros;
 pub(crate) mod print;
 
 pub mod locset;
+pub mod pat;
 pub mod spec;
 pub mod subject;
 pub mod term;
 
 use std::iter;
 
+pub use pat::*;
 pub use spec::*;
 use syn::{AttrStyle, Attribute};
 pub use term::*;
