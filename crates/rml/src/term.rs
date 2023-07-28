@@ -41,7 +41,13 @@ pub enum TermKind {
 
     // RML special kinds
     Quantor(QuantorKind, QuantorParam, Box<Term>),
-    LogEq(Box<Term>, Box<Term>),
+    Model(ModelKind, Box<Term>),
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum ModelKind {
+    Shallow,
+    Deep,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -77,6 +83,9 @@ pub enum TermBinOpKind {
     Ne,
     Ge,
     Gt,
+
+    // RML
+    LogEq,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

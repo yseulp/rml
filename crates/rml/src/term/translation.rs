@@ -74,36 +74,91 @@ impl<'hir> FromHir<'hir, ExprKind<'hir>> for TermKind {
                 ExprKind::Path(QPath::Resolved(None, Path { segments, .. }))
                     if is_rml_fn(segments) =>
                 {
-                    let kind = get_rml_fn_kind(segments).expect("expected valid stub function");
-                    let qkind = match kind {
-                        RmlFnKind::Exists => QuantorKind::Exists,
-                        RmlFnKind::Forall => QuantorKind::Forall,
-                    };
+                    let kind = get_rml_fn_kind(segments).expect("expected valid rml function");
 
-                    let clo: TermClosure = match args[0].kind {
-                        ExprKind::Closure(c) => c.hir_into(hir),
-                        _ => unreachable!(),
-                    };
-                    let param = {
-                        let c_param = &clo.body.params[0];
-
-                        let ident = match c_param.pat.kind {
-                            TermPatKind::Binding(_, _, ident, _) => ident,
+                    if let Some(qkind) = kind.get_quant_kind() {
+                        let clo: TermClosure = match args[0].kind {
+                            ExprKind::Closure(c) => c.hir_into(hir),
                             _ => unreachable!(),
                         };
+                        let param = {
+                            let c_param = &clo.body.params[0];
 
-                        QuantorParam {
-                            hir_id: c_param.hir_id,
-                            ident,
-                            ty: clo.fn_decl.inputs[0].clone(),
-                            span: c_param.span,
-                            ty_span: c_param.ty_span,
+                            let ident = match c_param.pat.kind {
+                                TermPatKind::Binding(_, _, ident, _) => ident,
+                                _ => unreachable!(),
+                            };
+
+                            QuantorParam {
+                                hir_id: c_param.hir_id,
+                                ident,
+                                ty: clo.fn_decl.inputs[0].clone(),
+                                span: c_param.span,
+                                ty_span: c_param.ty_span,
+                            }
+                        };
+
+                        let term = clo.body.value;
+
+                        return Self::Quantor(qkind, param, term);
+                    }
+
+                    match kind {
+                        RmlFnKind::Stub(StubKind::Equiv) => {
+                            let left: Term = (&args[0]).hir_into(hir);
+                            let right: Term = (&args[1]).hir_into(hir);
+
+                            TermKind::Binary(
+                                TermBinOp {
+                                    node: TermBinOpKind::LogEq,
+                                    span: recv.span.into(),
+                                },
+                                left.into(),
+                                right.into(),
+                            )
                         }
-                    };
+                        RmlFnKind::Stub(_) => unreachable!(),
+                        RmlFnKind::TraitFn(TraitFn::ShallowModel) => {
+                            let term: Term = (&args[0]).hir_into(hir);
+                            TermKind::Model(super::ModelKind::Shallow, term.into())
+                        }
+                        RmlFnKind::TraitFn(TraitFn::DeepModel) => {
+                            let term: Term = (&args[0]).hir_into(hir);
+                            TermKind::Model(super::ModelKind::Deep, term.into())
+                        }
+                        RmlFnKind::TraitFn(TraitFn::Index) => {
+                            let term: Term = (&args[0]).hir_into(hir);
+                            let index: Term = (&args[1]).hir_into(hir);
 
-                    let term = clo.body.value;
+                            TermKind::Index(term.into(), index.into())
+                        }
+                        RmlFnKind::TraitFn(
+                            ord @ TraitFn::OrdLt
+                            | ord @ TraitFn::OrdLe
+                            | ord @ TraitFn::OrdGe
+                            | ord @ TraitFn::OrdGt,
+                        ) => {
+                            let left: Term = (&args[0]).hir_into(hir);
+                            let right: Term = (&args[1]).hir_into(hir);
 
-                    Self::Quantor(qkind, param, term)
+                            let node = match ord {
+                                TraitFn::OrdLt => TermBinOpKind::Lt,
+                                TraitFn::OrdLe => TermBinOpKind::Le,
+                                TraitFn::OrdGe => TermBinOpKind::Ge,
+                                TraitFn::OrdGt => TermBinOpKind::Gt,
+                                _ => unreachable!(),
+                            };
+
+                            TermKind::Binary(
+                                TermBinOp {
+                                    node,
+                                    span: recv.span.into(),
+                                },
+                                left.into(),
+                                right.into(),
+                            )
+                        }
+                    }
                 }
                 _ => Self::Call(
                     Box::new(recv.hir_into(hir)),
@@ -1302,6 +1357,16 @@ enum RmlFnKind {
     TraitFn(TraitFn),
 }
 
+impl RmlFnKind {
+    fn get_quant_kind(&self) -> Option<QuantorKind> {
+        match self {
+            Self::Stub(StubKind::Exists) => Some(QuantorKind::Exists),
+            Self::Stub(StubKind::Forall) => Some(QuantorKind::Forall),
+            _ => None,
+        }
+    }
+}
+
 fn is_rml_fn(segments: &[PathSegment]) -> bool {
     (segments.len() == 4
         && segments[0].ident.name == Symbol::intern("{{root}}")
@@ -1326,14 +1391,19 @@ fn get_rml_fn_kind(segments: &[PathSegment]) -> Option<RmlFnKind> {
         } else {
             None
         }
-    }
-    if kind == Symbol::intern("logic") {
+    } else if kind == Symbol::intern("logic") {
         let r#trait = segments[3].ident.as_str();
         let r#fn = segments[4].ident.as_str();
 
         match (r#trait, r#fn) {
-            ("OrdLogic", "lt_logic") => Some(RmlFnKind::TraitFn(TraitFn::OrdLt)),
-            _ => panic!(),
+            ("OrdLogic", "lt_log") => Some(RmlFnKind::TraitFn(TraitFn::OrdLt)),
+            ("OrdLogic", "le_log") => Some(RmlFnKind::TraitFn(TraitFn::OrdLe)),
+            ("OrdLogic", "ge_log") => Some(RmlFnKind::TraitFn(TraitFn::OrdGe)),
+            ("OrdLogic", "gt_log") => Some(RmlFnKind::TraitFn(TraitFn::OrdGt)),
+            ("ShallowModel", "shallow_model") => Some(RmlFnKind::TraitFn(TraitFn::ShallowModel)),
+            ("DeepModel", "DeepModel") => Some(RmlFnKind::TraitFn(TraitFn::DeepModel)),
+            ("IndexLogic", "index_logic") => Some(RmlFnKind::TraitFn(TraitFn::Index)),
+            _ => panic!("Unknown trait {} or function {}", r#trait, r#fn),
         }
     } else {
         None

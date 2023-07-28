@@ -153,7 +153,7 @@ impl Encode for Term {
                 let expr = term.encode();
                 let index = index.encode();
 
-                parse_quote_spanned! { sp => ::rml_contracts::IndexLogic::index_logic(#expr, #index) }
+                parse_quote_spanned! { sp => ::rml_contracts::logic::IndexLogic::index_logic(#expr, #index) }
             }
             Term::Let(TermLet {
                 let_token,
