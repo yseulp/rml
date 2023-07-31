@@ -31,7 +31,7 @@ impl fmt::Display for Term {
             Term::Let(t) => fmt::Display::fmt(t, f),
             Term::Lit(t) => fmt::Display::fmt(t, f),
             Term::LogEq(t) => fmt::Display::fmt(t, f),
-            Term::Macro(t) => fmt::Display::fmt(&t.into_token_stream(), f),
+            Term::Macro(t) => fmt::Display::fmt(&t.to_token_stream(), f),
             Term::Match(t) => fmt::Display::fmt(t, f),
             Term::MethodCall(t) => fmt::Display::fmt(t, f),
             Term::Paren(t) => fmt::Display::fmt(t, f),
@@ -126,12 +126,12 @@ impl fmt::Display for TermStmt {
         match self {
             TermStmt::Local(s) => {
                 if let Some((_, i)) = &s.init {
-                    writeln!(f, "let {} = {};", s.pat.clone().into_token_stream(), i)
+                    writeln!(f, "let {} = {};", s.pat.to_token_stream(), i)
                 } else {
-                    writeln!(f, "let {};", s.pat.clone().into_token_stream())
+                    writeln!(f, "let {};", s.pat.to_token_stream())
                 }
             }
-            TermStmt::Item(s) => writeln!(f, "{}", s.into_token_stream()),
+            TermStmt::Item(s) => writeln!(f, "{}", s.to_token_stream()),
             TermStmt::Term(t) => writeln!(f, "{t}"),
             TermStmt::Semi(t, _) => writeln!(f, "{t};"),
         }
@@ -155,12 +155,7 @@ impl fmt::Display for TermCall {
 
 impl fmt::Display for TermCast {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(
-            f,
-            "{} as {}",
-            self.term,
-            self.ty.clone().into_token_stream()
-        )
+        write!(f, "{} as {}", self.term, self.ty.to_token_stream())
     }
 }
 
@@ -218,18 +213,13 @@ impl fmt::Display for TermIndex {
 
 impl fmt::Display for TermLet {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(
-            f,
-            "let {} = {}",
-            self.pat.clone().into_token_stream(),
-            self.term
-        )
+        write!(f, "let {} = {}", self.pat.to_token_stream(), self.term)
     }
 }
 
 impl fmt::Display for TermLit {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        fmt::Display::fmt(&self.lit.clone().into_token_stream(), f)
+        fmt::Display::fmt(&self.lit.to_token_stream(), f)
     }
 }
 
@@ -247,7 +237,7 @@ impl fmt::Display for TermMatch {
             self.term,
             self.arms
                 .iter()
-                .map(|a| format!("\n{} => {}", a.pat.clone().into_token_stream(), a.body))
+                .map(|a| format!("\n{} => {}", a.pat.to_token_stream(), a.body))
                 .collect::<Vec<_>>()
                 .join("")
         )
@@ -278,7 +268,7 @@ impl fmt::Display for TermParen {
 
 impl fmt::Display for TermPath {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        fmt::Display::fmt(&self.inner.clone().into_token_stream(), f)
+        fmt::Display::fmt(&self.inner.to_token_stream(), f)
     }
 }
 
@@ -309,7 +299,7 @@ impl fmt::Display for TermStruct {
             write!(
                 f,
                 "{} {{{}, ..{}}}",
-                self.path.clone().into_token_stream(),
+                self.path.to_token_stream(),
                 self.fields.to_token_stream(),
                 r
             )
@@ -317,7 +307,7 @@ impl fmt::Display for TermStruct {
             write!(
                 f,
                 "{} {{{}}}",
-                self.path.clone().into_token_stream(),
+                self.path.to_token_stream(),
                 self.fields.to_token_stream(),
             )
         }

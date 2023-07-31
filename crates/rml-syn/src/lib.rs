@@ -17,10 +17,7 @@ pub use spec::*;
 use syn::{AttrStyle, Attribute};
 pub use term::*;
 
-pub fn l() -> bool {
-    true
-}
-
+/// Encoding trait for translating an rml-syn element into a syn-element
 pub trait Encode {
     type Target;
     fn encode(self) -> Self::Target;
