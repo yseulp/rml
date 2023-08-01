@@ -1,8 +1,18 @@
-use syn::parse::Parse;
+use syn::{punctuated::Punctuated, token, Member, Token};
 
-mod print;
+use crate::{Term, TermPath};
+
+mod display;
+mod encoding;
+mod parsing;
+mod printing;
+
+mod kw {
+    syn::custom_keyword!(nothing);
+}
 
 ast_enum_of_structs! {
+    #[derive(Clone)]
     pub enum LocSetTerm {
         /// A specific field of a term `obj.k` or `obj.0`.
         Field(LocSetField),
@@ -10,42 +20,61 @@ ast_enum_of_structs! {
         /// The union of all fields of a term `obj.*`.
         FieldWildcard(LocSetFieldWildcard),
 
-        /// A field of a vec or array: `vector[2]`.
+        /// A field of a vec or array: `vector[2]`, `vector[1..]`, `vector[1..=2]`, `vector[..]`.
         Index(LocSetIndex),
-
-        /// All fields of a vec or array: `vector[*]`.
-        IndexWildcard(LocSetIndexWildcard),
 
         /// A path like `std::mem::replace` possibly containing generic
         /// parameters and a qualified self-type.
         ///
         /// A plain identifier like `x` is a path of length 1.
         Path(LocSetPath),
+
+        /// A comma-separated list of loc sets.
+        Group(LocSetGroup),
+
+        /// Nothing. The empty loc set.
+        Nothing(LocSetNothing),
     }
 }
 
 ast_struct! {
-    pub struct LocSetField {}
+    pub struct LocSetField {
+        pub base: Box<Term>,
+        pub dot_token: Token![.],
+        pub member: Member,
+    }
 }
 
 ast_struct! {
-    pub struct LocSetFieldWildcard {}
+    pub struct LocSetFieldWildcard {
+        pub base: Box<Term>,
+        pub dot_token: Token![.],
+        pub star_token: Token![*],
+    }
 }
 
 ast_struct! {
-    pub struct LocSetIndex {}
+    pub struct LocSetIndex {
+        pub term: Box<Term>,
+        pub bracket_token: token::Bracket,
+        pub index: Box<Term>,
+    }
 }
 
 ast_struct! {
-    pub struct LocSetIndexWildcard {}
+    pub struct LocSetPath {
+        pub inner: TermPath,
+    }
 }
 
 ast_struct! {
-    pub struct LocSetPath {}
+    pub struct LocSetGroup {
+        pub items: Punctuated<LocSetTerm, Token![,]>,
+    }
 }
 
-impl Parse for LocSetTerm {
-    fn parse(_input: syn::parse::ParseStream) -> syn::Result<Self> {
-        todo!()
+ast_struct! {
+    pub struct LocSetNothing {
+        pub nothing_token: kw::nothing,
     }
 }

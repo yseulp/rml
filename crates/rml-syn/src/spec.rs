@@ -11,9 +11,13 @@ use syn::{
 
 use crate::{locset::LocSetTerm, Term};
 
+/// The kind of a specification, i.e., whether it specifies normal
+/// or panic behavior.
 #[derive(Debug, Clone, Copy)]
 pub enum SpecKind {
+    /// Normal behavior.
     Normal,
+    /// Panic behavior.
     Panic,
 }
 impl SpecKind {
@@ -22,16 +26,32 @@ impl SpecKind {
     }
 }
 
+/// Part of a spec.
 #[derive(Debug)]
 pub enum SpecPart {
+    /// `requires` takes a boolean term and specifies the pre-condition.
+    /// Defaults to `true`.
     Requires(SpecPartRequires),
+    /// `ensures` takes a boolean term and specifies the post-condition in normal behavior.
+    /// Defaults to `true`.
     Ensures(SpecPartEnsures),
+    /// `panics` takes a boolean term and specifies the post-condition in panic behavior.
+    /// Defaults to `true`.
     Panics(SpecPartPanics),
+    /// `modifies` takes a [LocSetTerm] and specifies the locations the function may change.
+    /// Defaults to ???.
     Modifies(SpecPartModifies),
+    /// `variant` takes any term implementing the `WellFounded` trait defined in `rml-contracts`.
+    /// It specifies the variant for a recursive function.
+    /// Default is no variant.
     Variant(SpecPartVariant),
+    /// `diverges` takes a boolean term and specifies under what condition
+    /// Defaults to `false` if no `diverges` part exists and `true` if it exists but is empty.
     Diverges(SpecPartDiverges),
 }
 
+/// `requires` takes a boolean term and specifies the pre-condition.
+/// Defaults to `true`.
 #[derive(Debug)]
 pub struct SpecPartRequires {
     pub requires_token: kw::requires,
@@ -39,6 +59,8 @@ pub struct SpecPartRequires {
     pub term: Option<Term>,
 }
 
+/// `ensures` takes a boolean term and specifies the post-condition in normal behavior.
+/// Defaults to `true`.
 #[derive(Debug)]
 pub struct SpecPartEnsures {
     pub ensures_token: kw::ensures,
@@ -46,6 +68,8 @@ pub struct SpecPartEnsures {
     pub term: Option<Term>,
 }
 
+/// `panics` takes a boolean term and specifies the post-condition in panic behavior.
+/// Defaults to `true`.
 #[derive(Debug)]
 pub struct SpecPartPanics {
     pub panics_token: kw::panics,
@@ -53,13 +77,18 @@ pub struct SpecPartPanics {
     pub term: Option<Term>,
 }
 
+/// `modifies` takes a [LocSetTerm] and specifies the locations the function may change.
+/// Defaults to ???.
 #[derive(Debug)]
 pub struct SpecPartModifies {
     pub modifies_token: kw::modifies,
     pub delimiter: MacroDelimiter,
-    pub terms: Punctuated<LocSetTerm, Token![,]>,
+    pub locset: LocSetTerm,
 }
 
+/// `variant` takes any term implementing the `WellFounded` trait defined in `rml-contracts`.
+/// It specifies the variant for a recursive function.
+/// Default is no variant.
 #[derive(Debug)]
 pub struct SpecPartVariant {
     pub variant_token: kw::variant,
@@ -67,6 +96,8 @@ pub struct SpecPartVariant {
     pub term: Term,
 }
 
+/// `diverges` takes a boolean term and specifies under what condition
+/// Defaults to `false` if no `diverges` part exists and `true` if it exists but is empty.
 #[derive(Debug)]
 pub struct SpecPartDiverges {
     pub diverges_token: kw::diverges,
@@ -77,15 +108,33 @@ pub struct SpecPartDiverges {
 /// A function specification.
 ///
 /// # Grammar
-/// spec ::= (name ',')? ((requires-part | ensures-part)* | (requires-part | panics-part)*)
+/// spec ::= (name ',')? (normal-spec-part | panics-spec-part)*
 ///
 /// name ::= STRING_LIT
+///
+/// normal-spec-part ::= requires-part
+///                     | ensures-part
+///                     | modifies-part
+///                     | variant-part
+///                     | diverges-part
+///
+/// panics-spec-part ::= requires-part
+///                     | panics-part
+///                     | modifies-part
+///                     | variant-part
+///                     | diverges-part
 ///
 /// requires-part ::= 'requires' ('(' term ')')?
 ///
 /// ensures-part ::= 'ensures' ('(' term ')')?
 ///
 /// panics-part ::= 'panics' ('(' term ')')?
+///
+/// modifies-part ::= 'modifies' ('(' term-loc-set ')')
+///
+/// variant-part ::= 'variant' ('(' term ')')
+///
+/// diverges-part ::= 'diverges' ('(' term ')')?
 ///
 /// term ::= _see [`Term`]_
 #[derive(Debug)]
@@ -94,7 +143,7 @@ pub struct Spec {
     pub kind: SpecKind,
     pub pre_conds: Vec<Term>,
     pub post_conds: Vec<Term>,
-    pub modifies: Option<Vec<LocSetTerm>>,
+    pub modifies: Option<LocSetTerm>,
     pub variant: Option<Term>,
     pub diverges: Option<Option<Term>>,
 }
@@ -184,18 +233,11 @@ impl Parse for SpecPartModifies {
         } else {
             return Err(syn::Error::new(input.span(), "Expeted delimiter"));
         };
-        let mut terms = Punctuated::new();
-        terms.push_value(content.parse()?);
-
-        while input.peek(Token![,]) {
-            terms.push_punct(content.parse()?);
-            terms.push_value(content.parse()?);
-        }
 
         Ok(Self {
             modifies_token,
             delimiter,
-            terms,
+            locset: content.parse()?,
         })
     }
 }
@@ -267,6 +309,8 @@ impl Parse for SpecPart {
     }
 }
 
+/// Parse a macro delimiter (parentheses, brackets, braces) and returns the tokens as well as
+/// the tokenstream between the delimiters.
 pub(crate) fn parse_delimiter(
     input: syn::parse::ParseStream,
 ) -> syn::Result<(MacroDelimiter, proc_macro2::TokenStream)> {
@@ -340,14 +384,14 @@ impl Parse for Spec {
                         post_conds.push(t)
                     }
                 }
-                SpecPart::Modifies(SpecPartModifies { terms, .. }) => {
+                SpecPart::Modifies(SpecPartModifies { locset, .. }) => {
                     if modifies.is_some() {
                         return Err(syn::Error::new(
                             input.span(),
                             "The specification has multiple declarations of 'modifies'",
                         ));
                     } else {
-                        modifies = Some(terms.into_iter().collect())
+                        modifies = Some(locset)
                     }
                 }
                 SpecPart::Variant(SpecPartVariant { term, .. }) => {

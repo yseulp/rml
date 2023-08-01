@@ -7,12 +7,16 @@ use syn::{
 
 use crate::FilterAttrs;
 
+/// The subject of a `logic` attribute.
 #[derive(Debug)]
 pub enum LogicSubject {
+    /// A function with a body.
     WithBody(ItemFn),
+    /// A trait function with no body.
     WithoutBody(TraitFnWithoutBody),
 }
 
+/// A function in a trait declaration without a body.
 #[derive(Debug)]
 pub struct TraitFnWithoutBody {
     pub attrs: Vec<Attribute>,
