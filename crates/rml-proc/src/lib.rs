@@ -1,16 +1,25 @@
+#![feature(box_patterns)]
+
 use proc_macro::TokenStream as TS1;
 use proc_macro2::{Span, TokenStream as TS2};
 use quote::{quote, quote_spanned};
-use rml_syn::{subject::LogicSubject, Encode, Spec, TBlock, Term};
+use rml_syn::{
+    locset::{LocSet, LocSetGroup},
+    subject::LogicSubject,
+    Encode, Spec, TBlock, Term,
+};
 
 use syn::{
-    parse_macro_input, parse_quote, parse_quote_spanned, spanned::Spanned, Attribute, FnArg, Ident,
-    ItemFn, Pat, ReturnType, Signature, Type,
+    parse_macro_input, parse_quote, parse_quote_spanned, punctuated::Punctuated, spanned::Spanned,
+    Attribute, FnArg, Ident, ItemFn, Pat, ReturnType, Signature, Token, Type,
 };
 
 mod subject;
+mod util;
 
 use subject::{ContractSubject, InvariantSubject};
+
+use crate::util::get_mut_ref_params;
 
 #[proc_macro_attribute]
 pub fn spec(attr: TS1, item: TS1) -> TS1 {
@@ -257,7 +266,50 @@ fn fn_spec_item(spec_id: Ident, sig: Signature, result: FnArg, mut spec: Spec, s
     });
     let post_strs = post_idents.iter().map(|i| i.to_string());
 
-    // TODO: modifies
+    // modifies
+    let locset = if let Some(ls) = spec.modifies {
+        ls
+    } else {
+        let mut_params = get_mut_ref_params(&sig);
+        let mut locsets: Vec<LocSet> = mut_params
+            .map(|a| {
+                let asp = a.span();
+                match a {
+                    FnArg::Receiver(_) => {
+                        parse_quote_spanned! { asp => self.* }
+                    }
+                    FnArg::Typed(t) => {
+                        let base = &t.pat;
+                        parse_quote_spanned! { asp => #base.* }
+                    }
+                }
+            })
+            .collect();
+        let ls = if locsets.is_empty() {
+            LocSet::Nothing(parse_quote_spanned! { span => nothing })
+        } else {
+            let first = locsets.remove(0);
+            let mut p = Punctuated::new();
+            p.push_value(first);
+            p.push_punct(Token![,](span));
+
+            LocSet::Group(LocSetGroup { items: p })
+        };
+        ls
+    };
+    let modi_id = generate_unique_ident("spec_part_modi");
+    let modi_id_str = modi_id.to_string();
+    let lse = locset.encode();
+    let modi_attr: Attribute =
+        parse_quote_spanned! { span => #[rml::spec_part_mod_ref=#modi_id_str] };
+    let mut modi: ItemFn = parse_quote_spanned! { span =>
+        #[allow(unused_variables, dead_code)]
+        #[rml::spec::modi=#modi_id_str]
+        fn #modi_id() -> ::rml_contracts::logic::LocSet {
+            #lse
+        }
+    };
+    adapt_sig(&mut modi.sig, &sig);
 
     // variant
     let (var_attr, var) = if let Some(v) = spec.variant {
@@ -316,12 +368,14 @@ fn fn_spec_item(spec_id: Ident, sig: Signature, result: FnArg, mut spec: Spec, s
         #(#pre)*
         #(#post)*
         #div
+        #modi
         #var
         #[allow(unused_must_use, unused_variables, dead_code)]
         #[rml::#spec_attr=#spec_name_str]
         #(#[rml::spec_part_pre_ref=#pre_strs])*
         #(#[rml::spec_part_post_ref=#post_strs])*
         #var_attr
+        #modi_attr
         #div_attr
         #spec_name
         const #spec_id: bool = false;

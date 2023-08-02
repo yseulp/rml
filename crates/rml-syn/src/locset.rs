@@ -13,7 +13,7 @@ mod kw {
 
 ast_enum_of_structs! {
     #[derive(Clone)]
-    pub enum LocSetTerm {
+    pub enum LocSet {
         /// A specific field of a term `obj.k` or `obj.0`.
         Field(LocSetField),
 
@@ -69,7 +69,7 @@ ast_struct! {
 
 ast_struct! {
     pub struct LocSetGroup {
-        pub items: Punctuated<LocSetTerm, Token![,]>,
+        pub items: Punctuated<LocSet, Token![,]>,
     }
 }
 

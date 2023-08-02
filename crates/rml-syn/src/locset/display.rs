@@ -3,19 +3,18 @@ use std::fmt;
 use quote::ToTokens;
 
 use super::{
-    LocSetField, LocSetFieldWildcard, LocSetGroup, LocSetIndex, LocSetNothing, LocSetPath,
-    LocSetTerm,
+    LocSet, LocSetField, LocSetFieldWildcard, LocSetGroup, LocSetIndex, LocSetNothing, LocSetPath,
 };
 
-impl fmt::Display for LocSetTerm {
+impl fmt::Display for LocSet {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            LocSetTerm::Field(l) => fmt::Display::fmt(l, f),
-            LocSetTerm::FieldWildcard(l) => fmt::Display::fmt(l, f),
-            LocSetTerm::Index(l) => fmt::Display::fmt(l, f),
-            LocSetTerm::Path(l) => fmt::Display::fmt(l, f),
-            LocSetTerm::Group(l) => fmt::Display::fmt(l, f),
-            LocSetTerm::Nothing(l) => fmt::Display::fmt(l, f),
+            LocSet::Field(l) => fmt::Display::fmt(l, f),
+            LocSet::FieldWildcard(l) => fmt::Display::fmt(l, f),
+            LocSet::Index(l) => fmt::Display::fmt(l, f),
+            LocSet::Path(l) => fmt::Display::fmt(l, f),
+            LocSet::Group(l) => fmt::Display::fmt(l, f),
+            LocSet::Nothing(l) => fmt::Display::fmt(l, f),
         }
     }
 }

@@ -4,12 +4,11 @@ use proc_macro2::{Delimiter, TokenTree};
 use syn::{
     braced, bracketed, parenthesized,
     parse::{Parse, ParseStream},
-    punctuated::Punctuated,
     token::{self, Brace, Bracket, Paren},
     LitStr, MacroDelimiter, Token,
 };
 
-use crate::{locset::LocSetTerm, Term};
+use crate::{locset::LocSet, Term};
 
 /// The kind of a specification, i.e., whether it specifies normal
 /// or panic behavior.
@@ -83,7 +82,7 @@ pub struct SpecPartPanics {
 pub struct SpecPartModifies {
     pub modifies_token: kw::modifies,
     pub delimiter: MacroDelimiter,
-    pub locset: LocSetTerm,
+    pub locset: LocSet,
 }
 
 /// `variant` takes any term implementing the `WellFounded` trait defined in `rml-contracts`.
@@ -143,7 +142,7 @@ pub struct Spec {
     pub kind: SpecKind,
     pub pre_conds: Vec<Term>,
     pub post_conds: Vec<Term>,
-    pub modifies: Option<LocSetTerm>,
+    pub modifies: Option<LocSet>,
     pub variant: Option<Term>,
     pub diverges: Option<Option<Term>>,
 }
