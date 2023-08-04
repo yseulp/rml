@@ -364,3 +364,19 @@ impl ToTokens for TermArm {
         self.comma.to_tokens(tokens);
     }
 }
+
+impl ToTokens for TermModel {
+    fn to_tokens(&self, tokens: &mut TokenStream) {
+        self.at_token.to_tokens(tokens);
+        self.term.to_tokens(tokens);
+    }
+}
+
+impl ToTokens for TermOld {
+    fn to_tokens(&self, tokens: &mut TokenStream) {
+        self.old_token.to_tokens(tokens);
+        self.paren_token.surround(tokens, |tokens| {
+            self.term.to_tokens(tokens);
+        })
+    }
+}

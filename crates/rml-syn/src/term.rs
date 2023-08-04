@@ -17,6 +17,7 @@ pub(crate) mod printing;
 mod kw {
     syn::custom_keyword!(forall);
     syn::custom_keyword!(exists);
+    syn::custom_keyword!(old);
 }
 
 ast_enum_of_structs! {
@@ -89,6 +90,12 @@ ast_enum_of_structs! {
 
         /// A method call term: `x.foo::<T>(a, b)`.
         MethodCall(TermMethodCall),
+
+        /// A model term: `x@`.
+        Model(TermModel),
+
+        /// An `old` term: `old(x)`.
+        Old(TermOld),
 
         /// A parenthesized term: `(a + b)`.
         Paren(TermParen),
@@ -317,6 +324,23 @@ ast_struct! {
         pub turbofish: Option<TermAngleBracketedGenericArguments>,
         pub paren_token: token::Paren,
         pub args: Punctuated<Term, Token![,]>,
+    }
+}
+
+ast_struct! {
+    /// A model term: `x@`.
+    pub struct TermModel{
+        pub term: Box<Term>,
+        pub at_token: Token![@],
+    }
+}
+
+ast_struct! {
+    /// An `old` term: `old(x)`.
+    pub struct TermOld {
+        pub old_token: kw::old,
+        pub paren_token: token::Paren,
+        pub term: Box<Term>,
     }
 }
 

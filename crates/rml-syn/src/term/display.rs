@@ -6,8 +6,8 @@ use syn::BinOp;
 use crate::{
     TBlock, TermArray, TermBinary, TermBlock, TermCall, TermCast, TermClosure, TermExists,
     TermField, TermForall, TermGroup, TermIf, TermImpl, TermIndex, TermLet, TermLit, TermLogEq,
-    TermMatch, TermMethodCall, TermParen, TermPath, TermRange, TermRepeat, TermStmt, TermStruct,
-    TermTuple, TermUnary,
+    TermMatch, TermMethodCall, TermModel, TermOld, TermParen, TermPath, TermRange, TermRepeat,
+    TermStmt, TermStruct, TermTuple, TermUnary,
 };
 
 use super::Term;
@@ -42,6 +42,8 @@ impl fmt::Display for Term {
             Term::Tuple(t) => fmt::Display::fmt(t, f),
             Term::Unary(t) => fmt::Display::fmt(t, f),
             Term::Verbatim(t) => fmt::Display::fmt(t, f),
+            Term::Model(t) => fmt::Display::fmt(t, f),
+            Term::Old(t) => fmt::Display::fmt(t, f),
         }
     }
 }
@@ -337,5 +339,17 @@ impl fmt::Display for TermUnary {
             _ => todo!(),
         };
         write!(f, "{op}{}", self.term)
+    }
+}
+
+impl fmt::Display for TermModel {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}@", self.term)
+    }
+}
+
+impl fmt::Display for TermOld {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "old({})", self.term)
     }
 }

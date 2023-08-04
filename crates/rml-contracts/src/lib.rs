@@ -77,6 +77,13 @@ mod macros {
         pub fn equiv<T>(_: T, _: T) -> bool {
             true
         }
+
+        #[rml::decl::logic]
+        #[rml::decl::internal]
+        #[rustc_diagnostic_item = "rml_equiv"]
+        pub fn old<T>(t: T) -> T {
+            t
+        }
     }
 }
 

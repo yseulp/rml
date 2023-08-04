@@ -2,8 +2,8 @@ use crate::{
     Encode, TBlock, TLocal, TermAngleBracketedGenericArguments, TermArm, TermArray, TermBinary,
     TermBlock, TermCall, TermCast, TermClosure, TermExists, TermField, TermFieldValue, TermForall,
     TermGenericMethodArgument, TermGroup, TermIf, TermImpl, TermIndex, TermLet, TermLit, TermLogEq,
-    TermMatch, TermMethodCall, TermParen, TermPath, TermRange, TermRepeat, TermStmt, TermStruct,
-    TermTuple, TermUnary,
+    TermMatch, TermMethodCall, TermModel, TermOld, TermParen, TermPath, TermRange, TermRepeat,
+    TermStmt, TermStruct, TermTuple, TermUnary,
 };
 
 use super::Term;
@@ -259,6 +259,12 @@ impl Encode for Term {
                 expr: term.encode().into(),
             }),
             Term::Verbatim(t) => Expr::Verbatim(t),
+            Term::Model(TermModel { term, .. }) => {
+                parse_quote_spanned! { sp => ::rml_contracts::model::ShallowModel::shallow_model(#term) }
+            }
+            Term::Old(TermOld { term, .. }) => {
+                parse_quote_spanned! { sp => ::rml_contracts::stubs::old(#term) }
+            }
         }
     }
 }
