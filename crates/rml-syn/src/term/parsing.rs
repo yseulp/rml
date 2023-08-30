@@ -468,6 +468,8 @@ fn atom_term(input: ParseStream, allow_struct: AllowStruct) -> Result<Term> {
         input.parse().map(Term::Forall)
     } else if input.peek(kw::exists) {
         input.parse().map(Term::Exists)
+    } else if input.peek(kw::old) {
+        input.parse().map(Term::Old)
     } else if input.peek(Token![match]) {
         input.parse().map(Term::Match)
     } else if input.peek(token::Brace) {
@@ -1013,5 +1015,20 @@ impl Parse for TermPath {
         // let (qself, path) = syn::path::parsing::qpath(input, true)?;
         // Ok(TermPath { qself: exp_path.qself, path: exp_path.path })
         Ok(TermPath { inner: exp_path })
+    }
+}
+
+impl Parse for TermOld {
+    fn parse(input: ParseStream) -> Result<Self> {
+        let old_token = input.parse()?;
+        let content;
+        let paren_token = parenthesized!(content in input);
+        let term: Term = content.parse()?;
+
+        Ok(TermOld {
+            old_token,
+            paren_token,
+            term: term.into(),
+        })
     }
 }
