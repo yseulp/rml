@@ -1,4 +1,6 @@
-// Adapted from syn and creusot
+//! Contains the data types for RML terms.
+//!
+//! Adapted from syn and creusot.
 
 use syn::{
     parse::discouraged::AnyDelimiter, punctuated::Punctuated, token, Attribute, BinOp, ExprMacro,
@@ -21,7 +23,7 @@ mod kw {
 }
 
 ast_enum_of_structs! {
-    /// A RML term. Modeled after syn's Expr.
+    /// A RML term. Modeled after syn's `Expr`.
     #[derive(Clone)]
     #[non_exhaustive]
     pub enum Term {
@@ -43,14 +45,14 @@ ast_enum_of_structs! {
         /// A closure term: `|a, b| a + b`.
         Closure(TermClosure),
 
-        /// Logical existential quantification
+        /// Logical existential quantification: `exists(|i: Int| i > 0)`.
         Exists(TermExists),
 
         /// Access of a named struct field (`obj.k`) or unnamed tuple struct
         /// field (`obj.0`).
         Field(TermField),
 
-        /// Logical universal quantification
+        /// Logical universal quantification: `forall(|x: u32| x >= 0)`.
         Forall(TermForall),
 
         /// A term contained within invisible delimiters.
@@ -67,7 +69,7 @@ ast_enum_of_structs! {
         /// term, not any of the other types of term.
         If(TermIf),
 
-        /// Logical implication
+        /// Logical implication: `a ==> b`.
         Impl(TermImpl),
 
         /// A square bracketed indexing term: `vector[2]`.
@@ -79,7 +81,7 @@ ast_enum_of_structs! {
         /// A literal in place of an term: `1`, `"foo"`.
         Lit(TermLit),
 
-        /// Logical equality: a === b
+        /// Logical equality: `a === b`, rather than [Eq]
         LogEq(TermLogEq),
 
         /// A macro invocation term: `format!("{}", q)`.
@@ -247,6 +249,7 @@ ast_struct! {
 }
 
 ast_struct! {
+    /// Logical universal quantification: `forall(|x: u32| x >= 0)`.
     pub struct TermForall {
         pub forall_token: kw::forall,
         pub paren_token: token::Paren,
@@ -259,6 +262,7 @@ ast_struct! {
 }
 
 ast_struct! {
+    /// Logical existential quantification: `exists(|i: Int| i > 0)`.
     pub struct TermExists {
         pub exists_token: kw::exists,
         pub paren_token: token::Paren,
@@ -271,6 +275,7 @@ ast_struct! {
 }
 
 ast_struct! {
+    /// Logical implication: `a ==> b`.
     pub struct TermImpl {
         pub hyp: Box<Term>,
         pub eqeq_token: Token![==],
@@ -297,6 +302,7 @@ ast_struct! {
 }
 
 ast_struct! {
+    /// A logical equality between terms: `a === b` rather than [Eq]
     pub struct TermLogEq {
         pub lhs: Box<Term>,
         pub eqeq_token: Token![==],

@@ -1,3 +1,7 @@
+//! Patterns for RML.
+//!
+//! Adapted from syn by replacing all occurrences of expressions with terms.
+
 use proc_macro2::TokenStream;
 use syn::{
     punctuated::Punctuated, token, ExprMacro as PatMacro, Ident, Member, Path, QSelf, Token, Type,

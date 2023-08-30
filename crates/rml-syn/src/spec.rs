@@ -1,3 +1,5 @@
+//! RML specification.
+
 use std::fmt;
 
 use proc_macro2::{Delimiter, TokenTree};
@@ -37,7 +39,7 @@ pub enum SpecPart {
     /// `panics` takes a boolean term and specifies the post-condition in panic behavior.
     /// Defaults to `true`.
     Panics(SpecPartPanics),
-    /// `modifies` takes a [LocSetTerm] and specifies the locations the function may change.
+    /// `modifies` takes a [LocSet] and specifies the locations the function may change.
     /// Defaults to ???.
     Modifies(SpecPartModifies),
     /// `variant` takes any term implementing the `WellFounded` trait defined in `rml-contracts`.
@@ -76,7 +78,7 @@ pub struct SpecPartPanics {
     pub term: Option<Term>,
 }
 
-/// `modifies` takes a [LocSetTerm] and specifies the locations the function may change.
+/// `modifies` takes a [LocSet] and specifies the locations the function may change.
 /// Defaults to ???.
 #[derive(Debug)]
 pub struct SpecPartModifies {

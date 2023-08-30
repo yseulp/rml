@@ -1,4 +1,4 @@
-// Taken from syn and creusot
+//! Taken from syn and creusot
 
 use proc_macro2::TokenStream;
 use quote::ToTokens;
