@@ -80,7 +80,7 @@ mod macros {
 
         #[rml::decl::logic]
         #[rml::decl::internal]
-        #[rustc_diagnostic_item = "rml_equiv"]
+        #[rustc_diagnostic_item = "rml_old"]
         pub fn old<T>(t: T) -> T {
             t
         }
