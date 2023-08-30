@@ -33,7 +33,7 @@ pub enum TermKind {
     Closure(TermClosure),
     Block(TermBlock),
     Field(Box<Term>, IdentWrapper),
-    Index(Box<Term>, Box<Term>),
+    Index(Box<Term>, Box<Term>, SpanWrapper),
     Path(TermQPath),
     AddrOf(TermBorrowKind, TermMutability, Box<Term>),
     Struct(TermQPath, Vec<TermField>, Option<Box<Term>>),
@@ -135,7 +135,7 @@ pub enum TermBorrowKind {
 pub enum TermMatchSource {
     Normal,
     ForLoopDesugar,
-    TryDesugar,
+    TryDesugar(HirIdWrapper),
     AwaitDesugar,
     FormatArgs,
 }
@@ -524,6 +524,8 @@ pub enum TermAbi {
     PlatformIntrinsic,
     Unadjusted,
     RustCold,
+    RiscvInterruptM,
+    RiscvInterruptS,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -819,6 +821,7 @@ pub enum TermLangItem {
     PanicLocation,
     PanicImpl,
     PanicCannotUnwind,
+    PanicInCleanup,
     BeginPanic,
     FormatAlignment,
     FormatArgument,

@@ -129,8 +129,9 @@ impl<'hir> FromHir<'hir, ExprKind<'hir>> for TermKind {
                         RmlFnKind::TraitFn(TraitFn::Index) => {
                             let term: Term = (&args[0]).hir_into(hir);
                             let index: Term = (&args[1]).hir_into(hir);
+                            let span = index.span;
 
-                            TermKind::Index(term.into(), index.into())
+                            TermKind::Index(term.into(), index.into(), span)
                         }
                         RmlFnKind::TraitFn(
                             ord @ TraitFn::OrdLt
@@ -194,9 +195,11 @@ impl<'hir> FromHir<'hir, ExprKind<'hir>> for TermKind {
             ExprKind::Closure(c) => Self::Closure(c.hir_into(hir)),
             ExprKind::Block(b, _) => Self::Block(b.hir_into(hir)),
             ExprKind::Field(expr, field) => Self::Field(Box::new(expr.hir_into(hir)), field.into()),
-            ExprKind::Index(expr, idx) => {
-                Self::Index(Box::new(expr.hir_into(hir)), Box::new(idx.hir_into(hir)))
-            }
+            ExprKind::Index(expr, idx, span) => Self::Index(
+                Box::new(expr.hir_into(hir)),
+                Box::new(idx.hir_into(hir)),
+                span.into(),
+            ),
             ExprKind::Path(p) => Self::Path(p.hir_into(hir)),
             ExprKind::AddrOf(brw, m, expr) => {
                 Self::AddrOf(brw.into(), m.into(), Box::new(expr.hir_into(hir)))
@@ -653,6 +656,8 @@ impl From<Abi> for TermAbi {
             Abi::PlatformIntrinsic => Self::PlatformIntrinsic,
             Abi::Unadjusted => Self::Unadjusted,
             Abi::RustCold => Self::RustCold,
+            Abi::RiscvInterruptM => Self::RiscvInterruptM,
+            Abi::RiscvInterruptS => Self::RiscvInterruptS,
         }
     }
 }
@@ -769,7 +774,7 @@ impl From<MatchSource> for TermMatchSource {
         match value {
             MatchSource::Normal => Self::Normal,
             MatchSource::ForLoopDesugar => Self::ForLoopDesugar,
-            MatchSource::TryDesugar => Self::TryDesugar,
+            MatchSource::TryDesugar(hir_id) => Self::TryDesugar(hir_id.into()),
             MatchSource::AwaitDesugar => Self::AwaitDesugar,
             MatchSource::FormatArgs => Self::FormatArgs,
         }
@@ -1074,7 +1079,7 @@ impl From<DefKind> for TermDefKind {
             DefKind::Enum => Self::Enum,
             DefKind::Variant => Self::Variant,
             DefKind::Trait => Self::Trait,
-            DefKind::TyAlias => Self::TyAlias,
+            DefKind::TyAlias { .. } => Self::TyAlias,
             DefKind::ForeignTy => Self::ForeignTy,
             DefKind::TraitAlias => Self::TraitAlias,
             DefKind::AssocTy => Self::AssocConst,
@@ -1277,6 +1282,7 @@ impl<'hir> From<&'hir LangItem> for TermLangItem {
             LangItem::PanicImpl => Self::PanicImpl,
             LangItem::PanicCannotUnwind => Self::PanicCannotUnwind,
             LangItem::BeginPanic => Self::BeginPanic,
+            LangItem::PanicInCleanup => Self::PanicInCleanup,
             LangItem::FormatAlignment => Self::FormatAlignment,
             LangItem::FormatArgument => Self::FormatArgument,
             LangItem::FormatArguments => Self::FormatArguments,

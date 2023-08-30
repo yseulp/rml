@@ -13,7 +13,7 @@ use cargo_rml::options::{Args, RmlArgs};
 use clap::*;
 use rml::callbacks::*;
 use rustc_driver::{RunCompiler, DEFAULT_LOCALE_RESOURCES};
-use rustc_errors::{emitter::EmitterWriter, TerminalUrl};
+use rustc_errors::emitter::EmitterWriter;
 use rustc_interface::interface::try_print_query_stack;
 use rustc_session::{config::ErrorOutputType, EarlyErrorHandler};
 use std::{env, panic, panic::PanicInfo, process::Command};
@@ -38,17 +38,9 @@ fn report_panic(info: &PanicInfo) {
 
     let emitter = Box::new(EmitterWriter::stderr(
         rustc_errors::ColorConfig::Auto,
-        None,
-        None,
         fallback_bundle,
-        false,
-        false,
-        None,
-        false,
-        false,
-        TerminalUrl::Auto,
     ));
-    let handler = rustc_errors::Handler::with_emitter(true, None, emitter);
+    let handler = rustc_errors::Handler::with_emitter(emitter);
 
     let mut diagnostic = handler.struct_note_without_error("RML has panic-ed!");
     diagnostic.note("Oops, that shouldn't have happened, sorry about that.");
@@ -63,7 +55,7 @@ fn report_panic(info: &PanicInfo) {
     let backtrace = env::var_os("RUST_BACKTRACE").map_or(false, |x| &x != "0");
 
     if backtrace {
-        try_print_query_stack(&handler, None);
+        try_print_query_stack(&handler, None, None);
     }
 }
 
