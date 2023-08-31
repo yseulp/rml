@@ -5,6 +5,7 @@ use quote::{ToTokens, TokenStreamExt};
 use syn::{
     braced,
     parse::{self, Parse},
+    spanned::Spanned,
     token, AttrStyle, Attribute, Block, Expr, ExprClosure, ExprForLoop, ExprLoop, ExprWhile,
     ItemEnum, ItemStruct, ItemTrait, Label, Lifetime, Result, Signature, Token, Visibility,
 };
@@ -125,13 +126,60 @@ impl<'a> FilterAttrs<'a> for &'a [Attribute] {
 }
 
 #[derive(Debug)]
-pub enum InvariantSubject {
+pub enum LoopKind {
     ForLoop(ExprForLoop),
     Loop(ExprLoop),
     While(ExprWhile),
+}
+
+impl LoopKind {
+    pub fn span(&self) -> proc_macro2::Span {
+        match self {
+            LoopKind::ForLoop(l) => l.span(),
+            LoopKind::Loop(l) => l.span(),
+            LoopKind::While(l) => l.span(),
+        }
+    }
+
+    pub fn attrs_mut(&mut self) -> &mut Vec<Attribute> {
+        match self {
+            LoopKind::ForLoop(l) => &mut l.attrs,
+            LoopKind::Loop(l) => &mut l.attrs,
+            LoopKind::While(l) => &mut l.attrs,
+        }
+    }
+}
+
+#[derive(Debug)]
+pub enum ItemKind {
     Trait(ItemTrait),
     Struct(ItemStruct),
     Enum(ItemEnum),
+}
+
+impl ItemKind {
+    pub fn span(&self) -> proc_macro2::Span {
+        match self {
+            ItemKind::Trait(i) => i.span(),
+            ItemKind::Struct(i) => i.span(),
+            ItemKind::Enum(i) => i.span(),
+        }
+    }
+}
+
+#[derive(Debug)]
+pub enum InvariantSubject {
+    Loop(LoopKind),
+    Item(ItemKind),
+}
+
+impl InvariantSubject {
+    pub fn span(&self) -> proc_macro2::Span {
+        match self {
+            InvariantSubject::Loop(l) => l.span(),
+            InvariantSubject::Item(i) => i.span(),
+        }
+    }
 }
 
 impl Parse for InvariantSubject {
@@ -143,21 +191,21 @@ impl Parse for InvariantSubject {
         let lookahead = ahead.lookahead1();
 
         if lookahead.peek(Token![struct]) {
-            Ok(Self::Struct(input.parse()?))
+            Ok(Self::Item(ItemKind::Struct(input.parse()?)))
         } else if lookahead.peek(Token![enum]) {
-            Ok(Self::Enum(input.parse()?))
+            Ok(Self::Item(ItemKind::Enum(input.parse()?)))
         } else if lookahead.peek(Token![unsafe]) {
             ahead.parse::<Token![unsafe]>()?;
             let lookahead = ahead.lookahead1();
             if lookahead.peek(Token![trait])
                 || lookahead.peek(Token![auto]) && ahead.peek2(Token![trait])
             {
-                Ok(Self::Trait(input.parse()?))
+                Ok(Self::Item(ItemKind::Trait(input.parse()?)))
             } else {
                 Err(lookahead.error())
             }
         } else if lookahead.peek(Token![trait]) {
-            Ok(Self::Trait(input.parse()?))
+            Ok(Self::Item(ItemKind::Trait(input.parse()?)))
         } else {
             if !matches!(vis, Visibility::Inherited) {
                 return Err(syn::Error::new(
@@ -166,11 +214,11 @@ impl Parse for InvariantSubject {
                 ));
             }
             if lookahead.peek(Token![for]) {
-                Ok(Self::ForLoop(input.parse()?))
+                Ok(Self::Loop(LoopKind::ForLoop(input.parse()?)))
             } else if lookahead.peek(Token![loop]) {
-                Ok(Self::Loop(input.parse()?))
+                Ok(Self::Loop(LoopKind::Loop(input.parse()?)))
             } else if lookahead.peek(Token![while]) {
-                Ok(Self::While(input.parse()?))
+                Ok(Self::Loop(LoopKind::While(input.parse()?)))
             } else if lookahead.peek(Lifetime) {
                 let the_label: Label = input.parse()?;
                 let lookahead = input.lookahead1();
@@ -190,9 +238,9 @@ impl Parse for InvariantSubject {
                     _ => unreachable!(),
                 }
                 Ok(match expr {
-                    Expr::While(w) => Self::While(w),
-                    Expr::ForLoop(f) => Self::ForLoop(f),
-                    Expr::Loop(l) => Self::Loop(l),
+                    Expr::While(w) => Self::Loop(LoopKind::While(w)),
+                    Expr::ForLoop(f) => Self::Loop(LoopKind::ForLoop(f)),
+                    Expr::Loop(l) => Self::Loop(LoopKind::Loop(l)),
                     _ => unreachable!(),
                 })
             } else {

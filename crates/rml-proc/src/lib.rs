@@ -1,8 +1,9 @@
 #![feature(box_patterns)]
+#![feature(extract_if)]
 
 use proc_macro::TokenStream as TS1;
 use proc_macro2::{Span, TokenStream as TS2};
-use quote::{quote, quote_spanned};
+use quote::{quote, quote_spanned, ToTokens};
 use rml_syn::{
     locset::{LocSet, LocSetGroup},
     subject::LogicSubject,
@@ -11,20 +12,19 @@ use rml_syn::{
 
 use syn::{
     parse_macro_input, parse_quote, parse_quote_spanned, punctuated::Punctuated, spanned::Spanned,
-    Attribute, FnArg, Ident, ItemFn, Pat, ReturnType, Signature, Token, Type,
+    Attribute, Expr, FnArg, Ident, ItemFn, Meta, Pat, ReturnType, Signature, Stmt, Token, Type,
 };
 
 mod subject;
 mod util;
 
-use subject::{ContractSubject, InvariantSubject};
+use subject::{ContractSubject, InvariantSubject, LoopKind};
 
 use crate::util::get_mut_ref_params;
 
 #[proc_macro_attribute]
 pub fn spec(attr: TS1, item: TS1) -> TS1 {
     let sp = parse_macro_input!(attr as Spec);
-    //println!("{:#?}", sp);
 
     let item = parse_macro_input!(item as ContractSubject);
 
@@ -85,23 +85,19 @@ pub fn pure(attr: TS1, item: TS1) -> TS1 {
 pub fn invariant(attr: TS1, item: TS1) -> TS1 {
     let term = parse_macro_input!(attr as Term);
     let subject = parse_macro_input!(item as InvariantSubject);
+    let sp = subject.span();
     let ts = match subject {
-        InvariantSubject::ForLoop(l) => {
-            quote! {#l}
-        }
         InvariantSubject::Loop(l) => {
-            let inv = term.encode();
-            quote! {
-                #inv
-                #l
+            let (attrs, stmts, l) = loop_inv(term, l);
+            quote_spanned! { sp=>
+                {
+                    #stmts
+                    #attrs
+                    #l
+                }
             }
         }
-        InvariantSubject::While(l) => quote! {
-            #l
-        },
-        InvariantSubject::Trait(i) => quote! {#i},
-        InvariantSubject::Struct(i) => quote! {#i},
-        InvariantSubject::Enum(i) => quote! {#i},
+        InvariantSubject::Item(_) => todo!(),
     };
 
     TS1::from(ts)
@@ -414,4 +410,116 @@ fn adapt_sig(sig: &mut Signature, old_sig: &Signature) {
     }
 
     sig.generics = old_sig.generics.clone();
+}
+
+fn transform_loop(r#loop: LoopKind) -> (Vec<Attribute>, Vec<Stmt>, Expr) {
+    match r#loop {
+        LoopKind::ForLoop(_) => todo!(),
+        LoopKind::Loop(_) => todo!(),
+        LoopKind::While(l) => (vec![], vec![], Expr::While(l)),
+    }
+}
+
+fn loop_var_closure(term: Term, name: &str) -> Stmt {
+    let sp = term.span();
+    let e = term.encode();
+    parse_quote_spanned! { sp =>
+        #[allow(unused_must_use)]
+        let _ = #[rml::spec::loop_variant = #name]
+        || {
+            let _ = ::rml_contracts::well_founded::well_founded_check(#e);
+            #e
+        };
+    }
+}
+
+fn loop_inv_closure(term: Term, name: &str) -> Stmt {
+    let sp = term.span();
+    let e = term.encode();
+    parse_quote_spanned! { sp =>
+        #[allow(unused_must_use)]
+        let _ = #[rml::spec::loop_invariant = #name]
+        || {
+            let b: bool = #e;
+            b
+        };
+    }
+}
+
+fn loop_inv(term: Term, mut r#loop: LoopKind) -> (TS2, TS2, TS2) {
+    let sp = term.span();
+    let lsp = r#loop.span();
+    let first_ident = generate_unique_ident("loop_inv").to_string();
+    let mut attrs: Vec<Attribute> =
+        vec![parse_quote_spanned! {sp => #[rml::loop_inv_ref = #first_ident]}];
+    let mut fns: Vec<Stmt> = vec![loop_inv_closure(term, &first_ident)];
+
+    // TODO: use drain_filter when it becomes available
+    let inv_attrs: Vec<_> = r#loop
+        .attrs_mut()
+        .extract_if(|a| {
+            a.path()
+                .get_ident()
+                .map(|i| i == "invariant")
+                .unwrap_or(false)
+        })
+        .collect();
+    let var_attrs: Vec<_> = r#loop
+        .attrs_mut()
+        .extract_if(|a| {
+            a.path()
+                .get_ident()
+                .map(|i| i == "variant")
+                .unwrap_or(false)
+        })
+        .collect();
+
+    if var_attrs.len() > 1 {
+        let attr = &var_attrs[1];
+        // TODO: Better error reporting
+        panic!(
+            "Found {} variants for a loop: {}",
+            var_attrs.len(),
+            attr.to_token_stream()
+        )
+    }
+
+    for inv in inv_attrs {
+        if let Meta::List(l) = inv.meta {
+            let term: Term = syn::parse2(l.tokens).unwrap();
+            let name = generate_unique_ident("loop_inv").to_string();
+            fns.push(loop_inv_closure(term, &name));
+            attrs.push(parse_quote_spanned! {sp => #[rml::loop_inv_ref = #name]});
+        } else {
+            panic!()
+        }
+    }
+
+    for var in var_attrs {
+        if let Meta::List(l) = var.meta {
+            let term: Term = syn::parse2(l.tokens).unwrap();
+            let name = generate_unique_ident("loop_var").to_string();
+            fns.push(loop_var_closure(term, &name));
+            attrs.push(parse_quote_spanned! {sp => #[rml::loop_var_ref = #name]});
+        } else {
+            panic!()
+        }
+    }
+
+    let (mut add_attrs, mut add_fns, loop_expr) = transform_loop(r#loop);
+
+    attrs.append(&mut add_attrs);
+    fns.append(&mut add_fns);
+
+    (
+        quote_spanned! { sp =>
+            #(#attrs)*
+        },
+        quote_spanned! { sp =>
+            #(#fns)*
+        },
+        quote_spanned! { lsp =>
+            #loop_expr
+        },
+    )
 }

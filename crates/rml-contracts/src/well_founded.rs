@@ -1,3 +1,5 @@
+use crate::*;
+
 pub trait WellFounded {}
 
 impl WellFounded for u8 {}
@@ -163,4 +165,12 @@ where
     T11: WellFounded,
     T12: WellFounded,
 {
+}
+
+#[logic]
+pub fn well_founded_check<T>(t: T) -> T
+where
+    T: WellFounded,
+{
+    t
 }

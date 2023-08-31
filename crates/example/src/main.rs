@@ -49,6 +49,21 @@ fn rec(n: u128) -> u128 {
     }
 }
 
+#[spec(requires(n >= 0), ensures(result == n))]
+#[allow(unused)]
+fn simple_loop(n: i32) -> i32 {
+    let mut i = 0;
+
+    #[invariant(0 <= i)]
+    #[invariant(i <= n)]
+    #[variant(n - i)]
+    while i < n {
+        i += 1;
+    }
+
+    i
+}
+
 pub fn main() {
     #[cfg(rml)]
     println!("RML enabled");
