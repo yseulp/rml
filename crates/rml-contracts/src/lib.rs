@@ -12,7 +12,7 @@ pub mod well_founded;
 pub use ghost::Ghost;
 pub use logic::{int::Int, ops::IndexLogic, seq::Seq};
 pub use model::{DeepModel, ShallowModel};
-pub use well_founded::WellFounded;
+pub use well_founded::{well_founded_check, WellFounded};
 
 #[cfg(creusot)]
 pub mod ghost;

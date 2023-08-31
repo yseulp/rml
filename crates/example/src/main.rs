@@ -59,6 +59,7 @@ fn simple_loop(n: i32) -> i32 {
 
     #[invariant(0 <= i)]
     #[invariant(i <= n)]
+    #[modifies(nothing)]
     #[variant(n - i)]
     while i < n {
         i += 1;

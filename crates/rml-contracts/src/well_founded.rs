@@ -167,7 +167,7 @@ where
 {
 }
 
-#[logic]
+#[strictly_pure]
 pub fn well_founded_check<T>(t: T) -> T
 where
     T: WellFounded,

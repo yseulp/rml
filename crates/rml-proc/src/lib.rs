@@ -415,7 +415,7 @@ fn adapt_sig(sig: &mut Signature, old_sig: &Signature) {
 fn transform_loop(r#loop: LoopKind) -> (Vec<Attribute>, Vec<Stmt>, Expr) {
     match r#loop {
         LoopKind::ForLoop(_) => todo!(),
-        LoopKind::Loop(_) => todo!(),
+        LoopKind::Loop(l) => (vec![], vec![], Expr::Loop(l)),
         LoopKind::While(l) => (vec![], vec![], Expr::While(l)),
     }
 }
@@ -427,7 +427,7 @@ fn loop_var_closure(term: Term, name: &str) -> Stmt {
         #[allow(unused_must_use)]
         let _ = #[rml::spec::loop_variant = #name]
         || {
-            let _ = ::rml_contracts::well_founded::well_founded_check(#e);
+            let _ = ::rml_contracts::well_founded_check(#e);
             #e
         };
     }

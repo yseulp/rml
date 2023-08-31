@@ -1,7 +1,7 @@
 extern crate proc_macro;
 use proc_macro::TokenStream as TS1;
 
-use rml_syn::{subject::LogicSubject, Spec, Term};
+use rml_syn::{locset::LocSet, subject::LogicSubject, Spec, TBlock, Term};
 use syn::parse_macro_input;
 
 #[proc_macro_attribute]
@@ -24,18 +24,19 @@ pub fn pure(attr: TS1, item: TS1) -> TS1 {
 
 #[proc_macro_attribute]
 pub fn invariant(attr: TS1, item: TS1) -> TS1 {
-    let _: Term = parse_macro_input!(attr as Term);
+    let _ = parse_macro_input!(attr as Term);
     item
 }
 
 #[proc_macro_attribute]
 pub fn variant(attr: TS1, item: TS1) -> TS1 {
-    let _: Term = parse_macro_input!(attr as Term);
+    let _ = parse_macro_input!(attr as Term);
     item
 }
 
 #[proc_macro_attribute]
-pub fn modifies(_attr: TS1, item: TS1) -> TS1 {
+pub fn modifies(attr: TS1, item: TS1) -> TS1 {
+    let _ = parse_macro_input!(attr as LocSet);
     item
 }
 
@@ -55,11 +56,13 @@ pub fn trusted(attr: TS1, item: TS1) -> TS1 {
 }
 
 #[proc_macro]
-pub fn rml(_: TS1) -> TS1 {
+pub fn rml(tokens: TS1) -> TS1 {
+    let _ = parse_macro_input!(tokens with TBlock::parse_within);
     TS1::new()
 }
 
 #[proc_macro]
-pub fn proof_assert(_: TS1) -> TS1 {
+pub fn proof_assert(assertion: TS1) -> TS1 {
+    let _ = parse_macro_input!(assertion with TBlock::parse_within);
     TS1::new()
 }
