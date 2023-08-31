@@ -16,6 +16,7 @@ pub mod term;
 
 use std::iter;
 
+pub use locset::*;
 pub use pat::*;
 pub use spec::*;
 use syn::{AttrStyle, Attribute};
