@@ -12,7 +12,8 @@ use rml_syn::{
 
 use syn::{
     parse_macro_input, parse_quote, parse_quote_spanned, punctuated::Punctuated, spanned::Spanned,
-    Attribute, Expr, FnArg, Ident, ItemFn, Meta, Pat, ReturnType, Signature, Stmt, Token, Type,
+    Attribute, Expr, FnArg, Ident, ItemFn, Meta, Pat, Result, ReturnType, Signature, Stmt, Token,
+    Type,
 };
 
 mod subject;
@@ -88,7 +89,10 @@ pub fn invariant(attr: TS1, item: TS1) -> TS1 {
     let sp = subject.span();
     let ts = match subject {
         InvariantSubject::Loop(l) => {
-            let (attrs, stmts, l) = loop_inv(term, l);
+            let (attrs, stmts, l) = match loop_inv(term, l) {
+                Ok(r) => r,
+                Err(err) => return TS1::from(err.to_compile_error()),
+            };
             quote_spanned! { sp=>
                 {
                     #stmts
@@ -446,7 +450,27 @@ fn loop_inv_closure(term: Term, name: &str) -> Stmt {
     }
 }
 
-fn loop_inv(term: Term, mut r#loop: LoopKind) -> (TS2, TS2, TS2) {
+fn loop_mod_closure(ls: LocSet, name: &str) -> Stmt {
+    let sp = ls.span();
+    let e = ls.encode();
+    parse_quote_spanned! { sp =>
+        #[allow(unused_must_use)]
+        let _ = #[rml::spec::loop_modifies = #name]
+        || {
+            let l: ::rml_contracts::logic::LocSet = #e;
+            l
+        };
+    }
+}
+
+fn extract_loop_attrs(r#loop: &mut LoopKind, attr: &'static str) -> Vec<Attribute> {
+    r#loop
+        .attrs_mut()
+        .extract_if(|a| a.path().get_ident().map(|i| i == attr).unwrap_or(false))
+        .collect()
+}
+
+fn loop_inv(term: Term, mut r#loop: LoopKind) -> Result<(TS2, TS2, TS2)> {
     let sp = term.span();
     let lsp = r#loop.span();
     let first_ident = generate_unique_ident("loop_inv").to_string();
@@ -454,39 +478,37 @@ fn loop_inv(term: Term, mut r#loop: LoopKind) -> (TS2, TS2, TS2) {
         vec![parse_quote_spanned! {sp => #[rml::loop_inv_ref = #first_ident]}];
     let mut fns: Vec<Stmt> = vec![loop_inv_closure(term, &first_ident)];
 
-    // TODO: use drain_filter when it becomes available
-    let inv_attrs: Vec<_> = r#loop
-        .attrs_mut()
-        .extract_if(|a| {
-            a.path()
-                .get_ident()
-                .map(|i| i == "invariant")
-                .unwrap_or(false)
-        })
-        .collect();
-    let var_attrs: Vec<_> = r#loop
-        .attrs_mut()
-        .extract_if(|a| {
-            a.path()
-                .get_ident()
-                .map(|i| i == "variant")
-                .unwrap_or(false)
-        })
-        .collect();
+    let inv_attrs = extract_loop_attrs(&mut r#loop, "invariant");
+    let var_attrs = extract_loop_attrs(&mut r#loop, "variant");
+    let mod_attrs = extract_loop_attrs(&mut r#loop, "modifies");
 
     if var_attrs.len() > 1 {
         let attr = &var_attrs[1];
-        // TODO: Better error reporting
-        panic!(
-            "Found {} variants for a loop: {}",
-            var_attrs.len(),
-            attr.to_token_stream()
-        )
+        syn::Error::new(
+            attr.span(),
+            format!(
+                "Found {} variants for a loop: {}",
+                var_attrs.len(),
+                attr.to_token_stream()
+            ),
+        );
+    }
+
+    if mod_attrs.len() > 1 {
+        let attr = &mod_attrs[1];
+        syn::Error::new(
+            attr.span(),
+            format!(
+                "Found {} `modifies` attributes for a loop: {}",
+                var_attrs.len(),
+                attr.to_token_stream()
+            ),
+        );
     }
 
     for inv in inv_attrs {
         if let Meta::List(l) = inv.meta {
-            let term: Term = syn::parse2(l.tokens).unwrap();
+            let term: Term = syn::parse2(l.tokens)?;
             let name = generate_unique_ident("loop_inv").to_string();
             fns.push(loop_inv_closure(term, &name));
             attrs.push(parse_quote_spanned! {sp => #[rml::loop_inv_ref = #name]});
@@ -495,9 +517,20 @@ fn loop_inv(term: Term, mut r#loop: LoopKind) -> (TS2, TS2, TS2) {
         }
     }
 
+    for m in mod_attrs {
+        if let Meta::List(l) = m.meta {
+            let term: LocSet = syn::parse2(l.tokens)?;
+            let name = generate_unique_ident("loop_mod").to_string();
+            fns.push(loop_mod_closure(term, &name));
+            attrs.push(parse_quote_spanned! {sp => #[rml::loop_mod_ref = #name]});
+        } else {
+            panic!()
+        }
+    }
+
     for var in var_attrs {
         if let Meta::List(l) = var.meta {
-            let term: Term = syn::parse2(l.tokens).unwrap();
+            let term: Term = syn::parse2(l.tokens)?;
             let name = generate_unique_ident("loop_var").to_string();
             fns.push(loop_var_closure(term, &name));
             attrs.push(parse_quote_spanned! {sp => #[rml::loop_var_ref = #name]});
@@ -511,7 +544,7 @@ fn loop_inv(term: Term, mut r#loop: LoopKind) -> (TS2, TS2, TS2) {
     attrs.append(&mut add_attrs);
     fns.append(&mut add_fns);
 
-    (
+    Ok((
         quote_spanned! { sp =>
             #(#attrs)*
         },
@@ -521,5 +554,5 @@ fn loop_inv(term: Term, mut r#loop: LoopKind) -> (TS2, TS2, TS2) {
         quote_spanned! { lsp =>
             #loop_expr
         },
-    )
+    ))
 }
