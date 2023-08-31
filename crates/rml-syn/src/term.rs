@@ -422,7 +422,7 @@ ast_struct! {
 // Auxiliary structs
 
 ast_struct! {
-    /// A braced block containing Pearlite statements.
+    /// A braced block containing RML statements.
     pub struct TBlock {
         pub brace_token: token::Brace,
         /// Statements in a block

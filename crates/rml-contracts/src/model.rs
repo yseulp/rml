@@ -4,7 +4,7 @@ use super::logic;
 ///
 /// The shallow model of a type is typically used to specify a data
 /// structure. This kind of model is mostly useful for notation purposes,
-/// because this trait is linked to the @ notation of pearlite.
+/// because this trait is linked to the @ notation of RML.
 /// Models of inner types are typically not involved.
 pub trait ShallowModel {
     type ShallowModelTy;
