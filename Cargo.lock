@@ -356,6 +356,7 @@ dependencies = [
 name = "rml-proc-dummy"
 version = "0.1.0"
 dependencies = [
+ "proc-macro2",
  "rml-syn",
  "syn",
 ]

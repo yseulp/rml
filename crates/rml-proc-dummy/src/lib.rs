@@ -1,5 +1,6 @@
 extern crate proc_macro;
 use proc_macro::TokenStream as TS1;
+use proc_macro2::Span;
 
 use rml_syn::{locset::LocSet, subject::LogicSubject, Spec, TBlock, Term};
 use syn::parse_macro_input;
@@ -12,13 +13,17 @@ pub fn spec(attr: TS1, item: TS1) -> TS1 {
 
 #[proc_macro_attribute]
 pub fn strictly_pure(attr: TS1, item: TS1) -> TS1 {
-    assert!(attr.is_empty(), "`strictly_pure` takes no arguments");
+    if !attr.is_empty() {
+        return takes_no_args("strictly_pure");
+    }
     item
 }
 
 #[proc_macro_attribute]
 pub fn pure(attr: TS1, item: TS1) -> TS1 {
-    assert!(attr.is_empty(), "`pure` takes no arguments");
+    if !attr.is_empty() {
+        return takes_no_args("pure");
+    }
     item
 }
 
@@ -42,7 +47,9 @@ pub fn modifies(attr: TS1, item: TS1) -> TS1 {
 
 #[proc_macro_attribute]
 pub fn logic(attr: TS1, item: TS1) -> TS1 {
-    assert!(attr.is_empty(), "`logic` takes no arguments");
+    if !attr.is_empty() {
+        return takes_no_args("logic");
+    }
     // Make sure that the attribute is always attached to the correct "thing",
     // even though we don't output it
     let _ = parse_macro_input!(item as LogicSubject);
@@ -51,7 +58,9 @@ pub fn logic(attr: TS1, item: TS1) -> TS1 {
 
 #[proc_macro_attribute]
 pub fn trusted(attr: TS1, item: TS1) -> TS1 {
-    assert!(attr.is_empty(), "`trusted` takes no arguments");
+    if !attr.is_empty() {
+        return takes_no_args("trusted");
+    }
     item
 }
 
@@ -65,4 +74,11 @@ pub fn rml(tokens: TS1) -> TS1 {
 pub fn proof_assert(assertion: TS1) -> TS1 {
     let _ = parse_macro_input!(assertion with TBlock::parse_within);
     TS1::new()
+}
+
+fn takes_no_args(name: &str) -> TS1 {
+    TS1::from(
+        syn::Error::new(Span::call_site(), format!("`{name}` takes no arguments"))
+            .to_compile_error(),
+    )
 }

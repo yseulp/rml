@@ -58,7 +58,9 @@ pub fn spec(attr: TS1, item: TS1) -> TS1 {
 
 #[proc_macro_attribute]
 pub fn strictly_pure(attr: TS1, item: TS1) -> TS1 {
-    assert!(attr.is_empty(), "`strictly_pure` takes no arguments");
+    if !attr.is_empty() {
+        return takes_no_args("strictly_pure");
+    }
     let toks = TS2::from(item);
     TS1::from(quote! {
         #[rml::decl::strictly_pure]
@@ -68,7 +70,9 @@ pub fn strictly_pure(attr: TS1, item: TS1) -> TS1 {
 
 #[proc_macro_attribute]
 pub fn pure(attr: TS1, item: TS1) -> TS1 {
-    assert!(attr.is_empty(), "`pure` takes no arguments");
+    if !attr.is_empty() {
+        return takes_no_args("pure");
+    }
     let toks = TS2::from(item);
     TS1::from(quote! {
         #[rml::decl::pure]
@@ -102,18 +106,32 @@ pub fn invariant(attr: TS1, item: TS1) -> TS1 {
 }
 
 #[proc_macro_attribute]
-pub fn variant(_attr: TS1, item: TS1) -> TS1 {
-    item
+pub fn variant(_: TS1, _: TS1) -> TS1 {
+    TS1::from(
+        syn::Error::new(
+            Span::call_site(),
+            "The `variant` attribute must be after an `invariant` attribute",
+        )
+        .to_compile_error(),
+    )
 }
 
 #[proc_macro_attribute]
-pub fn modifies(_attr: TS1, item: TS1) -> TS1 {
-    item
+pub fn modifies(_: TS1, _: TS1) -> TS1 {
+    TS1::from(
+        syn::Error::new(
+            Span::call_site(),
+            "The `modifies` attribute must be after an `invariant` attribute",
+        )
+        .to_compile_error(),
+    )
 }
 
 #[proc_macro_attribute]
 pub fn logic(attr: TS1, item: TS1) -> TS1 {
-    assert!(attr.is_empty(), "`logic` takes no arguments");
+    if !attr.is_empty() {
+        return takes_no_args("logic");
+    }
     let subject = parse_macro_input!(item as LogicSubject);
     match subject {
         LogicSubject::WithBody(f) => {
@@ -135,7 +153,9 @@ pub fn logic(attr: TS1, item: TS1) -> TS1 {
 
 #[proc_macro_attribute]
 pub fn trusted(attr: TS1, item: TS1) -> TS1 {
-    assert!(attr.is_empty(), "`trusted` takes no arguments");
+    if !attr.is_empty() {
+        return takes_no_args("trusted");
+    }
     let toks = TS2::from(item);
     TS1::from(quote! {
         #[rml::delc::trusted]
@@ -183,4 +203,11 @@ pub fn proof_assert(assertion: TS1) -> TS1 {
             }
         }
     })
+}
+
+fn takes_no_args(name: &str) -> TS1 {
+    TS1::from(
+        syn::Error::new(Span::call_site(), format!("`{name}` takes no arguments"))
+            .to_compile_error(),
+    )
 }
