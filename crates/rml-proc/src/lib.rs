@@ -1,6 +1,10 @@
 #![feature(box_patterns)]
 #![feature(extract_if)]
 
+//! Procedural (attribute) macros to specify Rust code.
+//!
+//! **Do not directly depend on this!** Use `rml-contracts` instead.
+
 use func::fn_spec_item;
 use proc_macro::TokenStream as TS1;
 use proc_macro2::{Span, TokenStream as TS2};

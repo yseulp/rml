@@ -2,7 +2,6 @@
 #![feature(proc_macro_hygiene)]
 
 extern crate rml_contracts;
-
 use rml_contracts::*;
 
 #[spec { "normal", 

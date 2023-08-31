@@ -1,5 +1,23 @@
 #![feature(allocator_api)]
 
+//! Procedural (attribute) macros to specify Rust code. Either generates additional specification functions, methods, and closures, or changes nothing at all, depending on whether `--cfg rml` is set.
+//! Do not set this flag yourself, use `cargo-rml` instead.
+//!
+//! # Usage
+//!
+//! To specify contracts, import this crate like this:
+//! ```
+//! extern crate rml_contracts;
+//! use rml_contracts::*;
+//! ```
+//! This will add the necessary attributes, definition of logic-only types, and add some specification to standard library items.
+//!
+//! If you want to add attributes to loops or closures to specify them, you must add the following features to your crate:
+//! ```
+//! #![feature(stmt_expr_attributes)]
+//! #![feature(proc_macro_hygiene)]
+//! ```
+
 extern crate self as rml_contracts;
 
 pub use crate::macros::*;

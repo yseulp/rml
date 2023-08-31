@@ -18,7 +18,7 @@ extern crate rustc_type_ir;
 
 pub mod callbacks;
 pub(crate) mod check;
-pub(crate) mod ctx;
+pub mod ctx;
 pub mod error;
 pub mod spec;
 pub(crate) mod suppress_borrowck;

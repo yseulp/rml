@@ -1,3 +1,8 @@
+//! Procedural (attribute) macros that do not change the annoated code at all.
+//! Does, however, syntax check all attributes. Type-checking not included.
+//!
+//! **Do not directly depend on this!** Use `rml-contracts` instead.
+
 extern crate proc_macro;
 use proc_macro::TokenStream as TS1;
 use proc_macro2::Span;
