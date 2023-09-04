@@ -162,7 +162,7 @@ pub fn trusted(attr: TS1, item: TS1) -> TS1 {
     }
     let toks = TS2::from(item);
     TS1::from(quote! {
-        #[rml::delc::trusted]
+        #[rml::decl::trusted]
         #toks
     })
 }
