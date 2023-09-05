@@ -17,17 +17,24 @@ pub enum Purity {
     Impure,
     Pure,
     StrictlyPure,
+    /// Spec or logic function. May call any pure or impure function.
+    Logic,
 }
 
 impl Purity {
     pub fn may_call(&self, other: Purity) -> bool {
         use Purity::*;
         match (self, &other) {
+            (Logic, StrictlyPure | Pure) => true,
             (Impure, _) => true,
             (Pure, StrictlyPure) => true,
             (p1, p2) if p1 == p2 => true,
             _ => false,
         }
+    }
+
+    pub fn is_logic(&self) -> bool {
+        matches!(self, Self::Logic)
     }
 }
 
@@ -37,6 +44,7 @@ impl fmt::Display for Purity {
             Purity::Impure => write!(f, "impure"),
             Purity::Pure => write!(f, "pure"),
             Purity::StrictlyPure => write!(f, "strictly pure"),
+            Purity::Logic => write!(f, "logic"),
         }
     }
 }
@@ -64,6 +72,7 @@ impl<'tcx> RmlCtxt<'tcx> {
                 tcx,
                 thir: &thir,
                 purity,
+                did,
             },
             &thir[expr],
         )
@@ -73,10 +82,9 @@ impl<'tcx> RmlCtxt<'tcx> {
 pub(crate) fn get_purity(tcx: TyCtxt<'_>, did: DefId) -> Purity {
     // Theoretically, since logic and spec functions may call pure functions, they are not strictly pure.
     // But, because they are not "really" called, they do not change the memory and are, thus, strictly pure
-    if util::is_spec(tcx, did)
-        || util::is_logic(tcx, did)
-        || util::is_declared_strictly_pure(tcx, did)
-    {
+    if util::is_spec(tcx, did) || util::is_logic(tcx, did) {
+        Purity::Logic
+    } else if util::is_declared_strictly_pure(tcx, did) {
         Purity::StrictlyPure
     } else if util::is_declared_pure(tcx, did) {
         Purity::Pure
@@ -89,6 +97,7 @@ pub(crate) struct PurityVisitor<'a, 'tcx> {
     pub(crate) tcx: TyCtxt<'tcx>,
     pub(crate) thir: &'a Thir<'tcx>,
     pub(crate) purity: Purity,
+    pub(crate) did: DefId,
 }
 
 impl<'a, 'tcx> thir::visit::Visitor<'a, 'tcx> for PurityVisitor<'a, 'tcx> {
@@ -101,12 +110,18 @@ impl<'a, 'tcx> thir::visit::Visitor<'a, 'tcx> for PurityVisitor<'a, 'tcx> {
             if let &ty::FnDef(func_did, _) = self.thir[fun].ty.kind() {
                 let called_purity = get_purity(self.tcx, func_did);
                 if !self.purity.may_call(called_purity) {
-                    let msg = format!(
-                        "called {} function '{}' from {} function",
-                        called_purity,
-                        self.tcx.def_path_str(func_did),
-                        self.purity
-                    );
+                    let msg = if called_purity.is_logic() {
+                        let name = self.tcx.def_path_str(func_did);
+                        let caller = self.tcx.def_path_str(self.did);
+                        format!("called logical function '{name}' in program function {caller}")
+                    } else {
+                        format!(
+                            "called {} function '{}' from {} function",
+                            called_purity,
+                            self.tcx.def_path_str(func_did),
+                            self.purity
+                        )
+                    };
 
                     self.tcx.sess.span_err_with_code(
                         self.thir[fun].span,
