@@ -1,4 +1,4 @@
-use rustc_hir::{Expr, ExprKind, Path, PathSegment, QPath};
+use rustc_hir::{Expr, ExprKind, Path, PathSegment, QPath, Ty, TyKind};
 use rustc_middle::hir::map::Map;
 use rustc_span::Symbol;
 
@@ -23,14 +23,26 @@ impl<'hir> FromHir<'hir, ExprKind<'hir>> for LocSetKind {
         match value {
             ExprKind::Call(
                 Expr {
-                    kind: ExprKind::Path(QPath::Resolved(None, Path { segments, .. })),
+                    kind:
+                        ExprKind::Path(QPath::TypeRelative(
+                            Ty {
+                                kind: TyKind::Path(QPath::Resolved(None, Path { segments, .. })),
+                                ..
+                            },
+                            f,
+                        )),
                     ..
                 },
                 args,
-            ) => {
-                let f = match get_locset_fn(segments) {
-                    Some(f) => f,
-                    None => panic!("Expected loc set fn"),
+            ) if is_locset(segments) => {
+                let f = match f.ident.as_str() {
+                    "field" => LocSetFn::Field,
+                    "all_fields" => LocSetFn::AllFields,
+                    "index" => LocSetFn::Index,
+                    "path" => LocSetFn::Path,
+                    "empty" => LocSetFn::Empty,
+                    "union" => LocSetFn::Union,
+                    _ => panic!("Expected loc set fn"),
                 };
 
                 match f {
@@ -76,9 +88,17 @@ impl<'hir> FromHir<'hir, ExprKind<'hir>> for LocSetKind {
                     }
                 }
             }
-            _ => unreachable!("Cannot translate the expression to a loc set"),
+            kind => unreachable!("Cannot translate the expression to a loc set: {:#?}", kind),
         }
     }
+}
+
+fn is_locset(segments: &[PathSegment]) -> bool {
+    segments.len() == 4
+        && segments[0].ident.name == Symbol::intern("{{root}}")
+        && segments[1].ident.name == Symbol::intern("rml_contracts")
+        && segments[2].ident.name == Symbol::intern("logic")
+        && segments[3].ident.name == Symbol::intern("LocSet")
 }
 
 enum LocSetFn {
@@ -88,27 +108,4 @@ enum LocSetFn {
     Path,
     Empty,
     Union,
-}
-
-fn get_locset_fn(segments: &[PathSegment]) -> Option<LocSetFn> {
-    if !(segments.len() == 5
-        && segments[0].ident.name == Symbol::intern("{{root}}")
-        && segments[1].ident.name == Symbol::intern("rml_contracts")
-        && segments[2].ident.name == Symbol::intern("logic")
-        && segments[3].ident.name == Symbol::intern("Logic"))
-    {
-        return None;
-    }
-
-    let f = match segments[4].ident.as_str() {
-        "field" => LocSetFn::Field,
-        "all_fields" => LocSetFn::AllFields,
-        "index" => LocSetFn::Index,
-        "path" => LocSetFn::Path,
-        "empty" => LocSetFn::Empty,
-        "union" => LocSetFn::Union,
-        n => panic!("Unknown function {n}"),
-    };
-
-    Some(f)
 }

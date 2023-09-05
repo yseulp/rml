@@ -20,7 +20,7 @@ fn loop_var_closure(term: Term, name: &str) -> Stmt {
     let e = term.encode();
     parse_quote_spanned! { sp =>
         #[allow(unused_must_use)]
-        let _ = #[rml::spec::loop_variant = #name]
+        let _ = #[rml::spec::loop_var = #name]
         || {
             let _ = ::rml_contracts::well_founded_check(#e);
             #e
@@ -33,7 +33,7 @@ fn loop_inv_closure(term: Term, name: &str) -> Stmt {
     let e = term.encode();
     parse_quote_spanned! { sp =>
         #[allow(unused_must_use)]
-        let _ = #[rml::spec::loop_invariant = #name]
+        let _ = #[rml::spec::loop_inv = #name]
         || {
             let b: bool = #e;
             b
@@ -46,7 +46,7 @@ fn loop_mod_closure(ls: LocSet, name: &str) -> Stmt {
     let e = ls.encode();
     parse_quote_spanned! { sp =>
         #[allow(unused_must_use)]
-        let _ = #[rml::spec::loop_modifies = #name]
+        let _ = #[rml::spec::loop_modi = #name]
         || {
             let l: ::rml_contracts::logic::LocSet = #e;
             l
@@ -137,7 +137,7 @@ pub fn loop_inv(term: Term, mut r#loop: LoopKind) -> Result<(TS2, TS2, TS2)> {
         mod_attrs,
         loop_mod_closure,
         "loop_mod",
-        "loop_mod_ref",
+        "loop_modi_ref",
     )?;
 
     add_closures_and_attrs(

@@ -121,7 +121,7 @@ pub(crate) fn fn_spec_item(
     let modi_id_str = modi_id.to_string();
     let lse = locset.encode();
     let modi_attr: Attribute =
-        parse_quote_spanned! { span => #[rml::spec_part_mod_ref=#modi_id_str] };
+        parse_quote_spanned! { span => #[rml::spec_part_modi_ref=#modi_id_str] };
     let mut modi: ItemFn = parse_quote_spanned! { span =>
         #[allow(unused_variables, dead_code)]
         #[rml::spec::modi=#modi_id_str]

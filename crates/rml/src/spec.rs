@@ -157,7 +157,7 @@ impl LoopSpec {
                 .map(|did| get_expr_from_did(hir, did).hir_into(hir)),
             variant: spec
                 .variant
-                .map(|did| get_expr_from_did(hir, did).hir_into(hir)),
+                .map(|did| get_return_from_did(hir, did).hir_into(hir)),
         }
     }
 }
@@ -245,6 +245,14 @@ fn get_expr_from_did(hir: Map<'_>, did: DefId) -> &Expr {
             StmtKind::Local(Local { init: Some(e), .. }) => e,
             _ => unreachable!(),
         },
+        _ => unreachable!(),
+    }
+}
+
+fn get_return_from_did(hir: Map<'_>, did: DefId) -> &Expr {
+    let body = get_body(hir, did);
+    match body.value.kind {
+        ExprKind::Block(Block { expr: Some(e), .. }, None) => e,
         _ => unreachable!(),
     }
 }

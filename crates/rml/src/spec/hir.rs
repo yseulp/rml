@@ -1,7 +1,10 @@
 use std::collections::{HashMap, HashSet};
 
 use super::SpecKind;
-use rustc_hir::HirId;
+use rustc_hir::{
+    intravisit::{self},
+    ExprKind, HirId,
+};
 use rustc_middle::ty::TyCtxt;
 use rustc_span::{def_id::DefId, Symbol};
 
@@ -101,6 +104,29 @@ pub struct HirLoopSpec {
     pub variant: Option<DefId>,
 }
 
+impl HirLoopSpec {
+    pub fn new(target: HirId) -> Self {
+        Self {
+            target,
+            invariants: vec![],
+            modifies: None,
+            variant: None,
+        }
+    }
+
+    pub fn push_inv(&mut self, did: DefId) {
+        self.invariants.push(did)
+    }
+
+    pub fn set_mod(&mut self, did: DefId) {
+        self.modifies = Some(did)
+    }
+
+    pub fn set_var(&mut self, did: DefId) {
+        self.variant = Some(did)
+    }
+}
+
 #[derive(Debug, Default)]
 pub struct HirSpecMap {
     pub fn_specs: HashMap<DefId, HirFnSpec>,
@@ -155,6 +181,10 @@ pub fn collect_hir_specs(tcx: TyCtxt<'_>) -> HirSpecMap {
     let mut all_traits_with_invs = HashSet::new();
     let mut all_trait_invs = HashMap::new();
 
+    let mut all_loop_invs = HashMap::new();
+    let mut all_loop_mods = HashMap::new();
+    let mut all_loop_vars = HashMap::new();
+
     for did in tcx.hir().body_owners() {
         let did = did.to_def_id();
 
@@ -196,6 +226,15 @@ pub fn collect_hir_specs(tcx: TyCtxt<'_>) -> HirSpecMap {
             } else if util::is_spec_attr(attr, "trait_inv") {
                 let name = attr.value_str().unwrap();
                 all_trait_invs.insert(name, did);
+            } else if util::is_spec_attr(attr, "loop_inv") {
+                let name = attr.value_str().unwrap();
+                all_loop_invs.insert(name, did);
+            } else if util::is_spec_attr(attr, "loop_modi") {
+                let name = attr.value_str().unwrap();
+                all_loop_mods.insert(name, did);
+            } else if util::is_spec_attr(attr, "loop_var") {
+                let name = attr.value_str().unwrap();
+                all_loop_vars.insert(name, did);
             }
         }
     }
@@ -279,5 +318,81 @@ pub fn collect_hir_specs(tcx: TyCtxt<'_>) -> HirSpecMap {
         map.insert_trait_invs(did, invs);
     }
 
+    for (hir_id, (loop_inv_refs, loop_mod_ref, loop_var_ref)) in collect_loop_specs(tcx) {
+        let mut spec = HirLoopSpec::new(hir_id);
+
+        for r in loop_inv_refs {
+            let did = all_loop_invs.remove(&r).unwrap();
+            spec.push_inv(did)
+        }
+
+        if let Some(s) = loop_mod_ref {
+            let did = all_loop_mods.remove(&s).unwrap();
+            spec.set_mod(did)
+        }
+
+        if let Some(s) = loop_var_ref {
+            let did = all_loop_vars.remove(&s).unwrap();
+            spec.set_var(did)
+        }
+
+        map.insert_loop_spec(hir_id, spec);
+    }
+
     map
+}
+
+fn collect_loop_specs(
+    tcx: TyCtxt<'_>,
+) -> HashMap<HirId, (Vec<Symbol>, Option<Symbol>, Option<Symbol>)> {
+    let mut specs = HashMap::new();
+
+    let mut coll = LoopSpecCollector {
+        tcx,
+        specs: &mut specs,
+    };
+
+    tcx.hir().visit_all_item_likes_in_crate(&mut coll);
+
+    specs
+}
+
+struct LoopSpecCollector<'hir, 'a> {
+    tcx: TyCtxt<'hir>,
+    specs: &'a mut HashMap<HirId, (Vec<Symbol>, Option<Symbol>, Option<Symbol>)>,
+}
+
+impl<'v, 'a> intravisit::Visitor<'v> for LoopSpecCollector<'v, 'a> {
+    type Map = <Self::NestedFilter as intravisit::nested_filter::NestedFilter<'v>>::Map;
+
+    type NestedFilter = rustc_middle::hir::nested_filter::OnlyBodies;
+
+    fn nested_visit_map(&mut self) -> Self::Map {
+        self.tcx.hir()
+    }
+
+    fn visit_expr(&mut self, ex: &'v rustc_hir::Expr<'v>) {
+        if matches!(ex.kind, ExprKind::Loop(..)) {
+            let mut inv_refs = vec![];
+            let mut mod_ref = None;
+            let mut var_ref = None;
+
+            for attr in self.tcx.hir().attrs(ex.hir_id) {
+                if util::is_attr(attr, "loop_inv_ref") {
+                    let name = attr.value_str().unwrap();
+                    inv_refs.push(name);
+                } else if util::is_attr(attr, "loop_modi_ref") {
+                    let name = attr.value_str().unwrap();
+                    mod_ref = Some(name);
+                } else if util::is_attr(attr, "loop_var_ref") {
+                    let name = attr.value_str().unwrap();
+                    var_ref = Some(name);
+                }
+            }
+            if !inv_refs.is_empty() {
+                self.specs.insert(ex.hir_id, (inv_refs, mod_ref, var_ref));
+            }
+        }
+        intravisit::walk_expr(self, ex)
+    }
 }
