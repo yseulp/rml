@@ -157,12 +157,12 @@ pub enum ItemKind {
     Enum(ItemEnum),
 }
 
-impl ItemKind {
-    pub fn span(&self) -> proc_macro2::Span {
+impl ToTokens for ItemKind {
+    fn to_tokens(&self, tokens: &mut TS2) {
         match self {
-            ItemKind::Trait(i) => i.span(),
-            ItemKind::Struct(i) => i.span(),
-            ItemKind::Enum(i) => i.span(),
+            ItemKind::Trait(i) => i.to_tokens(tokens),
+            ItemKind::Struct(i) => i.to_tokens(tokens),
+            ItemKind::Enum(i) => i.to_tokens(tokens),
         }
     }
 }

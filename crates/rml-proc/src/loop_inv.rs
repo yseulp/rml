@@ -5,7 +5,7 @@ use syn::{
     parse::Parse, parse_quote_spanned, spanned::Spanned, Attribute, Expr, Ident, Meta, Result, Stmt,
 };
 
-use crate::{generate_unique_ident, subject::LoopKind};
+use crate::{generate_unique_ident, subject::LoopKind, util::extract_attrs};
 
 fn transform_loop(r#loop: LoopKind) -> (Vec<Attribute>, Vec<Stmt>, Expr) {
     match r#loop {
@@ -54,11 +54,9 @@ fn loop_mod_closure(ls: LocSet, name: &str) -> Stmt {
     }
 }
 
+#[inline]
 fn extract_loop_attrs(r#loop: &mut LoopKind, attr: &'static str) -> Vec<Attribute> {
-    r#loop
-        .attrs_mut()
-        .extract_if(|a| a.path().get_ident().map(|i| i == attr).unwrap_or(false))
-        .collect()
+    extract_attrs(r#loop.attrs_mut(), attr)
 }
 
 fn add_closures_and_attrs<F, T>(

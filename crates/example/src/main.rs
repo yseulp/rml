@@ -67,6 +67,20 @@ fn simple_loop(n: i32) -> i32 {
     i
 }
 
+#[invariant(self.0 < 10)]
+#[derive(Debug)]
+struct Digit(pub u32);
+
+#[invariant(match self {
+    Self::Digit(u) => u < 10,
+    Self::TenToNineteen(u) => 10 <= u && u < 20
+})]
+#[derive(Debug)]
+enum Number {
+    Digit(u32),
+    TenToNineteen(u32),
+}
+
 pub fn main() {
     #[cfg(rml)]
     println!("RML enabled");
@@ -77,5 +91,8 @@ pub fn main() {
     println!("{:?}", all_zero(vec![1, 2, 3, 4]));
     println!("{}", div(4, 0));
     //println!("{}", no_name(1, 1));
-    println!("{}", rec(100))
+    println!("{}", rec(100));
+    println!("{:?}", Digit(8));
+    println!("{:?}", Number::TenToNineteen(15));
+    println!("{:?}", Number::Digit(5));
 }

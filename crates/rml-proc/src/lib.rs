@@ -14,6 +14,7 @@ use rml_syn::{subject::LogicSubject, Encode, Spec, TBlock, Term};
 use syn::{parse_macro_input, parse_quote, spanned::Spanned, ReturnType};
 
 mod func;
+mod item_inv;
 mod loop_inv;
 mod subject;
 mod util;
@@ -103,7 +104,10 @@ pub fn invariant(attr: TS1, item: TS1) -> TS1 {
                 }
             }
         }
-        InvariantSubject::Item(_) => todo!(),
+        InvariantSubject::Item(i) => match item_inv::item_inv(term, i) {
+            Ok(ts) => ts,
+            Err(e) => return TS1::from(e.to_compile_error()),
+        },
     };
 
     TS1::from(ts)
