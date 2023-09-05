@@ -4,7 +4,9 @@ use rustc_middle::ty::TyCtxt;
 
 use std::{cell::RefCell, fs, thread_local};
 
-use crate::{ctx::RmlCtxt, spec::Spec, suppress_borrowck::suppress_borrowck, Options, OutputFile};
+use crate::{
+    ctx::RmlCtxt, spec::SpecMap, suppress_borrowck::suppress_borrowck, Options, OutputFile,
+};
 
 thread_local! {
     static RML_CTXT: RefCell<Option<RmlCtxt<'static>>> = RefCell::new(None);
@@ -86,11 +88,27 @@ impl Callbacks for ExtractSpec {
             let rcx = unsafe { retrieve_rcx(tcx) };
             let specs = rcx.get_specs();
             if self.opts.print_specs_debug {
-                for spec in specs.0.values() {
+                println!("== Function/method specs ==");
+                for spec in specs.fn_specs.values() {
+                    println!("{spec:#?}");
+                }
+                println!("== Struct invariants ==");
+                for invs in specs.struct_invs.values() {
+                    println!("{invs:#?}");
+                }
+                println!("== Enum invariants ==");
+                for invs in specs.enum_invs.values() {
+                    println!("{invs:#?}");
+                }
+                println!("== Trait invariants ==");
+                for invs in specs.trait_invs.values() {
+                    println!("{invs:#?}");
+                }
+                println!("== Loop specs ==");
+                for spec in specs.loop_specs.values() {
                     println!("{spec:#?}");
                 }
             }
-            let specs: Vec<_> = specs.0.values().collect();
 
             if let Some(of) = &self.opts.output_file {
                 output_specs(&specs, of, self.opts.pretty_print);
@@ -126,11 +144,12 @@ pub unsafe fn retrieve_rcx(_tcx: TyCtxt<'_>) -> RmlCtxt<'_> {
     unsafe { std::mem::transmute(rcx) }
 }
 
-fn output_specs(specs: &Vec<&Spec>, out_file: &OutputFile, pretty_print: bool) {
+fn output_specs(specs: &SpecMap, out_file: &OutputFile, pretty_print: bool) {
+    let specs = specs.serializable();
     let json = if pretty_print {
-        serde_json::to_string_pretty(specs)
+        serde_json::to_string_pretty(&specs)
     } else {
-        serde_json::to_string(specs)
+        serde_json::to_string(&specs)
     }
     .expect("expected no serialization errors");
 

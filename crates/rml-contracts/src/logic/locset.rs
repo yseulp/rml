@@ -6,14 +6,7 @@ impl LocSet {
     #[trusted]
     #[logic]
     #[rml::decl::internal]
-    pub fn field_named<T>(_base: T, _field: &'static str) -> Self {
-        panic!()
-    }
-
-    #[trusted]
-    #[logic]
-    #[rml::decl::internal]
-    pub fn field_unnamed<T>(_base: T, _field: u32) -> Self {
+    pub fn field<T>(_expr: T) -> Self {
         panic!()
     }
 

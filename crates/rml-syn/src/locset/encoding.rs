@@ -27,16 +27,8 @@ impl Encode for LocSetField {
     fn encode(self) -> Self::Target {
         let sp = self.span();
         let base = self.base.encode();
-        match self.member {
-            syn::Member::Named(name) => {
-                let field = name.to_string();
-                parse_quote_spanned! { sp => ::rml_contracts::logic::LocSet::field_named(#base, #field) }
-            }
-            syn::Member::Unnamed(idx) => {
-                let field = idx.index;
-                parse_quote_spanned! { sp => ::rml_contracts::logic::LocSet::field_unnamed(#base, #field) }
-            }
-        }
+        let member = self.member;
+        parse_quote_spanned! { sp => ::rml_contracts::logic::LocSet::field(#base.#member) }
     }
 }
 
@@ -78,7 +70,7 @@ impl Encode for LocSetGroup {
     fn encode(self) -> Self::Target {
         let sp = self.span();
         self.items.into_iter().fold(
-            parse_quote_spanned! { sp => ::rml_contracts::logic::LocSet::empty },
+            parse_quote_spanned! { sp => ::rml_contracts::logic::LocSet::empty() },
             |e, i| {
                 let i = i.encode();
                 parse_quote_spanned! { sp => ::rml_contracts::logic::LocSet::union(#e, #i) }

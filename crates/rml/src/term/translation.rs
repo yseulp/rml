@@ -520,7 +520,7 @@ impl<'hir> FromHir<'hir, &'hir PatField<'hir>> for TermPatField {
 
 impl From<DotDotPos> for TermDotDotPos {
     fn from(value: DotDotPos) -> Self {
-        Self(value.as_opt_usize().unwrap() as u32)
+        Self(value.as_opt_usize().map(|u| u as u32).unwrap_or(u32::MAX))
     }
 }
 

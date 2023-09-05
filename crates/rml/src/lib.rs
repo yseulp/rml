@@ -20,6 +20,7 @@ pub mod callbacks;
 pub(crate) mod check;
 pub mod ctx;
 pub mod error;
+pub mod locset;
 pub mod spec;
 pub(crate) mod suppress_borrowck;
 pub mod term;

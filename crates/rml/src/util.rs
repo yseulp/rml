@@ -15,7 +15,7 @@ pub(crate) fn is_attr(attr: &Attribute, str: &str) -> bool {
     }
 }
 
-pub(crate) fn is_spec_part(attr: &Attribute, str: &str) -> bool {
+pub(crate) fn is_spec_attr(attr: &Attribute, str: &str) -> bool {
     match &attr.kind {
         AttrKind::DocComment(..) => false,
         AttrKind::Normal(attr) => {

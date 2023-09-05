@@ -20,7 +20,7 @@ impl From<Span> for SpanWrapper {
     }
 }
 
-#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct HirIdWrapper(
     #[serde(
         serialize_with = "serialize::serialize_hir_id",
