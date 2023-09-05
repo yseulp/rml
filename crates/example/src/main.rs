@@ -81,6 +81,12 @@ enum Number {
     TenToNineteen(u32),
 }
 
+#[invariant(self.m() < 10)]
+trait T {
+    #[strictly_pure]
+    fn m(&self) -> u32;
+}
+
 pub fn main() {
     #[cfg(rml)]
     println!("RML enabled");
