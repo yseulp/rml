@@ -47,13 +47,13 @@ fn struct_or_enum(inv_kind: &'static str, term: Term, mut item: ItemKind) -> Res
         vec![parse_quote_spanned! {tsp => #[rml::#ref_ident = #first_str]}];
     let mut fns: Vec<ItemFn> = vec![item_inv_fn(term, &first_ident, &inv_kind_ident)];
 
-    let (mut old_attrs, ident, gens) = match &mut item {
+    let (old_attrs, ident, gens) = match &mut item {
         ItemKind::Trait(_) => unreachable!(),
         ItemKind::Struct(i) => (&mut i.attrs, i.ident.clone(), i.generics.clone()),
         ItemKind::Enum(i) => (&mut i.attrs, i.ident.clone(), i.generics.clone()),
     };
 
-    let inv_attrs = extract_attrs(&mut old_attrs, "invariant");
+    let inv_attrs = extract_attrs(old_attrs, "invariant");
 
     for inv in inv_attrs {
         let sp = inv.span();

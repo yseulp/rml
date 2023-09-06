@@ -101,7 +101,7 @@ pub(crate) fn fn_spec_item(
                 }
             })
             .collect();
-        let ls = if locsets.is_empty() {
+        if locsets.is_empty() {
             LocSet::Nothing(parse_quote_spanned! { span => nothing })
         } else {
             let first = locsets.remove(0);
@@ -114,8 +114,7 @@ pub(crate) fn fn_spec_item(
             }
 
             LocSet::Group(LocSetGroup { items: p })
-        };
-        ls
+        }
     };
     let modi_id = generate_unique_ident("spec_part_modi");
     let modi_id_str = modi_id.to_string();
