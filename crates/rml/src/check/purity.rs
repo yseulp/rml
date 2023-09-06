@@ -80,8 +80,6 @@ impl<'tcx> RmlCtxt<'tcx> {
 }
 
 pub(crate) fn get_purity(tcx: TyCtxt<'_>, did: DefId) -> Purity {
-    // Theoretically, since logic and spec functions may call pure functions, they are not strictly pure.
-    // But, because they are not "really" called, they do not change the memory and are, thus, strictly pure
     if util::is_spec(tcx, did) || util::is_logic(tcx, did) {
         Purity::Logic
     } else if util::is_declared_strictly_pure(tcx, did) {
