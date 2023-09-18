@@ -74,6 +74,8 @@ mod macros {
 
     pub use rml_proc::proof_assert;
 
+    pub use rml_proc::extern_spec;
+
     pub mod stubs {
         #[rml::decl::logic]
         #[rml::decl::internal]
@@ -126,4 +128,6 @@ mod macros {
     pub use rml_proc_dummy::trusted;
 
     pub use rml_proc_dummy::proof_assert;
+
+    pub use rml_proc_dummy::extern_spec;
 }

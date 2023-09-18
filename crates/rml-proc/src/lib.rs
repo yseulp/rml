@@ -9,10 +9,13 @@ use func::fn_spec_item;
 use proc_macro::TokenStream as TS1;
 use proc_macro2::{Span, TokenStream as TS2};
 use quote::{quote, quote_spanned};
-use rml_syn::{subject::LogicSubject, Encode, Spec, TBlock, Term};
+use rml_syn::{
+    extern_spec::ExternSpecItem, subject::LogicSubject, Encode, SpecContent, TBlock, Term,
+};
 
-use syn::{parse_macro_input, parse_quote, spanned::Spanned, ReturnType};
+use syn::{parse_macro_input, parse_quote, spanned::Spanned, Path, ReturnType};
 
+mod extern_spec;
 mod func;
 mod item_inv;
 mod loop_inv;
@@ -24,7 +27,11 @@ use util::generate_unique_ident;
 
 #[proc_macro_attribute]
 pub fn spec(attr: TS1, item: TS1) -> TS1 {
-    let sp = parse_macro_input!(attr as Spec);
+    let sp = parse_macro_input!(attr as SpecContent);
+    let sp = match sp.validate() {
+        Ok(s) => s,
+        Err(e) => return TS1::from(e.into_compile_error()),
+    };
 
     let item = parse_macro_input!(item as ContractSubject);
 
@@ -211,6 +218,21 @@ pub fn proof_assert(assertion: TS1) -> TS1 {
             }
         }
     })
+}
+
+#[proc_macro_attribute]
+pub fn extern_spec(attr: TS1, item: TS1) -> TS1 {
+    let path = if attr.is_empty() {
+        None
+    } else {
+        let p = parse_macro_input!(attr as Path);
+        Some(p)
+    };
+
+    let subject = parse_macro_input!(item as ExternSpecItem);
+    let ts = extern_spec::extern_spec(subject, path);
+
+    TS1::from(ts)
 }
 
 fn takes_no_args(name: &str) -> TS1 {

@@ -8,6 +8,8 @@
 pub(crate) mod macros;
 pub(crate) mod print;
 
+pub mod attrs;
+pub mod extern_spec;
 pub mod locset;
 pub mod pat;
 pub mod spec;

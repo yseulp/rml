@@ -7,12 +7,14 @@ extern crate proc_macro;
 use proc_macro::TokenStream as TS1;
 use proc_macro2::Span;
 
-use rml_syn::{locset::LocSet, subject::LogicSubject, Spec, TBlock, Term};
-use syn::parse_macro_input;
+use rml_syn::{
+    extern_spec::ExternSpecItem, locset::LocSet, subject::LogicSubject, SpecContent, TBlock, Term,
+};
+use syn::{parse_macro_input, Path};
 
 #[proc_macro_attribute]
 pub fn spec(attr: TS1, item: TS1) -> TS1 {
-    let _ = parse_macro_input!(attr as Spec);
+    let _ = parse_macro_input!(attr as SpecContent);
     item
 }
 
@@ -78,6 +80,20 @@ pub fn rml(tokens: TS1) -> TS1 {
 #[proc_macro]
 pub fn proof_assert(assertion: TS1) -> TS1 {
     let _ = parse_macro_input!(assertion with TBlock::parse_within);
+    TS1::new()
+}
+
+#[proc_macro_attribute]
+pub fn extern_spec(attr: TS1, item: TS1) -> TS1 {
+    let _ = if attr.is_empty() {
+        None
+    } else {
+        let p = parse_macro_input!(attr as Path);
+        Some(p)
+    };
+
+    let _ = parse_macro_input!(item as ExternSpecItem);
+
     TS1::new()
 }
 

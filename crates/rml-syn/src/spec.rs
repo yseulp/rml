@@ -1,13 +1,14 @@
 //! RML specification.
 
-use std::fmt;
-
 use proc_macro2::{Delimiter, TokenTree};
+use quote::ToTokens;
 use syn::{
     braced, bracketed, parenthesized,
     parse::{Parse, ParseStream},
+    punctuated::Punctuated,
+    spanned::Spanned,
     token::{self, Brace, Bracket, Paren},
-    LitStr, MacroDelimiter, Token,
+    LitStr, MacroDelimiter, Result, Token,
 };
 
 use crate::{locset::LocSet, Term};
@@ -106,7 +107,7 @@ pub struct SpecPartDiverges {
     pub term: Option<Term>,
 }
 
-/// A function specification.
+/// Content of the `spec` macro.
 ///
 /// # Grammar
 /// spec ::= (name ',')? (normal-spec-part | panics-spec-part)*
@@ -138,6 +139,112 @@ pub struct SpecPartDiverges {
 /// diverges-part ::= 'diverges' ('(' term ')')?
 ///
 /// term ::= _see [`Term`]_
+#[derive(Debug)]
+pub struct SpecContent {
+    pub name: Option<(LitStr, Token![,])>,
+    pub parts: Punctuated<SpecPart, Token![,]>,
+}
+
+impl SpecContent {
+    pub fn validate(self) -> Result<Spec> {
+        let span = self.span();
+        let mut pre_conds = Vec::new();
+        let mut post_conds = Vec::new();
+        let mut modifies = None;
+        let mut variant = None;
+        let mut diverges = None;
+        let mut kind = None;
+
+        for part in self.parts {
+            use SpecPart::*;
+            match part {
+                Requires(SpecPartRequires { term: Some(t), .. }) => pre_conds.push(t),
+                Ensures(SpecPartEnsures { term, .. }) => {
+                    match kind {
+                        Some(SpecKind::Normal) => {}
+                        Some(SpecKind::Panic) => {
+                            return Err(syn::Error::new(
+                                 span,
+                                "The specification has both ensures and panics clauses; it may only have post conditions of one type",
+                            ));
+                        }
+                        None => kind = Some(SpecKind::Normal),
+                    }
+                    if let Some(t) = term {
+                        post_conds.push(t)
+                    }
+                }
+                Panics(SpecPartPanics { term, .. }) => {
+                    match kind {
+                        Some(SpecKind::Panic) => {}
+                        Some(SpecKind::Normal) => {
+                            return Err(syn::Error::new(
+                                 span,
+                                "The specification has both ensures and panics clauses; it may only have post conditions of one type",
+                            ));
+                        }
+                        None => kind = Some(SpecKind::Panic),
+                    }
+                    if let Some(t) = term {
+                        post_conds.push(t)
+                    }
+                }
+                Modifies(SpecPartModifies { locset, .. }) => {
+                    if modifies.is_some() {
+                        return Err(syn::Error::new(
+                            span,
+                            "The specification has multiple declarations of 'modifies'",
+                        ));
+                    } else {
+                        modifies = Some(locset)
+                    }
+                }
+                Variant(SpecPartVariant { term, .. }) => {
+                    if variant.is_some() {
+                        return Err(syn::Error::new(
+                            span,
+                            "The specification has multiple declarations of 'variant'",
+                        ));
+                    } else {
+                        variant = Some(term)
+                    }
+                }
+                Diverges(SpecPartDiverges { term, .. }) => {
+                    if diverges.is_some() {
+                        return Err(syn::Error::new(
+                            span,
+                            "The specification has multiple declarations of 'diverges'",
+                        ));
+                    } else {
+                        diverges = Some(term)
+                    }
+                }
+                Requires(_) => {}
+            }
+        }
+
+        let kind = match kind {
+            Some(k) => k,
+            None => {
+                return Err(syn::Error::new(
+                    span,
+                    "Specification has no post condition of any kind",
+                ))
+            }
+        };
+
+        Ok(Spec {
+            name: self.name.map(|n| n.0.value().to_string()),
+            kind,
+            pre_conds,
+            post_conds,
+            modifies,
+            variant,
+            diverges,
+        })
+    }
+}
+
 #[derive(Debug)]
 pub struct Spec {
     pub name: Option<String>,
@@ -333,122 +440,129 @@ pub(crate) fn parse_delimiter(
     })
 }
 
-impl Parse for Spec {
+impl Parse for SpecContent {
     fn parse(input: syn::parse::ParseStream) -> syn::Result<Self> {
-        let mut pre_conds = Vec::new();
-        let mut post_conds = Vec::new();
-        let mut modifies = None;
-        let mut variant = None;
-        let mut diverges = None;
-        let mut kind = None;
+        let mut parts = Punctuated::new();
 
-        let name = input.parse::<Option<LitStr>>()?.map(|l| l.value());
-        if name.is_some() {
-            let _: Token![,] = input.parse()?;
-        }
+        let name = match input.parse::<Option<LitStr>>()? {
+            Some(n) => Some((n, input.parse()?)),
+            _ => None,
+        };
 
         loop {
             let part: SpecPart = input.parse()?;
-            match part {
-                SpecPart::Requires(SpecPartRequires { term, .. }) => {
-                    if let Some(t) = term {
-                        pre_conds.push(t)
-                    }
-                }
-                SpecPart::Ensures(SpecPartEnsures { term, .. }) => {
-                    match kind {
-                        Some(SpecKind::Normal) => {}
-                        Some(SpecKind::Panic) => {
-                            return Err(syn::Error::new(
-                                input.span(),
-                                "The specification has both ensures and panics clauses; it may only have post conditions of one type",
-                            ));
-                        }
-                        None => kind = Some(SpecKind::Normal),
-                    }
-                    if let Some(t) = term {
-                        post_conds.push(t)
-                    }
-                }
-                SpecPart::Panics(SpecPartPanics { term, .. }) => {
-                    match kind {
-                        Some(SpecKind::Panic) => {}
-                        Some(SpecKind::Normal) => {
-                            return Err(syn::Error::new(
-                                input.span(),
-                                "The specification has both ensures and panics clauses; it may only have post conditions of one type",
-                            ));
-                        }
-                        None => kind = Some(SpecKind::Panic),
-                    }
-                    if let Some(t) = term {
-                        post_conds.push(t)
-                    }
-                }
-                SpecPart::Modifies(SpecPartModifies { locset, .. }) => {
-                    if modifies.is_some() {
-                        return Err(syn::Error::new(
-                            input.span(),
-                            "The specification has multiple declarations of 'modifies'",
-                        ));
-                    } else {
-                        modifies = Some(locset)
-                    }
-                }
-                SpecPart::Variant(SpecPartVariant { term, .. }) => {
-                    if variant.is_some() {
-                        return Err(syn::Error::new(
-                            input.span(),
-                            "The specification has multiple declarations of 'variant'",
-                        ));
-                    } else {
-                        variant = Some(term)
-                    }
-                }
-                SpecPart::Diverges(SpecPartDiverges { term, .. }) => {
-                    if diverges.is_some() {
-                        return Err(syn::Error::new(
-                            input.span(),
-                            "The specification has multiple declarations of 'diverges'",
-                        ));
-                    } else {
-                        diverges = Some(term)
-                    }
-                }
-            }
+            parts.push_value(part);
             if !input.peek(Token![,]) {
                 break;
             }
-            let _: Token![,] = input.parse()?;
+            parts.push_punct(input.parse()?);
         }
 
         if !input.is_empty() {
             return Err(input.error("expected `,` or end of input"));
         }
 
-        let kind = match kind {
-            Some(k) => k,
-            None => {
-                return Err(syn::Error::new(
-                    input.span(),
-                    "Specification has no post condition of any kind",
-                ))
-            }
-        };
-
-        Ok(Self {
-            name,
-            pre_conds,
-            post_conds,
-            modifies,
-            variant,
-            diverges,
-            kind,
-        })
+        Ok(Self { name, parts })
     }
 }
 
-impl fmt::Display for Spec {
+impl ToTokens for SpecContent {
+    fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
+        if let Some((name, comma)) = &self.name {
+            name.to_tokens(tokens);
+            comma.to_tokens(tokens);
+        }
+        self.parts.to_tokens(tokens);
+    }
+}
+
+impl ToTokens for SpecPart {
+    fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
+        match self {
+            SpecPart::Requires(p) => p.to_tokens(tokens),
+            SpecPart::Ensures(p) => p.to_tokens(tokens),
+            SpecPart::Panics(p) => p.to_tokens(tokens),
+            SpecPart::Modifies(p) => p.to_tokens(tokens),
+            SpecPart::Variant(p) => p.to_tokens(tokens),
+            SpecPart::Diverges(p) => p.to_tokens(tokens),
+        }
+    }
+}
+
+impl ToTokens for SpecPartRequires {
+    fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
+        self.requires_token.to_tokens(tokens);
+        if let Some(delim) = &self.delimiter {
+            surround_delim(delim, tokens, |tokens| {
+                self.term.to_tokens(tokens);
+            });
+        }
+    }
+}
+
+impl ToTokens for SpecPartEnsures {
+    fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
+        self.ensures_token.to_tokens(tokens);
+        if let Some(delim) = &self.delimiter {
+            surround_delim(delim, tokens, |tokens| {
+                self.term.to_tokens(tokens);
+            });
+        }
+    }
+}
+
+impl ToTokens for SpecPartPanics {
+    fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
+        self.panics_token.to_tokens(tokens);
+        if let Some(delim) = &self.delimiter {
+            surround_delim(delim, tokens, |tokens| {
+                self.term.to_tokens(tokens);
+            });
+        }
+    }
+}
+
+impl ToTokens for SpecPartModifies {
+    fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
+        self.modifies_token.to_tokens(tokens);
+        surround_delim(&self.delimiter, tokens, |tokens| {
+            self.locset.to_tokens(tokens);
+        });
+    }
+}
+
+impl ToTokens for SpecPartVariant {
+    fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
+        self.variant_token.to_tokens(tokens);
+        surround_delim(&self.delimiter, tokens, |tokens| {
+            self.term.to_tokens(tokens);
+        });
+    }
+}
+
+impl ToTokens for SpecPartDiverges {
+    fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
+        self.diverges_token.to_tokens(tokens);
+        if let Some(delim) = &self.delimiter {
+            surround_delim(delim, tokens, |tokens| {
+                self.term.to_tokens(tokens);
+            });
+        }
+    }
+}
+
+pub(crate) fn surround_delim<F>(delim: &MacroDelimiter, tokens: &mut proc_macro2::TokenStream, f: F)
+where
+    F: FnOnce(&mut proc_macro2::TokenStream),
+{
+    match delim {
+        MacroDelimiter::Paren(d) => d.surround(tokens, f),
+        MacroDelimiter::Brace(d) => d.surround(tokens, f),
+        MacroDelimiter::Bracket(d) => d.surround(tokens, f),
+    }
+}
+
+/* impl fmt::Display for SpecContent {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let name = match &self.name {
             Some(n) => n,
@@ -468,4 +582,4 @@ impl fmt::Display for Spec {
 
         r.and(writeln!(f, "\t]")).and(writeln!(f, "}}"))
     }
-}
+} */

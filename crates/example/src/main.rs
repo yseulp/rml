@@ -87,6 +87,16 @@ trait T {
     fn m(&self) -> u32;
 }
 
+#[extern_spec(std::mem)]
+impl<T> Option<T> {
+    #[spec {
+        "name",
+        requires(true),
+        ensures[result == match self { Some(_) => true, _ => false }]
+    }]
+    fn is_some(&self) -> bool;
+}
+
 pub fn main() {
     #[cfg(rml)]
     println!("RML enabled");

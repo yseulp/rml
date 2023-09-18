@@ -99,13 +99,7 @@ impl Parse for LocSetIndex {
 
 impl Parse for LocSetGroup {
     fn parse(input: syn::parse::ParseStream) -> syn::Result<Self> {
-        let mut items = Punctuated::new();
-        items.push_value(input.parse()?);
-
-        while input.peek(Token![,]) {
-            items.push_punct(input.parse()?);
-            items.push_value(input.parse()?);
-        }
+        let items = Punctuated::parse_separated_nonempty(input)?;
 
         Ok(Self { items })
     }
