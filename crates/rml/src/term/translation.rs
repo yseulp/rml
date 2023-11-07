@@ -301,7 +301,9 @@ impl From<Constness> for TermConstness {
 impl From<CaptureBy> for TermCaptureBy {
     fn from(value: CaptureBy) -> Self {
         match value {
-            CaptureBy::Value => Self::Value,
+            CaptureBy::Value { move_kw } => Self::Value {
+                move_kw: move_kw.into(),
+            },
             CaptureBy::Ref => Self::Ref,
         }
     }
@@ -1103,7 +1105,7 @@ impl From<DefKind> for TermDefKind {
             DefKind::GlobalAsm => Self::GlobalAsm,
             DefKind::Impl { of_trait } => Self::Impl { of_trait },
             DefKind::Closure => Self::Closure,
-            DefKind::Generator => Self::Generator,
+            DefKind::Coroutine => Self::Coroutine,
         }
     }
 }
@@ -1262,9 +1264,10 @@ impl<'hir> From<&'hir LangItem> for TermLangItem {
             LangItem::FnMut => Self::FnMut,
             LangItem::FnOnce => Self::FnOnce,
             LangItem::FnOnceOutput => Self::FnOnceOutput,
+            LangItem::Iterator => Self::Iterator,
             LangItem::Future => Self::Future,
-            LangItem::GeneratorState => Self::GeneratorState,
-            LangItem::Generator => Self::Generator,
+            LangItem::Coroutine => Self::Coroutine,
+            LangItem::CoroutineState => Self::CoroutineState,
             LangItem::Unpin => Self::Unpin,
             LangItem::Pin => Self::Pin,
             LangItem::PartialEq => Self::PartialEq,
@@ -1273,7 +1276,6 @@ impl<'hir> From<&'hir LangItem> for TermLangItem {
             LangItem::Panic => Self::Panic,
             LangItem::PanicNounwind => Self::PanicNounwind,
             LangItem::PanicFmt => Self::PanicFmt,
-            LangItem::PanicDisplay => Self::PanicDisplay,
             LangItem::ConstPanicFmt => Self::ConstPanicFmt,
             LangItem::PanicBoundsCheck => Self::PanicBoundsCheck,
             LangItem::PanicMisalignedPointerDereference => Self::PanicMisalignedPointerDereference,

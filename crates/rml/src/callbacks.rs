@@ -24,7 +24,7 @@ impl ExtractSpec {
 
 impl Callbacks for ExtractSpec {
     fn config(&mut self, config: &mut Config) {
-        config.override_queries = Some(|_, providers, _| {
+        config.override_queries = Some(|_, providers| {
             providers.mir_built = |tcx, did| {
                 let mir = (rustc_interface::DEFAULT_QUERY_PROVIDERS.mir_built)(tcx, did);
                 let mut mir = mir.steal();
@@ -80,7 +80,6 @@ impl Callbacks for ExtractSpec {
 
     fn after_analysis<'tcx>(
         &mut self,
-        _handler: &rustc_session::EarlyErrorHandler,
         _compiler: &rustc_interface::interface::Compiler,
         queries: &'tcx Queries<'tcx>,
     ) -> Compilation {
