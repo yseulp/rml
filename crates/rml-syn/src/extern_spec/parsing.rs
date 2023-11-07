@@ -166,10 +166,10 @@ impl Parse for ExternSpecImpl {
             self_ty = input.parse()?;
         } else {
             trait_ = None;
-            self_ty = if polarity.is_none() {
-                first_ty
-            } else {
+            self_ty = if let Some(p) = polarity {
                 return Err(Error::new_spanned(polarity.unwrap(), "Unexpected !"));
+            } else {
+                first_ty
             };
         }
 
