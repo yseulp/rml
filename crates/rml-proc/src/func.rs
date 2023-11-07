@@ -1,12 +1,15 @@
 use proc_macro2::{Span, TokenStream as TS2};
 use quote::quote_spanned;
-use rml_syn::{Encode, LocSet, LocSetGroup, Spec};
+use rml_syn::{LocSet, LocSetGroup, Spec};
 use syn::{
     parse_quote, parse_quote_spanned, punctuated::Punctuated, spanned::Spanned, Attribute, FnArg,
-    Ident, ItemFn, Pat, Signature, Token, Type,
+    Ident, Signature, Token,
 };
 
-use crate::util::{generate_unique_ident, get_mut_ref_params};
+use crate::util::{
+    gen_boolean_spec_fn, gen_locset_spec_fn, gen_wf_spec_fn, generate_unique_ident,
+    get_mut_ref_params,
+};
 
 pub(crate) fn fn_spec_item(
     spec_id: Ident,
@@ -37,21 +40,9 @@ pub(crate) fn fn_spec_item(
         .into_iter()
         .enumerate()
         .map(|(i, p)| {
-            let id = &pre_idents[i];
-            let id_str = id.to_string();
+            let id = pre_idents[i].clone();
             let span = p.span();
-            let t = p.encode();
-            let mut res: ItemFn = parse_quote_spanned! { span =>
-                #[allow(unused_variables, dead_code)]
-                #[rml::spec::pre=#id_str]
-                fn #id() -> bool {
-                    let cond: bool = !!(#t);
-                    cond
-                }
-            };
-            adapt_sig(&mut res.sig, &sig);
-
-            res
+            gen_boolean_spec_fn(id, span, p, parse_quote!(rml::spec::pre), &sig)
         })
         .collect();
     let pre_strs = pre_idents.iter().map(|i| i.to_string());
@@ -64,21 +55,10 @@ pub(crate) fn fn_spec_item(
         .map(|_| generate_unique_ident("spec_part_post"))
         .collect();
     let post = spec.post_conds.into_iter().enumerate().map(|(i, p)| {
-        let id = &post_idents[i];
-        let id_str = id.to_string();
+        let id = post_idents[i].clone();
         let span = p.span();
-        let t = p.encode();
-        let mut res: ItemFn = parse_quote_spanned! { span =>
-            #[allow(unused_variables, dead_code)]
-            #[rml::spec::post=#id_str]
-            fn #id() -> bool {
-                let cond: bool = !!(#t);
-                cond
-            }
-        };
-        adapt_sig(&mut res.sig, &post_sig);
 
-        res
+        gen_boolean_spec_fn(id, span, p, parse_quote!(rml::spec::post), &post_sig)
     });
     let post_strs = post_idents.iter().map(|i| i.to_string());
 
@@ -118,33 +98,16 @@ pub(crate) fn fn_spec_item(
     };
     let modi_id = generate_unique_ident("spec_part_modi");
     let modi_id_str = modi_id.to_string();
-    let lse = locset.encode();
     let modi_attr: Attribute =
         parse_quote_spanned! { span => #[rml::spec_part_modi_ref=#modi_id_str] };
-    let mut modi: ItemFn = parse_quote_spanned! { span =>
-        #[allow(unused_variables, dead_code)]
-        #[rml::spec::modi=#modi_id_str]
-        fn #modi_id() -> ::rml_contracts::logic::LocSet {
-            #lse
-        }
-    };
-    adapt_sig(&mut modi.sig, &sig);
+    let modi = gen_locset_spec_fn(modi_id, span, locset, parse_quote!(rml::spec::modi), &sig);
 
     // variant
     let (var_attr, var) = if let Some(v) = spec.variant {
         let span = v.span();
-        let t = v.encode();
         let id = generate_unique_ident("spec_part_var");
         let id_str = id.to_string();
-        let mut item: ItemFn = parse_quote_spanned! { span =>
-            #[allow(unused_variables, dead_code)]
-            #[rml::spec::var=#id_str]
-            fn #id() -> impl ::rml_contracts::WellFounded {
-                #t
-            }
-        };
-        adapt_sig(&mut item.sig, &sig);
-        let id_str = id.to_string();
+        let item = gen_wf_spec_fn(id, span, v, parse_quote!(rml::spec::var), &sig);
         let var_attr: Attribute =
             parse_quote_spanned! { span => #[rml::spec_part_var_ref=#id_str] };
         (Some(var_attr), Some(item))
@@ -161,18 +124,8 @@ pub(crate) fn fn_spec_item(
         let id = generate_unique_ident("spec_part_div");
         let id_str = id.to_string();
         let span = diverges.span();
-        let t = diverges.encode();
 
-        let mut item: ItemFn = parse_quote_spanned! { span =>
-            #[allow(unused_variables, dead_code)]
-            #[rml::spec::div=#id_str]
-            fn #id() -> bool {
-                let b: bool = !!(#t);
-                b
-            }
-        };
-        adapt_sig(&mut item.sig, &sig);
-        let id_str = id.to_string();
+        let item = gen_boolean_spec_fn(id, span, diverges, parse_quote!(rml::spec::div), &sig);
         let attr: Attribute = parse_quote_spanned! { span => #[rml::spec_part_div_ref=#id_str] };
         (item, attr)
     };
@@ -199,38 +152,4 @@ pub(crate) fn fn_spec_item(
         #spec_name
         const #spec_id: bool = false;
     }
-}
-
-fn adapt_sig(sig: &mut Signature, old_sig: &Signature) {
-    for p in old_sig.inputs.pairs() {
-        let (arg, punct) = p.into_tuple();
-        match arg.clone() {
-            FnArg::Receiver(mut r) => {
-                r.mutability = None;
-                sig.inputs.push_value(FnArg::Receiver(r));
-            }
-            FnArg::Typed(mut a) => {
-                a.pat = match *a.pat {
-                    Pat::Ident(mut p) => {
-                        p.mutability = None;
-                        Pat::Ident(p).into()
-                    }
-                    p => p.into(),
-                };
-                a.ty = match *a.ty {
-                    Type::Reference(mut r) => {
-                        r.mutability = None;
-                        Type::Reference(r).into()
-                    }
-                    ty => ty.into(),
-                };
-                sig.inputs.push_value(FnArg::Typed(a));
-            }
-        }
-        if let Some(punct) = punct {
-            sig.inputs.push_punct(*punct);
-        }
-    }
-
-    sig.generics = old_sig.generics.clone();
 }

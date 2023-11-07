@@ -1,4 +1,4 @@
-use std::rc::Rc;
+use std::sync::Arc;
 
 use serde::{Deserialize, Serialize};
 
@@ -97,8 +97,8 @@ pub struct TermLit {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum TermLitKind {
     Str(SymbolWrapper, TermStrStyle),
-    ByteStr(Rc<[u8]>, TermStrStyle),
-    CStr(Rc<[u8]>, TermStrStyle),
+    ByteStr(Arc<[u8]>, TermStrStyle),
+    CStr(Arc<[u8]>, TermStrStyle),
     Byte(u8),
     Char(char),
     Int(u128, TermLitIntType),
@@ -186,7 +186,7 @@ pub enum TermConstness {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum TermCaptureBy {
-    Value,
+    Value { move_kw: SpanWrapper },
     Ref,
 }
 
@@ -687,7 +687,7 @@ pub enum TermDefKind {
     GlobalAsm,
     Impl { of_trait: bool },
     Closure,
-    Generator,
+    Coroutine,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -802,9 +802,10 @@ pub enum TermLangItem {
     FnMut,
     FnOnce,
     FnOnceOutput,
+    Iterator,
     Future,
-    GeneratorState,
-    Generator,
+    Coroutine,
+    CoroutineState,
     Unpin,
     Pin,
     PartialEq,
@@ -813,7 +814,6 @@ pub enum TermLangItem {
     Panic,
     PanicNounwind,
     PanicFmt,
-    PanicDisplay,
     ConstPanicFmt,
     PanicBoundsCheck,
     PanicMisalignedPointerDereference,
