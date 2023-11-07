@@ -167,7 +167,7 @@ impl Parse for ExternSpecImpl {
         } else {
             trait_ = None;
             self_ty = if let Some(p) = polarity {
-                return Err(Error::new_spanned(polarity.unwrap(), "Unexpected !"));
+                return Err(Error::new_spanned(p, "Unexpected !"));
             } else {
                 first_ty
             };
