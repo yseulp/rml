@@ -230,7 +230,10 @@ pub fn extern_spec(attr: TS1, item: TS1) -> TS1 {
     };
 
     let subject = parse_macro_input!(item as ExternSpecItem);
-    let ts = extern_spec::extern_spec(subject, path);
+    let ts = match extern_spec::extern_spec(subject, path) {
+        Ok(ts) => ts,
+        Err(e) => return TS1::from(e.to_compile_error()),
+    };
 
     TS1::from(ts)
 }
