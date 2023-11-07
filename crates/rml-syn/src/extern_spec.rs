@@ -149,23 +149,23 @@ impl ExternSpecItem {
             _ => Vec::new(),
         }
     }
-}
 
-pub fn flatten(spec: ExternSpecItem, path: Option<Path>) -> Result<Vec<FlattenedExternSpec>> {
-    let prefix = ExprPath {
-        attrs: Vec::new(),
-        qself: None,
-        path: path.unwrap_or_else(|| Path {
-            leading_colon: Some(Default::default()),
-            segments: Punctuated::new(),
-        }),
-    };
+    pub fn flatten(self, path: Option<Path>) -> Result<Vec<FlattenedExternSpec>> {
+        let prefix = ExprPath {
+            attrs: Vec::new(),
+            qself: None,
+            path: path.unwrap_or_else(|| Path {
+                leading_colon: Some(Default::default()),
+                segments: Punctuated::new(),
+            }),
+        };
 
-    let mut flattened = Vec::new();
+        let mut flattened = Vec::new();
 
-    flatten_helper(spec, prefix, FnContext::None, &mut flattened)?;
+        flatten_helper(self, prefix, FnContext::None, &mut flattened)?;
 
-    Ok(flattened)
+        Ok(flattened)
+    }
 }
 
 fn flatten_helper(

@@ -1,5 +1,6 @@
 #![feature(box_patterns)]
 #![feature(extract_if)]
+#![feature(iterator_try_collect)]
 
 //! Procedural (attribute) macros to specify Rust code.
 //!
