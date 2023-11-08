@@ -74,10 +74,12 @@ pub struct ExternSpecTrait {
     pub items: Vec<ExternSpecFn>,
 }
 
+#[derive(Debug, Clone)]
 pub enum FnContext {
     None,
-    TraitImpl(Ident, Generics),
+    Trait(Ident, Generics),
     Impl(Type),
+    TraitImpl { target_ty: Type, trait_: Path },
 }
 
 pub enum FlattenedExternSpec {
@@ -216,11 +218,20 @@ fn flatten_helper(
                 return Err(Error::new(i.span(), "unsupported form of impl"));
             }
 
+            let ctxt = if let Some((_, trait_, _)) = i.trait_ {
+                FnContext::TraitImpl {
+                    target_ty: *i.self_ty.clone(),
+                    trait_,
+                }
+            } else {
+                FnContext::Impl(*i.self_ty.clone())
+            };
+
             for item in i.items {
                 flatten_helper(
                     ExternSpecItem::Fn(item),
                     prefix.clone(),
-                    FnContext::Impl(*i.self_ty.clone()),
+                    ctxt.clone(),
                     flattened,
                 )?
             }
@@ -262,7 +273,7 @@ fn flatten_helper(
                 flatten_helper(
                     ExternSpecItem::Fn(item),
                     prefix.clone(),
-                    FnContext::TraitImpl(t.ident.clone(), t.generics.clone()),
+                    FnContext::Trait(t.ident.clone(), t.generics.clone()),
                     flattened,
                 )?
             }
