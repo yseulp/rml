@@ -7,8 +7,7 @@ use syn::{
 };
 
 use crate::util::{
-    gen_boolean_spec_fn, gen_locset_spec_fn, gen_wf_spec_fn, generate_unique_ident,
-    get_mut_ref_params,
+    gen_bool_spec_fn, gen_locset_spec_fn, gen_wf_spec_fn, generate_unique_ident, get_mut_ref_params,
 };
 
 pub(crate) fn fn_spec_item(
@@ -42,7 +41,7 @@ pub(crate) fn fn_spec_item(
         .map(|(i, p)| {
             let id = pre_idents[i].clone();
             let span = p.span();
-            gen_boolean_spec_fn(id, span, p, parse_quote!(rml::spec::pre), &sig)
+            gen_bool_spec_fn(id, span, p, parse_quote!(rml::spec::pre), &sig)
         })
         .collect();
     let pre_strs = pre_idents.iter().map(|i| i.to_string());
@@ -58,7 +57,7 @@ pub(crate) fn fn_spec_item(
         let id = post_idents[i].clone();
         let span = p.span();
 
-        gen_boolean_spec_fn(id, span, p, parse_quote!(rml::spec::post), &post_sig)
+        gen_bool_spec_fn(id, span, p, parse_quote!(rml::spec::post), &post_sig)
     });
     let post_strs = post_idents.iter().map(|i| i.to_string());
 
@@ -125,7 +124,7 @@ pub(crate) fn fn_spec_item(
         let id_str = id.to_string();
         let span = diverges.span();
 
-        let item = gen_boolean_spec_fn(id, span, diverges, parse_quote!(rml::spec::div), &sig);
+        let item = gen_bool_spec_fn(id, span, diverges, parse_quote!(rml::spec::div), &sig);
         let attr: Attribute = parse_quote_spanned! { span => #[rml::spec_part_div_ref=#id_str] };
         (item, attr)
     };

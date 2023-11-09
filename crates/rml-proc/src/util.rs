@@ -59,7 +59,7 @@ pub(crate) fn gen_spec_fn(
     f
 }
 
-pub(crate) fn gen_boolean_spec_fn(
+pub(crate) fn gen_bool_spec_fn(
     ident: Ident,
     span: Span,
     term: Term,

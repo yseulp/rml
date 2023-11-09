@@ -1,3 +1,5 @@
+use core::fmt;
+
 use proc_macro2::{Ident, Span, TokenStream as TS2};
 use quote::{quote, quote_spanned};
 use rml_syn::{
@@ -8,14 +10,31 @@ use rml_syn::{
     },
 };
 
-use syn::{parse_quote, spanned::Spanned, Attribute, ExprPath, Generics, Path, Result, ReturnType};
+use syn::{
+    parse_quote, punctuated::Punctuated, spanned::Spanned, token, Attribute, ExprPath, Generics,
+    Path, Result, ReturnType, Signature, Token,
+};
 
-use crate::{func::fn_spec_item, util::generate_unique_ident};
+use crate::{
+    func::fn_spec_item,
+    util::{gen_bool_spec_fn, generate_unique_ident},
+};
 
 enum InvSubject {
     Struct,
     Enum,
     Trait,
+}
+
+impl fmt::Display for InvSubject {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let s = match self {
+            InvSubject::Struct => "struct",
+            InvSubject::Enum => "enum",
+            InvSubject::Trait => "trait",
+        };
+        fmt::Display::fmt(s, f)
+    }
 }
 
 pub(crate) fn extern_spec(subject: ExternSpecItem, path: Option<Path>) -> Result<TS2> {
@@ -26,14 +45,13 @@ pub(crate) fn extern_spec(subject: ExternSpecItem, path: Option<Path>) -> Result
         .into_iter()
         .map(|spec| match spec {
             FlattenedExternSpec::Struct(FlattenedStructSpec {
-                span,
                 attrs,
                 prefix,
                 ident,
                 generics,
+                ..
             }) => handle_inv(
                 subject_span,
-                span,
                 attrs,
                 prefix,
                 ident,
@@ -41,14 +59,13 @@ pub(crate) fn extern_spec(subject: ExternSpecItem, path: Option<Path>) -> Result
                 InvSubject::Struct,
             ),
             FlattenedExternSpec::Enum(FlattenedEnumSpec {
-                span,
                 attrs,
                 prefix,
                 ident,
                 generics,
+                ..
             }) => handle_inv(
                 subject_span,
-                span,
                 attrs,
                 prefix,
                 ident,
@@ -56,14 +73,13 @@ pub(crate) fn extern_spec(subject: ExternSpecItem, path: Option<Path>) -> Result
                 InvSubject::Enum,
             ),
             FlattenedExternSpec::Trait(FlattenedTraitSpec {
-                span,
                 attrs,
                 prefix,
                 ident,
                 generics,
+                ..
             }) => handle_inv(
                 subject_span,
-                span,
                 attrs,
                 prefix,
                 ident,
@@ -150,32 +166,79 @@ fn handle_fn(
 
     let spec_case_attrs = spec_case_refs
         .into_iter()
-        .map(|name| quote!(rml::extern_spec_case_ref=#name))
+        .map(|name| quote!(#[rml::extern_spec_case_ref=#name]))
         .collect::<Vec<_>>();
 
     let const_name = generate_unique_ident(&format!("extern_spec_{}", sig.ident));
 
+    let f_ident = sig.ident;
+
     Ok(quote_spanned! {
         subject_span =>
+        #(#fn_spec_items)*
+
         #purity_attr
         #(#spec_case_attrs)*
         #ctxt
-        #[extern_spec_path=#prefix]
+        #[rml::extern_spec_path=#prefix::#f_ident]
         const #const_name: bool = false;
     })
 }
 
 fn handle_inv(
     subject_span: Span,
-    span: Span,
     attrs: Vec<AttributeInvariant>,
     prefix: ExprPath,
     ident: Ident,
     generics: Generics,
     subject: InvSubject,
 ) -> Result<TS2> {
+    let mut inv_fns = vec![];
+    let mut inv_idents = vec![];
+    let ident_prefix = format!("inv_{subject}_{ident}");
+
+    for attr in attrs {
+        let inv = attr.term;
+        let ident = generate_unique_ident(&ident_prefix);
+        let mut inputs = Punctuated::new();
+        inputs.push(parse_quote!(self));
+        let sig = Signature {
+            constness: None,
+            asyncness: None,
+            unsafety: None,
+            abi: None,
+            fn_token: Token![fn](subject_span),
+            ident: ident.clone(),
+            generics: generics.clone(),
+            paren_token: token::Paren(subject_span),
+            inputs,
+            variadic: None,
+            output: ReturnType::Default,
+        };
+        let f = gen_bool_spec_fn(
+            ident.clone(),
+            subject_span,
+            inv,
+            parse_quote!(rml::extern_spec_inv),
+            &sig,
+        );
+        inv_fns.push(f);
+        inv_idents.push(ident);
+    }
+
+    let inv_attrs = inv_idents
+        .into_iter()
+        .map(|name| quote!(#[rml::extern_spec_inv_ref=#name]))
+        .collect::<Vec<_>>();
+
+    let const_name = generate_unique_ident(&format!("extern_spec_inv_{subject}_{ident}"));
+
     Ok(quote_spanned! {
         subject_span =>
+        #(#inv_fns)*
 
+        #(#inv_attrs)*
+        #[rml::extern_spec_path=#prefix::#ident]
+        const #const_name: bool = false;
     })
 }

@@ -102,7 +102,7 @@ fn trait_inv(term: Term, mut i: ItemTrait) -> Result<TS2> {
         }
     }
 
-    // We simply add the invariants as spec functions nto the trait declaration.
+    // We simply add the invariants as spec functions to the trait declaration.
     // Technically, this permits developers to override the contents of the invariants,
     // leading to breaking of behavioral subtyping.
     // But in practice, this is impossible: On every compilation the names of the

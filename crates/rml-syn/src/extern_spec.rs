@@ -184,19 +184,13 @@ fn flatten_helper(
             ident: e.ident,
             generics: e.generics,
         })),
-        ExternSpecItem::Fn(f) => {
-            prefix.path.segments.push(PathSegment {
-                ident: f.sig.ident.clone(),
-                arguments: PathArguments::None,
-            });
-            flattened.push(FlattenedExternSpec::Fn(FlattenedFnSpec {
-                span: f.span(),
-                attrs: f.attrs,
-                prefix,
-                sig: f.sig,
-                ctxt: fn_ctxt,
-            }))
-        }
+        ExternSpecItem::Fn(f) => flattened.push(FlattenedExternSpec::Fn(FlattenedFnSpec {
+            span: f.span(),
+            attrs: f.attrs,
+            prefix,
+            sig: f.sig,
+            ctxt: fn_ctxt,
+        })),
         ExternSpecItem::Impl(i) => {
             if prefix.path.segments.is_empty() {
                 prefix.qself = Some(syn::QSelf {
