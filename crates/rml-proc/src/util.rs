@@ -24,6 +24,7 @@ pub(crate) fn get_mut_ref_params(sig: &Signature) -> impl Iterator<Item = &FnArg
     })
 }
 
+/// Generates a random [Ident] with the `prefix`.
 pub(crate) fn generate_unique_ident(prefix: &str) -> Ident {
     let uuid = uuid::Uuid::new_v4();
     let ident = format!("{}_{}", prefix, uuid).replace('-', "_");
@@ -31,12 +32,16 @@ pub(crate) fn generate_unique_ident(prefix: &str) -> Ident {
     Ident::new(&ident, Span::call_site())
 }
 
+/// Extract all attributes with identifier `attr`.
 pub(crate) fn extract_attrs(attrs: &mut Vec<Attribute>, attr: &str) -> Vec<Attribute> {
     attrs
         .extract_if(|a| a.path().get_ident().map(|i| i == attr).unwrap_or(false))
         .collect()
 }
 
+/// Generate a generic function with `ident`, return type `ret_ty`, `body`. The result will have span `span`.
+///
+/// The signature get adapted to `sig`. See [adapt_sig].
 pub(crate) fn gen_spec_fn(
     ident: Ident,
     span: Span,
@@ -59,6 +64,7 @@ pub(crate) fn gen_spec_fn(
     f
 }
 
+/// Generate a spec function that returns booean `term` (encoded). See [gen_spec_fn].
 pub(crate) fn gen_bool_spec_fn(
     ident: Ident,
     span: Span,
@@ -77,6 +83,7 @@ pub(crate) fn gen_bool_spec_fn(
     )
 }
 
+/// Generate a spec function that returns locset `ls` (encoded). See [gen_spec_fn].
 pub(crate) fn gen_locset_spec_fn(
     ident: Ident,
     span: Span,
@@ -95,6 +102,7 @@ pub(crate) fn gen_locset_spec_fn(
     )
 }
 
+/// Generate a spec function that returns a well founded `term` (encoded). See [gen_spec_fn].
 pub(crate) fn gen_wf_spec_fn(
     ident: Ident,
     span: Span,
@@ -113,6 +121,9 @@ pub(crate) fn gen_wf_spec_fn(
     )
 }
 
+/// Adapt the signature `sig` to `old_sig`, i.e.:
+/// - Copy `old_sig`'s parameters but remove mutability.
+/// - Copy generics.
 fn adapt_sig(sig: &mut Signature, old_sig: &Signature) {
     for p in old_sig.inputs.pairs() {
         let (arg, punct) = p.into_tuple();

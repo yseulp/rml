@@ -14,24 +14,29 @@ mod kw {
     syn::custom_keyword!(spec);
 }
 
+/// Permissable attributes for functions.
+/// Used for extern specs.
 pub enum FnAttribute {
     Pure(AttributePure),
     StrictlyPure(AttributeStrictlyPure),
     Spec(AttributeSpec),
 }
 
+/// Attribute declaring pure functions/methods.
 pub struct AttributePure {
     pub pound_token: Token![#],
     pub bracket_token: token::Bracket,
     pub pure_token: kw::pure,
 }
 
+/// Attribute declaring strictly pure functions/methods.
 pub struct AttributeStrictlyPure {
     pub pound_token: Token![#],
     pub bracket_token: token::Bracket,
     pub strictly_pure_token: kw::strictly_pure,
 }
 
+/// Attribute declaring invariants for data structures and traits..
 pub struct AttributeInvariant {
     pub pound_token: Token![#],
     pub bracket_token: token::Bracket,
@@ -40,6 +45,7 @@ pub struct AttributeInvariant {
     pub term: Term,
 }
 
+/// Attribute declaring specification case for functions.
 pub struct AttributeSpec {
     pub pound_token: Token![#],
     pub bracket_token: token::Bracket,
@@ -161,6 +167,7 @@ impl ToTokens for AttributeInvariant {
     }
 }
 
+/// Greedily parse a series of attributes.
 pub fn parse_attrs<T>(input: ParseStream) -> syn::Result<Vec<T>>
 where
     T: Parse,

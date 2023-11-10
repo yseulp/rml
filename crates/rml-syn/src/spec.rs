@@ -23,6 +23,7 @@ pub enum SpecKind {
     Panic,
 }
 impl SpecKind {
+    /// Returns `true` if the value is [SpecKind::Normal].
     fn is_normal(&self) -> bool {
         matches!(self, Self::Normal)
     }
@@ -146,6 +147,9 @@ pub struct SpecContent {
 }
 
 impl SpecContent {
+    /// Check the spec content for any errors, inconsitencies, etc.
+    ///
+    /// Returns a normalized struct, stripped of tokens, etc.
     pub fn validate(self) -> Result<Spec> {
         let span = self.span();
         let mut pre_conds = Vec::new();
@@ -257,6 +261,7 @@ pub struct Spec {
 }
 
 impl Spec {
+    /// Returns `true` iff the spec describes normal termination.
     pub fn is_normal(&self) -> bool {
         self.kind.is_normal()
     }

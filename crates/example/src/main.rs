@@ -6,8 +6,8 @@ use rml_contracts::*;
 
 #[spec { "normal", 
     requires(a + b <= i32::MAX),
-    requires(a + b >= i32::MIN), 
-    ensures(result == a + b) 
+    requires(a + b >= i32::MIN),
+    ensures(result == a + b)
 }]
 #[strictly_pure]
 fn add(a: i32, b: i32) -> i32 {

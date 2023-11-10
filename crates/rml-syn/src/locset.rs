@@ -40,6 +40,7 @@ ast_enum_of_structs! {
 }
 
 ast_struct! {
+    /// A specific field of a term `obj.k` or `obj.0`.
     pub struct LocSetField {
         pub base: Box<Term>,
         pub dot_token: Token![.],
@@ -48,6 +49,7 @@ ast_struct! {
 }
 
 ast_struct! {
+    /// The union of all fields of a term `obj.*`.
     pub struct LocSetFieldWildcard {
         pub base: Box<Term>,
         pub dot_token: Token![.],
@@ -56,6 +58,7 @@ ast_struct! {
 }
 
 ast_struct! {
+    /// A field of a vec or array: `vector[2]`, `vector[1..]`, `vector[1..=2]`, `vector[..]`.
     pub struct LocSetIndex {
         pub term: Box<Term>,
         pub bracket_token: token::Bracket,
@@ -64,18 +67,24 @@ ast_struct! {
 }
 
 ast_struct! {
+    /// A path like `std::mem::replace` possibly containing generic
+    /// parameters and a qualified self-type.
+    ///
+    /// A plain identifier like `x` is a path of length 1.
     pub struct LocSetPath {
         pub inner: TermPath,
     }
 }
 
 ast_struct! {
+    /// A comma-separated list of loc sets.
     pub struct LocSetGroup {
         pub items: Punctuated<LocSet, Token![,]>,
     }
 }
 
 ast_struct! {
+    /// Nothing. The empty loc set.
     pub struct LocSetNothing {
         pub nothing_token: kw::nothing,
     }

@@ -26,6 +26,8 @@ mod util;
 use subject::{ContractSubject, InvariantSubject};
 use util::generate_unique_ident;
 
+/// A specification case for a function. The attribute takes a [SpecContent]
+/// and must be attached to a function or method, which need not have a body.
 #[proc_macro_attribute]
 pub fn spec(attr: TS1, item: TS1) -> TS1 {
     let sp = parse_macro_input!(attr as SpecContent);
@@ -69,6 +71,9 @@ pub fn spec(attr: TS1, item: TS1) -> TS1 {
     }
 }
 
+/// Declares a function as strictly pure, i.e., that it has *no* side effects.
+///
+/// The attribute takes no arguments and must be attched to a function or method.
 #[proc_macro_attribute]
 pub fn strictly_pure(attr: TS1, item: TS1) -> TS1 {
     if !attr.is_empty() {
@@ -81,6 +86,9 @@ pub fn strictly_pure(attr: TS1, item: TS1) -> TS1 {
     })
 }
 
+/// Declares a function as strictly pure, i.e., that it has *no* side effects on *existing data*.
+///
+/// The attribute takes no arguments and must be attched to a function or method.
 #[proc_macro_attribute]
 pub fn pure(attr: TS1, item: TS1) -> TS1 {
     if !attr.is_empty() {
@@ -93,6 +101,8 @@ pub fn pure(attr: TS1, item: TS1) -> TS1 {
     })
 }
 
+/// Declare an invariant for a data structure or loop.
+/// Takes a boolean [Term]. The target must be a loop, enum, struct, or trait.
 #[proc_macro_attribute]
 pub fn invariant(attr: TS1, item: TS1) -> TS1 {
     let term = parse_macro_input!(attr as Term);
@@ -121,6 +131,7 @@ pub fn invariant(attr: TS1, item: TS1) -> TS1 {
     TS1::from(ts)
 }
 
+/// Declare a variant for a loop. Takes a [Term], which must have a strict order defined.
 #[proc_macro_attribute]
 pub fn variant(_: TS1, _: TS1) -> TS1 {
     TS1::from(
@@ -132,6 +143,10 @@ pub fn variant(_: TS1, _: TS1) -> TS1 {
     )
 }
 
+/// Declare which fields, parameters, etc. may be modified by the function or loop.
+/// Takes a [LocSet].
+///
+/// [LocSet]: rml_syn::LocSet
 #[proc_macro_attribute]
 pub fn modifies(_: TS1, _: TS1) -> TS1 {
     TS1::from(
@@ -143,6 +158,7 @@ pub fn modifies(_: TS1, _: TS1) -> TS1 {
     )
 }
 
+/// Declares a function as a logic function, which can only be called from within specifications.
 #[proc_macro_attribute]
 pub fn logic(attr: TS1, item: TS1) -> TS1 {
     if !attr.is_empty() {
@@ -167,6 +183,7 @@ pub fn logic(attr: TS1, item: TS1) -> TS1 {
     }
 }
 
+/// Declares a function as trusted, which means it need not be verified.
 #[proc_macro_attribute]
 pub fn trusted(attr: TS1, item: TS1) -> TS1 {
     if !attr.is_empty() {
@@ -179,6 +196,7 @@ pub fn trusted(attr: TS1, item: TS1) -> TS1 {
     })
 }
 
+/// Parse a series of RML statements.
 #[proc_macro]
 pub fn rml(tokens: TS1) -> TS1 {
     let block = parse_macro_input!(tokens with TBlock::parse_within);
@@ -221,6 +239,29 @@ pub fn proof_assert(assertion: TS1) -> TS1 {
     })
 }
 
+/// Specifies external data structures or functions. Takes an optional [Path] to the items.
+///
+/// The target must be an [ExternSpecItem].
+///
+/// External specification refers to specification for items _external_ to the
+/// current crate. Since, the source code is not available, specification must
+/// be made available in a different way.
+///
+/// Specifying can be done by using the `extern_spec` attribute before other
+/// RML attributes.
+///
+/// ## Functions
+/// Assume `div` is a function defined in some external crate.
+/// ```
+/// #[extern_spec]
+/// #[spec {
+///     requires(b > 0),
+///     ensures(result a / b)
+/// }]
+/// fn div(a: u32, b: u32) -> u32;
+/// ```
+/// The above specification will be used by tools using RML as though it was
+/// attached to a local function.
 #[proc_macro_attribute]
 pub fn extern_spec(attr: TS1, item: TS1) -> TS1 {
     let path = if attr.is_empty() {
@@ -239,6 +280,8 @@ pub fn extern_spec(attr: TS1, item: TS1) -> TS1 {
     TS1::from(ts)
 }
 
+/// Generate a compile error for an attribute that takes no arguments but
+/// was given some.
 fn takes_no_args(name: &str) -> TS1 {
     TS1::from(
         syn::Error::new(Span::call_site(), format!("`{name}` takes no arguments"))

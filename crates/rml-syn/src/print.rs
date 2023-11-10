@@ -3,6 +3,7 @@
 use proc_macro2::TokenStream;
 use quote::ToTokens;
 
+/// Struct to ease printing optional tokens which have a default value.
 pub struct TokensOrDefault<'a, T: 'a>(pub &'a Option<T>);
 
 impl<'a, T> ToTokens for TokensOrDefault<'a, T>

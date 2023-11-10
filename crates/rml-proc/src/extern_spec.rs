@@ -37,6 +37,10 @@ impl fmt::Display for InvSubject {
     }
 }
 
+/// Generate Rust code that enocdes the specification of an [ExternSpecItem] as a constant with attributes and spec functions.
+///
+/// - `subject`: The subject to generate code for.
+/// - `path`: An optional path that describes the path to the item.
 pub(crate) fn extern_spec(subject: ExternSpecItem, path: Option<Path>) -> Result<TS2> {
     let subject_span = subject.span();
     let specs = subject.flatten(path)?;
@@ -91,6 +95,7 @@ pub(crate) fn extern_spec(subject: ExternSpecItem, path: Option<Path>) -> Result
         .try_collect()
 }
 
+/// Generate code for an extern function (after flattening).
 fn handle_fn(
     subject_span: Span,
     FlattenedFnSpec {
@@ -185,6 +190,7 @@ fn handle_fn(
     })
 }
 
+/// Generate code for an extern data structure or trait (after flattening).
 fn handle_inv(
     subject_span: Span,
     attrs: Vec<AttributeInvariant>,

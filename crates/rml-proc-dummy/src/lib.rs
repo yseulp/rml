@@ -12,12 +12,17 @@ use rml_syn::{
 };
 use syn::{parse_macro_input, Path};
 
+/// A specification case for a function. The attribute takes a [SpecContent]
+/// and must be attached to a function or method, which need not have a body.
 #[proc_macro_attribute]
 pub fn spec(attr: TS1, item: TS1) -> TS1 {
     let _ = parse_macro_input!(attr as SpecContent);
     item
 }
 
+/// Declares a function as strictly pure, i.e., that it has *no* side effects.
+///
+/// The attribute takes no arguments and must be attched to a function or method.
 #[proc_macro_attribute]
 pub fn strictly_pure(attr: TS1, item: TS1) -> TS1 {
     if !attr.is_empty() {
@@ -26,6 +31,9 @@ pub fn strictly_pure(attr: TS1, item: TS1) -> TS1 {
     item
 }
 
+/// Declares a function as strictly pure, i.e., that it has *no* side effects on *existing data*.
+///
+/// The attribute takes no arguments and must be attched to a function or method.
 #[proc_macro_attribute]
 pub fn pure(attr: TS1, item: TS1) -> TS1 {
     if !attr.is_empty() {
@@ -34,24 +42,30 @@ pub fn pure(attr: TS1, item: TS1) -> TS1 {
     item
 }
 
+/// Declare an invariant for a data structure or loop.
+/// Takes a boolean [Term].
 #[proc_macro_attribute]
 pub fn invariant(attr: TS1, item: TS1) -> TS1 {
     let _ = parse_macro_input!(attr as Term);
     item
 }
 
+/// Declare a variant for a loop. Takes a [Term], which must have a strict order defined.
 #[proc_macro_attribute]
 pub fn variant(attr: TS1, item: TS1) -> TS1 {
     let _ = parse_macro_input!(attr as Term);
     item
 }
 
+/// Declare which fields, parameters, etc. may be modified by the function or loop.
+/// Takes a [LocSet].
 #[proc_macro_attribute]
 pub fn modifies(attr: TS1, item: TS1) -> TS1 {
     let _ = parse_macro_input!(attr as LocSet);
     item
 }
 
+/// Declares a function as a logic function, which can only be called from within specifications.
 #[proc_macro_attribute]
 pub fn logic(attr: TS1, item: TS1) -> TS1 {
     if !attr.is_empty() {
@@ -63,6 +77,7 @@ pub fn logic(attr: TS1, item: TS1) -> TS1 {
     TS1::new()
 }
 
+/// Declares a function as trusted, which means it need not be verified.
 #[proc_macro_attribute]
 pub fn trusted(attr: TS1, item: TS1) -> TS1 {
     if !attr.is_empty() {
@@ -71,6 +86,7 @@ pub fn trusted(attr: TS1, item: TS1) -> TS1 {
     item
 }
 
+/// Parse a series of RML statements.
 #[proc_macro]
 pub fn rml(tokens: TS1) -> TS1 {
     let _ = parse_macro_input!(tokens with TBlock::parse_within);
@@ -83,6 +99,7 @@ pub fn proof_assert(assertion: TS1) -> TS1 {
     TS1::new()
 }
 
+/// Specifies external data structures or functions. Takes an optional [Path] to the items.
 #[proc_macro_attribute]
 pub fn extern_spec(attr: TS1, item: TS1) -> TS1 {
     let _ = if attr.is_empty() {
@@ -97,6 +114,8 @@ pub fn extern_spec(attr: TS1, item: TS1) -> TS1 {
     TS1::new()
 }
 
+/// Generate a compile error for an attribute that takes no arguments but
+/// was given some.
 fn takes_no_args(name: &str) -> TS1 {
     TS1::from(
         syn::Error::new(Span::call_site(), format!("`{name}` takes no arguments"))

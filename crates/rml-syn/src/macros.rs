@@ -1,4 +1,4 @@
-// Taken from syn
+//! Taken from syn
 
 macro_rules! ast_struct {
     (

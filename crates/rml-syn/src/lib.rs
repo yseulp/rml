@@ -27,13 +27,18 @@ pub use term::*;
 /// Encoding trait for translating an rml-syn element into a syn-element
 pub trait Encode {
     type Target;
+
+    /// Encode the value to [Self::Target].
     fn encode(self) -> Self::Target;
 }
 
+/// Allow filtering attributes to outer/inner attributes.
 pub trait FilterAttrs<'a> {
     type Ret: Iterator<Item = &'a Attribute>;
 
+    /// Get outer attributes.
     fn outer(self) -> Self::Ret;
+    /// Get inner attributes.
     fn inner(self) -> Self::Ret;
 }
 
