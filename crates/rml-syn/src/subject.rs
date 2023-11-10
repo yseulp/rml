@@ -1,4 +1,5 @@
-//! Contains the datatype for RML subjects, i.e., functions, methods, loops, etc.
+//! Contains the datatype for RML subjects, i.e., functions, methods, loops,
+//! etc.
 //!
 //! Adapted from creusot.
 

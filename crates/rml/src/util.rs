@@ -44,12 +44,14 @@ pub(crate) fn is_spec(tcx: TyCtxt, def_id: DefId) -> bool {
     get_spec_part(tcx.get_attrs_unchecked(def_id)).is_some()
 }
 
-/// Whether the item has a `#[pure]` attribute. Even if this returns `false`, it might be pure.
+/// Whether the item has a `#[pure]` attribute. Even if this returns `false`, it
+/// might be pure.
 pub(crate) fn is_declared_pure(tcx: TyCtxt, def_id: DefId) -> bool {
     get_attr(tcx.get_attrs_unchecked(def_id), &["rml", "decl", "pure"]).is_some()
 }
 
-/// Whether the item has a `#[strictly_pure]` attribute. Even if this returns `false`, it might be strictly pure or pure.
+/// Whether the item has a `#[strictly_pure]` attribute. Even if this returns
+/// `false`, it might be strictly pure or pure.
 pub(crate) fn is_declared_strictly_pure(tcx: TyCtxt, def_id: DefId) -> bool {
     get_attr(
         tcx.get_attrs_unchecked(def_id),

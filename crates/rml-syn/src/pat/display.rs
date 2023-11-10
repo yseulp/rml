@@ -1,5 +1,4 @@
 use ::std::fmt;
-
 use quote::ToTokens;
 use syn::punctuated::Punctuated;
 

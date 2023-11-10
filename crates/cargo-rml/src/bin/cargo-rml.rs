@@ -1,9 +1,10 @@
-use cargo_rml::options::Args;
-use clap::Parser;
 use std::{
     env,
     process::{exit, Command},
 };
+
+use cargo_rml::options::Args;
+use clap::Parser;
 
 fn main() {
     let args = Args::parse_from(std::env::args().skip(1));
@@ -40,7 +41,7 @@ fn main() {
     }
     println!(
         r"
-=== Cargo RML succeeded. === 
+=== Cargo RML succeeded. ===
 === Remember to run `cargo clean` before compiling your code for other purposes! ==="
     )
 }

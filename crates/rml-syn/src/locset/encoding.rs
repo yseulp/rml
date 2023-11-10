@@ -1,10 +1,9 @@
 use syn::{parse_quote_spanned, spanned::Spanned, Expr};
 
-use crate::Encode;
-
 use super::{
     LocSet, LocSetField, LocSetFieldWildcard, LocSetGroup, LocSetIndex, LocSetNothing, LocSetPath,
 };
+use crate::Encode;
 
 impl Encode for LocSet {
     type Target = Expr;

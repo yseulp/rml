@@ -1,6 +1,5 @@
 use rustc_hir::{def_id::LocalDefId, HirId, ItemId};
 use rustc_span::{def_id::DefId, symbol::Ident, Span, Symbol};
-
 use serde::{Deserialize, Serialize};
 
 use super::serialize;

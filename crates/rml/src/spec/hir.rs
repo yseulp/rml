@@ -1,6 +1,5 @@
 use std::collections::{HashMap, HashSet};
 
-use super::SpecKind;
 use rustc_hir::{
     intravisit::{self},
     ExprKind, HirId,
@@ -8,6 +7,7 @@ use rustc_hir::{
 use rustc_middle::ty::TyCtxt;
 use rustc_span::{def_id::DefId, Symbol};
 
+use super::SpecKind;
 use crate::util;
 
 #[derive(Debug, Clone)]
@@ -364,7 +364,6 @@ struct LoopSpecCollector<'hir, 'a> {
 
 impl<'v, 'a> intravisit::Visitor<'v> for LoopSpecCollector<'v, 'a> {
     type Map = <Self::NestedFilter as intravisit::nested_filter::NestedFilter<'v>>::Map;
-
     type NestedFilter = rustc_middle::hir::nested_filter::OnlyBodies;
 
     fn nested_visit_map(&mut self) -> Self::Map {

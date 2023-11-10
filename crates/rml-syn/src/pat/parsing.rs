@@ -5,12 +5,11 @@ use syn::{
     QSelf, RangeLimits, Result, Token, Type,
 };
 
-use crate::{parse_delimiter, Term, TermLit, TermPath, TermRange};
-
 use super::{
     FieldPat, Pat, PatIdent, PatOr, PatParen, PatRest, PatSlice, PatStruct, PatTuple,
     PatTupleStruct, PatWild,
 };
+use crate::{parse_delimiter, Term, TermLit, TermPath, TermRange};
 
 impl Pat {
     /// Taken from `syn`
@@ -91,8 +90,8 @@ impl Pat {
     /// ```
     /// # let wat = None;
     /// match wat {
-    ///     | None | Some(false) => {}
-    ///     | Some(true) => {}
+    ///     None | Some(false) => {}
+    ///     Some(true) => {}
     /// }
     /// ```
     ///

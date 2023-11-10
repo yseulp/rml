@@ -1,7 +1,9 @@
 #![feature(allocator_api)]
 
-//! Procedural (attribute) macros to specify Rust code. Either generates additional specification functions, methods, and closures, or changes nothing at all, depending on whether `--cfg rml` is set.
-//! Do not set this flag yourself, use `cargo-rml` instead.
+//! Procedural (attribute) macros to specify Rust code. Either generates
+//! additional specification functions, methods, and closures, or changes
+//! nothing at all, depending on whether `--cfg rml` is set. Do not set this
+//! flag yourself, use `cargo-rml` instead.
 //!
 //! # Usage
 //!
@@ -10,10 +12,11 @@
 //! extern crate rml_contracts;
 //! use rml_contracts::*;
 //! ```
-//! This will add the necessary attributes, definition of logic-only types, and add some specification to standard library items.
+//! This will add the necessary attributes, definition of logic-only types, and
+//! add some specification to standard library items.
 //!
-//! If you want to add attributes to loops or closures to specify them, you must add the following features to your crate:
-//! ```
+//! If you want to add attributes to loops or closures to specify them, you must
+//! add the following features to your crate: ```
 //! #![feature(stmt_expr_attributes)]
 //! #![feature(proc_macro_hygiene)]
 //! ```
@@ -54,27 +57,10 @@ pub mod ghost {
 
 #[cfg(rml)]
 mod macros {
-    pub use rml_proc::spec;
-
-    pub use rml_proc::pure;
-
-    pub use rml_proc::strictly_pure;
-
-    pub use rml_proc::invariant;
-
-    pub use rml_proc::modifies;
-
-    pub use rml_proc::variant;
-
-    pub use rml_proc::logic;
-
-    pub use rml_proc::rml;
-
-    pub use rml_proc::trusted;
-
-    pub use rml_proc::proof_assert;
-
-    pub use rml_proc::extern_spec;
+    pub use rml_proc::{
+        extern_spec, invariant, logic, modifies, proof_assert, pure, rml, spec, strictly_pure,
+        trusted, variant,
+    };
 
     pub mod stubs {
         #[rml::decl::logic]
@@ -109,25 +95,8 @@ mod macros {
 
 #[cfg(not(rml))]
 mod macros {
-    pub use rml_proc_dummy::spec;
-
-    pub use rml_proc_dummy::pure;
-
-    pub use rml_proc_dummy::strictly_pure;
-
-    pub use rml_proc_dummy::invariant;
-
-    pub use rml_proc_dummy::modifies;
-
-    pub use rml_proc_dummy::variant;
-
-    pub use rml_proc_dummy::logic;
-
-    pub use rml_proc_dummy::rml;
-
-    pub use rml_proc_dummy::trusted;
-
-    pub use rml_proc_dummy::proof_assert;
-
-    pub use rml_proc_dummy::extern_spec;
+    pub use rml_proc_dummy::{
+        extern_spec, invariant, logic, modifies, proof_assert, pure, rml, spec, strictly_pure,
+        trusted, variant,
+    };
 }

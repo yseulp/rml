@@ -46,7 +46,7 @@ pub(crate) fn fn_spec_item(
         .collect();
     let pre_strs = pre_idents.iter().map(|i| i.to_string());
 
-    //post
+    // post
     if spec.post_conds.is_empty() {
         spec.post_conds.push(parse_quote!(true))
     }

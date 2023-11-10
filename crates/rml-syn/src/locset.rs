@@ -1,4 +1,5 @@
-//! Location sets. Used for modelling what memory locations may be changed by functions.
+//! Location sets. Used for modelling what memory locations may be changed by
+//! functions.
 
 use syn::{punctuated::Punctuated, token, Member, Token};
 

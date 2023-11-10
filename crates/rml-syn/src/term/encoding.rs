@@ -1,13 +1,3 @@
-use crate::{
-    Encode, TBlock, TLocal, TermAngleBracketedGenericArguments, TermArm, TermArray, TermBinary,
-    TermBlock, TermCall, TermCast, TermClosure, TermExists, TermField, TermFieldValue, TermForall,
-    TermGenericMethodArgument, TermGroup, TermIf, TermImpl, TermIndex, TermLet, TermLit, TermLogEq,
-    TermMatch, TermMethodCall, TermModel, TermOld, TermParen, TermPath, TermRange, TermRepeat,
-    TermStmt, TermStruct, TermTuple, TermUnary,
-};
-
-use super::Term;
-
 use syn::{
     parse_quote_spanned,
     punctuated::{Pair, Punctuated},
@@ -16,6 +6,15 @@ use syn::{
     ExprCast, ExprClosure, ExprField, ExprGroup, ExprIf, ExprLet, ExprLit, ExprMatch,
     ExprMethodCall, ExprParen, ExprRange, ExprRepeat, ExprStruct, ExprTuple, ExprUnary, FieldValue,
     GenericArgument, Local, LocalInit, Stmt,
+};
+
+use super::Term;
+use crate::{
+    Encode, TBlock, TLocal, TermAngleBracketedGenericArguments, TermArm, TermArray, TermBinary,
+    TermBlock, TermCall, TermCast, TermClosure, TermExists, TermField, TermFieldValue, TermForall,
+    TermGenericMethodArgument, TermGroup, TermIf, TermImpl, TermIndex, TermLet, TermLit, TermLogEq,
+    TermMatch, TermMethodCall, TermModel, TermOld, TermParen, TermPath, TermRange, TermRepeat,
+    TermStmt, TermStruct, TermTuple, TermUnary,
 };
 
 impl Encode for Term {
@@ -39,16 +38,24 @@ impl Encode for Term {
                 let right = right.encode();
                 match op {
                     Lt(_) => {
-                        parse_quote_spanned! { sp => ::rml_contracts::logic::OrdLogic::lt_log(#left, #right) }
+                        parse_quote_spanned! {
+                            sp => ::rml_contracts::logic::OrdLogic::lt_log(#left, #right)
+                        }
                     }
                     Le(_) => {
-                        parse_quote_spanned! { sp => ::rml_contracts::logic::OrdLogic::le_log(#left, #right) }
+                        parse_quote_spanned! {
+                            sp => ::rml_contracts::logic::OrdLogic::le_log(#left, #right)
+                        }
                     }
                     Ge(_) => {
-                        parse_quote_spanned! { sp => ::rml_contracts::logic::OrdLogic::ge_log(#left, #right) }
+                        parse_quote_spanned! {
+                            sp => ::rml_contracts::logic::OrdLogic::ge_log(#left, #right)
+                        }
                     }
                     Gt(_) => {
-                        parse_quote_spanned! { sp => ::rml_contracts::logic::OrdLogic::gt_log(#left, #right) }
+                        parse_quote_spanned! {
+                            sp => ::rml_contracts::logic::OrdLogic::gt_log(#left, #right)
+                        }
                     }
                     _ => Expr::Binary(ExprBinary {
                         attrs: Vec::new(),
@@ -104,7 +111,9 @@ impl Encode for Term {
                 for arg in args.into_iter().rev() {
                     let id = arg.ident;
                     let ty = arg.ty;
-                    body = parse_quote_spanned! { sp => ::rml_contracts::stubs::exists(#[rml::decl::logic] |#id: #ty| #body) }
+                    body = parse_quote_spanned! {
+                        sp => ::rml_contracts::stubs::exists(#[rml::decl::logic] |#id: #ty| #body)
+                    }
                 }
                 body
             }
@@ -123,7 +132,9 @@ impl Encode for Term {
                 for arg in args.into_iter().rev() {
                     let id = arg.ident;
                     let ty = arg.ty;
-                    body = parse_quote_spanned! { sp => ::rml_contracts::stubs::forall(#[rml::decl::logic] |#id: #ty| #body) }
+                    body = parse_quote_spanned! {
+                        sp => ::rml_contracts::stubs::forall(#[rml::decl::logic] |#id: #ty| #body)
+                    }
                 }
                 body
             }
@@ -153,7 +164,9 @@ impl Encode for Term {
                 let expr = term.encode();
                 let index = index.encode();
 
-                parse_quote_spanned! { sp => ::rml_contracts::logic::IndexLogic::index_logic(#expr, #index) }
+                parse_quote_spanned! {
+                    sp => ::rml_contracts::logic::IndexLogic::index_logic(#expr, #index)
+                }
             }
             Term::Let(TermLet {
                 let_token,
@@ -260,7 +273,9 @@ impl Encode for Term {
             }),
             Term::Verbatim(t) => Expr::Verbatim(t),
             Term::Model(TermModel { term, .. }) => {
-                parse_quote_spanned! { sp => ::rml_contracts::model::ShallowModel::shallow_model(#term) }
+                parse_quote_spanned! {
+                    sp => ::rml_contracts::model::ShallowModel::shallow_model(#term)
+                }
             }
             Term::Old(TermOld { term, .. }) => {
                 parse_quote_spanned! { sp => ::rml_contracts::stubs::old(#term) }

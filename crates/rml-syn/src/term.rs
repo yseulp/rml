@@ -2,12 +2,11 @@
 //!
 //! Adapted from syn and creusot.
 
+use proc_macro2::{Delimiter, TokenStream};
 use syn::{
     parse::discouraged::AnyDelimiter, punctuated::Punctuated, token, Attribute, BinOp, ExprMacro,
     ExprPath, Ident, Item, Label, Lit, Member, Path, RangeLimits, ReturnType, Token, Type, UnOp,
 };
-
-use proc_macro2::{Delimiter, TokenStream};
 
 use crate::Pat;
 

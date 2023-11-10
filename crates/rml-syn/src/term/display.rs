@@ -3,14 +3,13 @@ use std::fmt;
 use quote::ToTokens;
 use syn::BinOp;
 
+use super::Term;
 use crate::{
     TBlock, TermArray, TermBinary, TermBlock, TermCall, TermCast, TermClosure, TermExists,
     TermField, TermForall, TermGroup, TermIf, TermImpl, TermIndex, TermLet, TermLit, TermLogEq,
     TermMatch, TermMethodCall, TermModel, TermOld, TermParen, TermPath, TermRange, TermRepeat,
     TermStmt, TermStruct, TermTuple, TermUnary,
 };
-
-use super::Term;
 
 impl fmt::Display for Term {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {

@@ -9,7 +9,6 @@ use rml_syn::{
         FlattenedStructSpec, FlattenedTraitSpec, FnContext,
     },
 };
-
 use syn::{
     parse_quote, punctuated::Punctuated, spanned::Spanned, token, Attribute, ExprPath, Generics,
     Path, Result, ReturnType, Signature, Token,
@@ -37,7 +36,8 @@ impl fmt::Display for InvSubject {
     }
 }
 
-/// Generate Rust code that enocdes the specification of an [ExternSpecItem] as a constant with attributes and spec functions.
+/// Generate Rust code that enocdes the specification of an [ExternSpecItem] as
+/// a constant with attributes and spec functions.
 ///
 /// - `subject`: The subject to generate code for.
 /// - `path`: An optional path that describes the path to the item.

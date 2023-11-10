@@ -2,9 +2,8 @@ use std::cmp;
 
 use quote::ToTokens;
 
-use crate::print::TokensOrDefault;
-
 use super::*;
+use crate::print::TokensOrDefault;
 
 impl ToTokens for PatIdent {
     fn to_tokens(&self, tokens: &mut TokenStream) {

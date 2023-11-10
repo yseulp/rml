@@ -205,7 +205,8 @@ impl ExternSpecAttributes {
 }
 
 impl ExternSpecItem {
-    /// Replace the invariant attributes of the item with `new` and return the old value.
+    /// Replace the invariant attributes of the item with `new` and return the
+    /// old value.
     ///
     /// If there are no invariant attributes, returns an empty vector.
     pub fn replace_inv_attrs(&mut self, new: Vec<AttributeInvariant>) -> Vec<AttributeInvariant> {
@@ -217,7 +218,8 @@ impl ExternSpecItem {
         }
     }
 
-    /// Replace the function attributes of the item with `new` and return the old value.
+    /// Replace the function attributes of the item with `new` and return the
+    /// old value.
     ///
     /// If there are no function attributes, returns an empty vector.
     pub fn replace_fn_attrs(&mut self, new: Vec<FnAttribute>) -> Vec<FnAttribute> {

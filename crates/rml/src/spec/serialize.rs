@@ -1,5 +1,4 @@
 use rustc_span::def_id::DefId;
-
 use serde::{ser::SerializeStruct, Deserializer, Serializer};
 
 pub(crate) fn serialize_did<S>(did: &DefId, s: S) -> Result<S::Ok, S::Error>

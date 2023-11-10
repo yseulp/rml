@@ -1,11 +1,10 @@
 use syn::{bracketed, parse::Parse, punctuated::Punctuated, token, Token};
 
-use crate::{Term, TermPath};
-
 use super::{
     kw, LocSet, LocSetField, LocSetFieldWildcard, LocSetGroup, LocSetIndex, LocSetNothing,
     LocSetPath,
 };
+use crate::{Term, TermPath};
 
 impl Parse for LocSet {
     fn parse(input: syn::parse::ParseStream) -> syn::Result<Self> {

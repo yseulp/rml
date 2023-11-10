@@ -1,12 +1,13 @@
-use crate::PatType;
-
-use super::*;
 use std::{cmp::Ordering, mem};
+
 use syn::{
     braced, bracketed, parenthesized,
     parse::{Parse, ParseStream, Result},
     Error, Lifetime, LitFloat, PathArguments,
 };
+
+use super::*;
+use crate::PatType;
 
 syn::custom_keyword!(raw);
 

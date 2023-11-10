@@ -103,12 +103,13 @@ fn trait_inv(term: Term, mut i: ItemTrait) -> Result<TS2> {
     }
 
     // We simply add the invariants as spec functions to the trait declaration.
-    // Technically, this permits developers to override the contents of the invariants,
-    // leading to breaking of behavioral subtyping.
+    // Technically, this permits developers to override the contents of the
+    // invariants, leading to breaking of behavioral subtyping.
     // But in practice, this is impossible: On every compilation the names of the
-    // spec functions is randomly generated anew with a new UUID. If a developer manages to
-    // name their functions in accordance to this random generation---and does so for any
-    // new compilation---they deserve to break whatever they want!
+    // spec functions is randomly generated anew with a new UUID. If a developer
+    // manages to name their functions in accordance to this random
+    // generation---and does so for any new compilation---they deserve to break
+    // whatever they want!
     i.items.extend(fns.into_iter().map(
         |ItemFn {
              attrs, sig, block, ..

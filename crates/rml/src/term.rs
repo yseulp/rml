@@ -1,7 +1,6 @@
 use std::sync::Arc;
 
 use serde::{Deserialize, Serialize};
-
 use wrappers::{LocalDefIdWrapper, SpanWrapper};
 
 use self::wrappers::{DefIdWrapper, HirIdWrapper, IdentWrapper, ItemIdWrapper, SymbolWrapper};

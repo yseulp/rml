@@ -76,7 +76,7 @@ macro_rules! ast_enum_from_struct {
     // No From<TokenStream> for verbatim variants.
     ($name:ident::Verbatim, $member:ident) => {};
 
-    ($name:ident::$variant:ident, $member:ident) => {
+    ($name:ident:: $variant:ident, $member:ident) => {
         impl From<$member> for $name {
             fn from(e: $member) -> $name {
                 $name::$variant(e)

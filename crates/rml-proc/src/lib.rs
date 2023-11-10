@@ -13,7 +13,6 @@ use quote::{quote, quote_spanned};
 use rml_syn::{
     extern_spec::ExternSpecItem, subject::LogicSubject, Encode, SpecContent, TBlock, Term,
 };
-
 use syn::{parse_macro_input, parse_quote, spanned::Spanned, Path, ReturnType};
 
 mod extern_spec;
@@ -73,7 +72,8 @@ pub fn spec(attr: TS1, item: TS1) -> TS1 {
 
 /// Declares a function as strictly pure, i.e., that it has *no* side effects.
 ///
-/// The attribute takes no arguments and must be attched to a function or method.
+/// The attribute takes no arguments and must be attched to a function or
+/// method.
 #[proc_macro_attribute]
 pub fn strictly_pure(attr: TS1, item: TS1) -> TS1 {
     if !attr.is_empty() {
@@ -86,9 +86,11 @@ pub fn strictly_pure(attr: TS1, item: TS1) -> TS1 {
     })
 }
 
-/// Declares a function as strictly pure, i.e., that it has *no* side effects on *existing data*.
+/// Declares a function as strictly pure, i.e., that it has *no* side effects on
+/// *existing data*.
 ///
-/// The attribute takes no arguments and must be attched to a function or method.
+/// The attribute takes no arguments and must be attched to a function or
+/// method.
 #[proc_macro_attribute]
 pub fn pure(attr: TS1, item: TS1) -> TS1 {
     if !attr.is_empty() {
@@ -131,7 +133,8 @@ pub fn invariant(attr: TS1, item: TS1) -> TS1 {
     TS1::from(ts)
 }
 
-/// Declare a variant for a loop. Takes a [Term], which must have a strict order defined.
+/// Declare a variant for a loop. Takes a [Term], which must have a strict order
+/// defined.
 #[proc_macro_attribute]
 pub fn variant(_: TS1, _: TS1) -> TS1 {
     TS1::from(
@@ -143,8 +146,8 @@ pub fn variant(_: TS1, _: TS1) -> TS1 {
     )
 }
 
-/// Declare which fields, parameters, etc. may be modified by the function or loop.
-/// Takes a [LocSet].
+/// Declare which fields, parameters, etc. may be modified by the function or
+/// loop. Takes a [LocSet].
 ///
 /// [LocSet]: rml_syn::LocSet
 #[proc_macro_attribute]
@@ -158,7 +161,8 @@ pub fn modifies(_: TS1, _: TS1) -> TS1 {
     )
 }
 
-/// Declares a function as a logic function, which can only be called from within specifications.
+/// Declares a function as a logic function, which can only be called from
+/// within specifications.
 #[proc_macro_attribute]
 pub fn logic(attr: TS1, item: TS1) -> TS1 {
     if !attr.is_empty() {
@@ -239,7 +243,8 @@ pub fn proof_assert(assertion: TS1) -> TS1 {
     })
 }
 
-/// Specifies external data structures or functions. Takes an optional [Path] to the items.
+/// Specifies external data structures or functions. Takes an optional [Path] to
+/// the items.
 ///
 /// The target must be an [ExternSpecItem].
 ///

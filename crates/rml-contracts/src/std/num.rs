@@ -6,6 +6,7 @@ macro_rules! mach_int {
     ($t:ty, $ty_nm:expr, $zero:expr) => {
         impl ShallowModel for $t {
             type ShallowModelTy = Int;
+
             #[logic]
             #[trusted]
             #[rml::decl::internal]
@@ -17,6 +18,7 @@ macro_rules! mach_int {
 
         impl DeepModel for $t {
             type DeepModelTy = Int;
+
             #[logic]
             #[rml::decl::internal]
             fn deep_model(self) -> Self::DeepModelTy {

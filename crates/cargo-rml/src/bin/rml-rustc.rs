@@ -9,6 +9,8 @@ extern crate rustc_session;
 #[macro_use]
 extern crate log;
 
+use std::{env, panic, panic::PanicInfo, process::Command};
+
 use cargo_rml::options::{Args, RmlArgs};
 use clap::*;
 use rml::callbacks::*;
@@ -16,7 +18,6 @@ use rustc_driver::{RunCompiler, DEFAULT_LOCALE_RESOURCES};
 use rustc_errors::emitter::EmitterWriter;
 use rustc_interface::interface::try_print_query_stack;
 use rustc_session::{config::ErrorOutputType, EarlyErrorHandler};
-use std::{env, panic, panic::PanicInfo, process::Command};
 
 const BUG_REPORT_URL: &str = "https://github.com/Drodt/rml/issues/new";
 
@@ -97,7 +98,8 @@ fn setup_plugin() {
         .iter()
         .any(|arg| arg == "rml_contracts" || arg.contains("rml_contracts="));
 
-    // Did the user ask to compile this crate? Either they explicitly invoked `rml-rustc` or this is a primary package.
+    // Did the user ask to compile this crate? Either they explicitly invoked
+    // `rml-rustc` or this is a primary package.
     let user_asked_for = !is_wrapper || primary_package;
 
     if normal_rustc || !(user_asked_for || has_contracts) {

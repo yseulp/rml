@@ -1,8 +1,7 @@
 use quote::{ToTokens, TokenStreamExt};
 
-use crate::print::TokensOrDefault;
-
 use super::*;
+use crate::print::TokensOrDefault;
 
 // If the given term is a bare `TermStruct`, wraps it in parenthesis
 // before appending it to `TokenStream`.

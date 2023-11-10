@@ -55,6 +55,7 @@ where
     T: DeepModel + ?Sized,
 {
     type DeepModelTy = T::DeepModelTy;
+
     #[logic]
     fn deep_model(self) -> Self::DeepModelTy {
         (*self).deep_model()
@@ -66,6 +67,7 @@ where
     T: ShallowModel + ?Sized,
 {
     type ShallowModelTy = T::ShallowModelTy;
+
     #[logic]
     fn shallow_model(self) -> Self::ShallowModelTy {
         (*self).shallow_model()

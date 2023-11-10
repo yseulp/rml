@@ -1,9 +1,9 @@
+use std::collections::HashMap;
+
+pub(crate) use hir::{collect_hir_specs, HirSpecMap};
 use rustc_hir::{Block, Body, Expr, ExprKind, HirId, Local, StmtKind};
 use rustc_middle::{hir::map::Map, ty::TyCtxt};
 use rustc_span::def_id::DefId;
-
-use std::collections::HashMap;
-
 use serde::{Deserialize, Serialize};
 
 use self::hir::{HirFnSpec, HirFnSpecCase, HirItemInvs, HirLoopSpec};
@@ -15,7 +15,6 @@ use crate::{
         Term,
     },
 };
-pub(crate) use hir::{collect_hir_specs, HirSpecMap};
 
 pub(crate) mod hir;
 pub(crate) mod serialize;

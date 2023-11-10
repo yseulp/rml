@@ -6,8 +6,8 @@ use serde::{Deserialize, Serialize};
 #[command(version, author)]
 pub struct RmlArgs {
     #[clap(long)]
-    /// Only generate proofs for items matching the provided string. The string is treated
-    /// as a Rust qualified path.
+    /// Only generate proofs for items matching the provided string. The string
+    /// is treated as a Rust qualified path.
     focus_on: Option<String>,
     /// Print to stdout.
     #[clap(group = "output", long)]

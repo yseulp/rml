@@ -1,13 +1,13 @@
-use crate::attrs::{parse_attrs, AttributeInvariant, FnAttribute};
+use syn::{
+    braced, parenthesized, parse, parse::Parse, punctuated::Punctuated, token, Error, FnArg,
+    Result, Signature, Token, Type, TypePath,
+};
 
 use super::{
     ExternSpecAttributes, ExternSpecEnum, ExternSpecFn, ExternSpecImpl, ExternSpecItem,
     ExternSpecMod, ExternSpecStruct, ExternSpecTrait,
 };
-use syn::{
-    braced, parenthesized, parse, parse::Parse, punctuated::Punctuated, token, Error, FnArg,
-    Result, Signature, Token, Type, TypePath,
-};
+use crate::attrs::{parse_attrs, AttributeInvariant, FnAttribute};
 
 impl Parse for ExternSpecAttributes {
     fn parse(input: parse::ParseStream) -> Result<Self> {

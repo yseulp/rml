@@ -39,7 +39,8 @@ pub(crate) fn extract_attrs(attrs: &mut Vec<Attribute>, attr: &str) -> Vec<Attri
         .collect()
 }
 
-/// Generate a generic function with `ident`, return type `ret_ty`, `body`. The result will have span `span`.
+/// Generate a generic function with `ident`, return type `ret_ty`, `body`. The
+/// result will have span `span`.
 ///
 /// The signature get adapted to `sig`. See [adapt_sig].
 pub(crate) fn gen_spec_fn(
@@ -64,7 +65,8 @@ pub(crate) fn gen_spec_fn(
     f
 }
 
-/// Generate a spec function that returns booean `term` (encoded). See [gen_spec_fn].
+/// Generate a spec function that returns booean `term` (encoded). See
+/// [gen_spec_fn].
 pub(crate) fn gen_bool_spec_fn(
     ident: Ident,
     span: Span,
@@ -83,7 +85,8 @@ pub(crate) fn gen_bool_spec_fn(
     )
 }
 
-/// Generate a spec function that returns locset `ls` (encoded). See [gen_spec_fn].
+/// Generate a spec function that returns locset `ls` (encoded). See
+/// [gen_spec_fn].
 pub(crate) fn gen_locset_spec_fn(
     ident: Ident,
     span: Span,
@@ -102,7 +105,8 @@ pub(crate) fn gen_locset_spec_fn(
     )
 }
 
-/// Generate a spec function that returns a well founded `term` (encoded). See [gen_spec_fn].
+/// Generate a spec function that returns a well founded `term` (encoded). See
+/// [gen_spec_fn].
 pub(crate) fn gen_wf_spec_fn(
     ident: Ident,
     span: Span,

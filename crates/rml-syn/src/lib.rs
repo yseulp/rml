@@ -2,7 +2,8 @@
 
 //! RML-Syn is a library for the syntax of an RML specification, based on `syn`.
 //!
-//! It is geared towards use in procedural (attribute) macros, but contains a general API.
+//! It is geared towards use in procedural (attribute) macros, but contains a
+//! general API.
 
 #[macro_use]
 pub(crate) mod macros;

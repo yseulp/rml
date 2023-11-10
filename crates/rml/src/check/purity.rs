@@ -61,7 +61,8 @@ impl<'tcx> RmlCtxt<'tcx> {
         }
 
         let did = did.to_def_id();
-        // Internal items (e.g., the `exists` and `forall` functions) should not be checked
+        // Internal items (e.g., the `exists` and `forall` functions) should not be
+        // checked
         if is_internal(tcx, did) {
             return;
         }

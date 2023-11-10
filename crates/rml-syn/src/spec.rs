@@ -35,21 +35,29 @@ pub enum SpecPart {
     /// `requires` takes a boolean term and specifies the pre-condition.
     /// Defaults to `true`.
     Requires(SpecPartRequires),
-    /// `ensures` takes a boolean term and specifies the post-condition in normal behavior.
+    /// `ensures` takes a boolean term and specifies the post-condition in
+    /// normal behavior.
+    ///
     /// Defaults to `true`.
     Ensures(SpecPartEnsures),
-    /// `panics` takes a boolean term and specifies the post-condition in panic behavior.
+    /// `panics` takes a boolean term and specifies the post-condition in panic
+    /// behavior.
+    ///
     /// Defaults to `true`.
     Panics(SpecPartPanics),
-    /// `modifies` takes a [LocSet] and specifies the locations the function may change.
+    /// `modifies` takes a [LocSet] and specifies the locations the function may
+    /// change.
+    ///
     /// Defaults to ???.
     Modifies(SpecPartModifies),
-    /// `variant` takes any term implementing the `WellFounded` trait defined in `rml-contracts`.
-    /// It specifies the variant for a recursive function.
+    /// `variant` takes any term implementing the `WellFounded` trait defined in
+    /// `rml-contracts`. It specifies the variant for a recursive function.
     /// Default is no variant.
     Variant(SpecPartVariant),
     /// `diverges` takes a boolean term and specifies under what condition
-    /// Defaults to `false` if no `diverges` part exists and `true` if it exists but is empty.
+    ///
+    /// Defaults to `false` if no `diverges` part exists and `true` if it exists
+    /// but is empty.
     Diverges(SpecPartDiverges),
 }
 
@@ -62,7 +70,9 @@ pub struct SpecPartRequires {
     pub term: Option<Term>,
 }
 
-/// `ensures` takes a boolean term and specifies the post-condition in normal behavior.
+/// `ensures` takes a boolean term and specifies the post-condition in normal
+/// behavior.
+///
 /// Defaults to `true`.
 #[derive(Debug)]
 pub struct SpecPartEnsures {
@@ -71,7 +81,9 @@ pub struct SpecPartEnsures {
     pub term: Option<Term>,
 }
 
-/// `panics` takes a boolean term and specifies the post-condition in panic behavior.
+/// `panics` takes a boolean term and specifies the post-condition in panic
+/// behavior.
+///
 /// Defaults to `true`.
 #[derive(Debug)]
 pub struct SpecPartPanics {
@@ -80,7 +92,9 @@ pub struct SpecPartPanics {
     pub term: Option<Term>,
 }
 
-/// `modifies` takes a [LocSet] and specifies the locations the function may change.
+/// `modifies` takes a [LocSet] and specifies the locations the function may
+/// change.
+///
 /// Defaults to ???.
 #[derive(Debug)]
 pub struct SpecPartModifies {
@@ -89,8 +103,8 @@ pub struct SpecPartModifies {
     pub locset: LocSet,
 }
 
-/// `variant` takes any term implementing the `WellFounded` trait defined in `rml-contracts`.
-/// It specifies the variant for a recursive function.
+/// `variant` takes any term implementing the `WellFounded` trait defined in
+/// `rml-contracts`. It specifies the variant for a recursive function.
 /// Default is no variant.
 #[derive(Debug)]
 pub struct SpecPartVariant {
@@ -100,7 +114,9 @@ pub struct SpecPartVariant {
 }
 
 /// `diverges` takes a boolean term and specifies under what condition
-/// Defaults to `false` if no `diverges` part exists and `true` if it exists but is empty.
+///
+/// Defaults to `false` if no `diverges` part exists and `true` if it exists but
+/// is empty.
 #[derive(Debug)]
 pub struct SpecPartDiverges {
     pub diverges_token: kw::diverges,
@@ -168,8 +184,9 @@ impl SpecContent {
                         Some(SpecKind::Normal) => {}
                         Some(SpecKind::Panic) => {
                             return Err(syn::Error::new(
-                                 span,
-                                "The specification has both ensures and panics clauses; it may only have post conditions of one type",
+                                span,
+                                "The specification has both ensures and panics clauses; it may \
+                                 only have post conditions of one type",
                             ));
                         }
                         None => kind = Some(SpecKind::Normal),
@@ -183,8 +200,9 @@ impl SpecContent {
                         Some(SpecKind::Panic) => {}
                         Some(SpecKind::Normal) => {
                             return Err(syn::Error::new(
-                                 span,
-                                "The specification has both ensures and panics clauses; it may only have post conditions of one type",
+                                span,
+                                "The specification has both ensures and panics clauses; it may \
+                                 only have post conditions of one type",
                             ));
                         }
                         None => kind = Some(SpecKind::Panic),
@@ -422,8 +440,8 @@ impl Parse for SpecPart {
     }
 }
 
-/// Parse a macro delimiter (parentheses, brackets, braces) and returns the tokens as well as
-/// the tokenstream between the delimiters.
+/// Parse a macro delimiter (parentheses, brackets, braces) and returns the
+/// tokens as well as the tokenstream between the delimiters.
 pub(crate) fn parse_delimiter(
     input: syn::parse::ParseStream,
 ) -> syn::Result<(MacroDelimiter, proc_macro2::TokenStream)> {
@@ -567,24 +585,24 @@ where
     }
 }
 
-/* impl fmt::Display for SpecContent {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let name = match &self.name {
-            Some(n) => n,
-            None => "<UNNAMED>",
-        };
-        let mut r = writeln!(f, "Spec({name}) {{").and(writeln!(f, "\tpre: ["));
-        for p in &self.pre_conds {
-            r = r.and(writeln!(f, "\t\t{},", p));
-        }
-        r = r.and(writeln!(f, "\t],")).and(match &self.kind {
-            SpecKind::Normal => writeln!(f, "\tpost: ["),
-            SpecKind::Panic => writeln!(f, "\tpanics: ["),
-        });
-        for p in &self.post_conds {
-            r = r.and(writeln!(f, "\t\t{p},"))
-        }
-
-        r.and(writeln!(f, "\t]")).and(writeln!(f, "}}"))
-    }
-} */
+// impl fmt::Display for SpecContent {
+// fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+// let name = match &self.name {
+// Some(n) => n,
+// None => "<UNNAMED>",
+// };
+// let mut r = writeln!(f, "Spec({name}) {{").and(writeln!(f, "\tpre: ["));
+// for p in &self.pre_conds {
+// r = r.and(writeln!(f, "\t\t{},", p));
+// }
+// r = r.and(writeln!(f, "\t],")).and(match &self.kind {
+// SpecKind::Normal => writeln!(f, "\tpost: ["),
+// SpecKind::Panic => writeln!(f, "\tpanics: ["),
+// });
+// for p in &self.post_conds {
+// r = r.and(writeln!(f, "\t\t{p},"))
+// }
+//
+// r.and(writeln!(f, "\t]")).and(writeln!(f, "}}"))
+// }
+// }
