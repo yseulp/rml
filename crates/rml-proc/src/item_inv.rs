@@ -1,30 +1,17 @@
 use proc_macro2::{Ident, Span, TokenStream as TS2};
 use quote::quote;
-use rml_syn::{Encode, Term};
+use rml_syn::Term;
 use syn::{
-    parse_quote_spanned, spanned::Spanned, Attribute, Generics, ItemFn, ItemImpl, ItemTrait, Meta,
-    Result, TraitItemFn,
+    parse_quote, parse_quote_spanned, spanned::Spanned, Attribute, Generics, ItemFn, ItemImpl,
+    ItemTrait, Meta, Path, Result, TraitItemFn,
 };
 
 use crate::{
     subject::ItemKind,
-    util::{extract_attrs, generate_unique_ident},
+    util::{extract_attrs, gen_bool_spec_fn, gen_self_params, gen_unique_ident, EMPTY_GENERICS},
 };
 
-fn item_inv_fn(term: Term, ident: &Ident, inv_kind: &Ident) -> ItemFn {
-    let tsp = term.span();
-    let e = term.encode();
-    let name = ident.to_string();
-    parse_quote_spanned! { tsp =>
-        #[allow(unused_variables, dead_code)]
-        #[rml::spec::#inv_kind = #name]
-        fn #ident(self) -> bool {
-            let b: bool = !!(#e);
-            b
-        }
-    }
-}
-
+/// Generate an `impl` with the methods `fns`.
 fn item_inv_impl(span: Span, ident: Ident, generics: &Generics, fns: Vec<ItemFn>) -> ItemImpl {
     let mut i: ItemImpl = parse_quote_spanned! { span =>
         impl #ident {
@@ -36,16 +23,27 @@ fn item_inv_impl(span: Span, ident: Ident, generics: &Generics, fns: Vec<ItemFn>
     i
 }
 
+/// Generates spec code for data structure invariants
+///
+/// Adds a new impl for with invariant spec methods.
 fn struct_or_enum(inv_kind: &'static str, term: Term, mut item: ItemKind) -> Result<TS2> {
     let tsp = term.span();
     let ref_ident = Ident::new(&format!("{inv_kind}_ref"), tsp);
-    let first_ident = generate_unique_ident(inv_kind);
+    let first_ident = gen_unique_ident(inv_kind);
     let first_str = first_ident.to_string();
     let inv_kind_ident = Ident::new(inv_kind, tsp);
+    let attr_path: Path = parse_quote!(rml::spec::#inv_kind_ident);
 
     let mut attrs: Vec<Attribute> =
         vec![parse_quote_spanned! {tsp => #[rml::#ref_ident = #first_str]}];
-    let mut fns: Vec<ItemFn> = vec![item_inv_fn(term, &first_ident, &inv_kind_ident)];
+    let mut fns: Vec<ItemFn> = vec![gen_bool_spec_fn(
+        &first_ident,
+        term.span(),
+        term,
+        &attr_path,
+        gen_self_params().pairs(),
+        &EMPTY_GENERICS,
+    )];
 
     let (old_attrs, ident, gens) = match &mut item {
         ItemKind::Trait(_) => unreachable!(),
@@ -59,8 +57,15 @@ fn struct_or_enum(inv_kind: &'static str, term: Term, mut item: ItemKind) -> Res
         let sp = inv.span();
         if let Meta::List(l) = inv.meta {
             let t: Term = syn::parse2(l.tokens)?;
-            let name = generate_unique_ident(inv_kind);
-            fns.push(item_inv_fn(t, &name, &inv_kind_ident));
+            let name = gen_unique_ident(inv_kind);
+            fns.push(gen_bool_spec_fn(
+                &name,
+                t.span(),
+                t,
+                &attr_path,
+                gen_self_params().pairs(),
+                &EMPTY_GENERICS,
+            ));
             attrs.push(parse_quote_spanned! {sp => #[rml::#ref_ident = #name]});
         } else {
             panic!()
@@ -78,15 +83,24 @@ fn struct_or_enum(inv_kind: &'static str, term: Term, mut item: ItemKind) -> Res
     })
 }
 
+/// Generate spec code for traits. Adds a method to the trait for each invariant
+/// attribute.
 fn trait_inv(term: Term, mut i: ItemTrait) -> Result<TS2> {
     let tsp = term.span();
-    let first_ident = generate_unique_ident("trait_inv");
+    let first_ident = gen_unique_ident("trait_inv");
     let first_str = first_ident.to_string();
-    let inv_kind_ident = Ident::new("trait_inv", tsp);
+    let attr_path: Path = parse_quote!(rml::spec::trait_inv);
 
     let mut attrs: Vec<Attribute> =
         vec![parse_quote_spanned! {tsp => #[rml::trait_inv_ref = #first_str]}];
-    let mut fns: Vec<ItemFn> = vec![item_inv_fn(term, &first_ident, &inv_kind_ident)];
+    let mut fns: Vec<ItemFn> = vec![gen_bool_spec_fn(
+        &first_ident,
+        term.span(),
+        term,
+        &attr_path,
+        gen_self_params().pairs(),
+        &EMPTY_GENERICS,
+    )];
 
     let inv_attrs = extract_attrs(&mut i.attrs, "invariant");
 
@@ -94,8 +108,15 @@ fn trait_inv(term: Term, mut i: ItemTrait) -> Result<TS2> {
         let sp = inv.span();
         if let Meta::List(l) = inv.meta {
             let t: Term = syn::parse2(l.tokens)?;
-            let name = generate_unique_ident("trait_inv");
-            fns.push(item_inv_fn(t, &name, &inv_kind_ident));
+            let name = gen_unique_ident("trait_inv");
+            fns.push(gen_bool_spec_fn(
+                &name,
+                t.span(),
+                t,
+                &attr_path,
+                gen_self_params().pairs(),
+                &EMPTY_GENERICS,
+            ));
             attrs.push(parse_quote_spanned! {sp => #[rml::trait_inv_ref = #name]});
         } else {
             panic!()
@@ -129,6 +150,7 @@ fn trait_inv(term: Term, mut i: ItemTrait) -> Result<TS2> {
     })
 }
 
+/// Generate spec code for invariants.
 pub(crate) fn item_inv(term: Term, item: ItemKind) -> Result<TS2> {
     match item {
         ItemKind::Trait(i) => trait_inv(term, i),

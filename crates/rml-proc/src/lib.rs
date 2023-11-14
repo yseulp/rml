@@ -23,7 +23,7 @@ mod subject;
 mod util;
 
 use subject::{ContractSubject, InvariantSubject};
-use util::generate_unique_ident;
+use util::gen_unique_ident;
 
 /// A specification case for a function. The attribute takes a [SpecContent]
 /// and must be attached to a function or method, which need not have a body.
@@ -37,7 +37,7 @@ pub fn spec(attr: TS1, item: TS1) -> TS1 {
 
     let item = parse_macro_input!(item as ContractSubject);
 
-    let spec_name = generate_unique_ident(&item.name());
+    let spec_name = gen_unique_ident(&item.name());
     let name_tag = format!("{}", quote! { #spec_name });
 
     match item {

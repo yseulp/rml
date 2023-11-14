@@ -10,6 +10,7 @@ use syn::{
     ItemEnum, ItemStruct, ItemTrait, Label, Lifetime, Result, Signature, Token, Visibility,
 };
 
+/// A function or method, which may either have a body or a semicolon.
 pub(crate) struct FnOrMethod {
     pub defaultness: Option<Token![default]>,
     pub visibility: Visibility,
@@ -25,6 +26,8 @@ impl FnOrMethod {
     }
 }
 
+/// The subject or target of a specification case. Either a function/method, or
+/// a closure.
 pub(crate) enum ContractSubject {
     FnOrMethod(FnOrMethod),
     Closure(ExprClosure),
@@ -42,6 +45,8 @@ impl ToTokens for FnOrMethod {
 }
 
 impl ContractSubject {
+    /// Name of the subject. If called on a function or method, returns the
+    /// name. For closures, it defaults to `"closure"`.
     pub fn name(&self) -> String {
         match self {
             ContractSubject::FnOrMethod(tr) => tr.sig.ident.to_string(),
@@ -125,14 +130,19 @@ impl<'a> FilterAttrs<'a> for &'a [Attribute] {
     }
 }
 
+/// The three kinds of Rust loop.
 #[derive(Debug)]
 pub enum LoopKind {
+    /// A `for pat in expr { ... }` loop.
     ForLoop(ExprForLoop),
+    /// A `loop { ... }`.
     Loop(ExprLoop),
+    /// A `while expr` loop.
     While(ExprWhile),
 }
 
 impl LoopKind {
+    /// The span of the loop.
     pub fn span(&self) -> proc_macro2::Span {
         match self {
             LoopKind::ForLoop(l) => l.span(),
@@ -141,6 +151,7 @@ impl LoopKind {
         }
     }
 
+    /// A mutable reference to the attributes.
     pub fn attrs_mut(&mut self) -> &mut Vec<Attribute> {
         match self {
             LoopKind::ForLoop(l) => &mut l.attrs,
@@ -150,10 +161,14 @@ impl LoopKind {
     }
 }
 
+/// The kind of items that can have invariants.
 #[derive(Debug)]
 pub enum ItemKind {
+    /// A trait, e.g., `trait T { ... }`.
     Trait(ItemTrait),
+    /// A struct, e.g., `struct S { ... }`.
     Struct(ItemStruct),
+    /// An enum, e.g., `enum E { ... }`.
     Enum(ItemEnum),
 }
 
@@ -167,6 +182,8 @@ impl ToTokens for ItemKind {
     }
 }
 
+/// Subject or target for invariant attributes. Either a loop (loop invariant)
+/// or struct/enum/trait ("object" invariant).
 #[derive(Debug)]
 pub enum InvariantSubject {
     Loop(LoopKind),
@@ -174,6 +191,7 @@ pub enum InvariantSubject {
 }
 
 impl InvariantSubject {
+    /// Span of the subject.
     pub fn span(&self) -> proc_macro2::Span {
         match self {
             InvariantSubject::Loop(l) => l.span(),

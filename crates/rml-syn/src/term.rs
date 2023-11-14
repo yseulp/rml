@@ -514,7 +514,6 @@ ast_struct! {
 
 ast_enum! {
     /// An individual generic argument to a method, like `T`.
-    ///
     #[derive(Debug, Clone)]
     pub enum TermGenericMethodArgument {
         /// A type argument.
@@ -528,6 +527,7 @@ ast_enum! {
 }
 
 ast_struct! {
+    /// An argument (typed) for a quantifier. See [TermForall] and [TermExists].
     pub struct QuantArg {
         pub ident: Ident,
         pub colon_token: Token![:],

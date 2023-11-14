@@ -5,7 +5,7 @@ use syn::{
     parse::Parse, parse_quote_spanned, spanned::Spanned, Attribute, Expr, Ident, Meta, Result, Stmt,
 };
 
-use crate::{generate_unique_ident, subject::LoopKind, util::extract_attrs};
+use crate::{gen_unique_ident, subject::LoopKind, util::extract_attrs};
 
 fn transform_loop(r#loop: LoopKind) -> (Vec<Attribute>, Vec<Stmt>, Expr) {
     match r#loop {
@@ -54,11 +54,22 @@ fn loop_mod_closure(ls: LocSet, name: &str) -> Stmt {
     }
 }
 
+/// Extract attributes of the loop with the path `attr`.
 #[inline]
 fn extract_loop_attrs(r#loop: &mut LoopKind, attr: &'static str) -> Vec<Attribute> {
     extract_attrs(r#loop.attrs_mut(), attr)
 }
 
+/// Collects the closures and attributes for one part of the specification such
+/// as invariants.
+///
+/// - `fns`: Collection of the closures.
+/// - `attrs`: Collection of the attributes.
+/// - `to_parse`: The attributes the contents of which we need to parse, e.g.,
+///   invariant attributes.
+/// - `f`: A function to create the closure.
+/// - `prefix`: Prefix of the closure's name.
+/// - `attr_name`: Name of the generated attribute.
 fn add_closures_and_attrs<F, T>(
     fns: &mut Vec<Stmt>,
     attrs: &mut Vec<Attribute>,
@@ -75,7 +86,7 @@ where
         let sp = a.span();
         if let Meta::List(l) = a.meta {
             let t: T = syn::parse2(l.tokens)?;
-            let name = generate_unique_ident(prefix).to_string();
+            let name = gen_unique_ident(prefix).to_string();
             fns.push(f(t, &name));
             let attr_ident = Ident::new(attr_name, sp);
             attrs.push(parse_quote_spanned! {sp => #[rml::#attr_ident = #name]});
@@ -86,10 +97,19 @@ where
     Ok(())
 }
 
-pub fn loop_inv(term: Term, mut r#loop: LoopKind) -> Result<(TS2, TS2, TS2)> {
+/// Generate the necessary code for specifying a loop. `term` is the first
+/// invariant. `r#loop` is the loop.
+///
+/// Returns a thruple of [TokenStream]s:
+/// 1. The specification attributes
+/// 2. The spec closures.
+/// 3. The transformed loop.
+///
+/// [TokenStream]: TS2
+pub(crate) fn loop_inv(term: Term, mut r#loop: LoopKind) -> Result<(TS2, TS2, TS2)> {
     let sp = term.span();
     let lsp = r#loop.span();
-    let first_ident = generate_unique_ident("loop_inv").to_string();
+    let first_ident = gen_unique_ident("loop_inv").to_string();
     let mut attrs: Vec<Attribute> =
         vec![parse_quote_spanned! {sp => #[rml::loop_inv_ref = #first_ident]}];
     let mut fns: Vec<Stmt> = vec![loop_inv_closure(term, &first_ident)];

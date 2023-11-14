@@ -9,14 +9,11 @@ use rml_syn::{
         FlattenedStructSpec, FlattenedTraitSpec, FnContext,
     },
 };
-use syn::{
-    parse_quote, punctuated::Punctuated, spanned::Spanned, token, Attribute, ExprPath, Generics,
-    Path, Result, ReturnType, Signature, Token,
-};
+use syn::{parse_quote, spanned::Spanned, Attribute, ExprPath, Generics, Path, Result, ReturnType};
 
 use crate::{
     func::fn_spec_item,
-    util::{gen_bool_spec_fn, generate_unique_ident},
+    util::{gen_bool_spec_fn, gen_self_params, gen_unique_ident},
 };
 
 enum InvSubject {
@@ -130,7 +127,7 @@ fn handle_fn(
                 is_strictly_pure = true;
             }
             rml_syn::attrs::FnAttribute::Spec(AttributeSpec { spec, .. }) => {
-                let spec_id = generate_unique_ident(&sig.ident.to_string());
+                let spec_id = gen_unique_ident(&sig.ident.to_string());
                 let result = match &sig.output {
                     ReturnType::Default => parse_quote! { result : () },
                     ReturnType::Type(_, ref ty) => parse_quote! { result : #ty },
@@ -174,7 +171,7 @@ fn handle_fn(
         .map(|name| quote!(#[rml::extern_spec_case_ref=#name]))
         .collect::<Vec<_>>();
 
-    let const_name = generate_unique_ident(&format!("extern_spec_{}", sig.ident));
+    let const_name = gen_unique_ident(&format!("extern_spec_{}", sig.ident));
 
     let f_ident = sig.ident;
 
@@ -205,28 +202,15 @@ fn handle_inv(
 
     for attr in attrs {
         let inv = attr.term;
-        let ident = generate_unique_ident(&ident_prefix);
-        let mut inputs = Punctuated::new();
-        inputs.push(parse_quote!(self));
-        let sig = Signature {
-            constness: None,
-            asyncness: None,
-            unsafety: None,
-            abi: None,
-            fn_token: Token![fn](subject_span),
-            ident: ident.clone(),
-            generics: generics.clone(),
-            paren_token: token::Paren(subject_span),
-            inputs,
-            variadic: None,
-            output: ReturnType::Default,
-        };
+        let ident = gen_unique_ident(&ident_prefix);
+        let inputs = gen_self_params();
         let f = gen_bool_spec_fn(
-            ident.clone(),
+            &ident,
             subject_span,
             inv,
-            parse_quote!(rml::extern_spec_inv),
-            &sig,
+            &parse_quote!(rml::extern_spec_inv),
+            inputs.pairs(),
+            &generics.clone(),
         );
         inv_fns.push(f);
         inv_idents.push(ident);
@@ -237,7 +221,7 @@ fn handle_inv(
         .map(|name| quote!(#[rml::extern_spec_inv_ref=#name]))
         .collect::<Vec<_>>();
 
-    let const_name = generate_unique_ident(&format!("extern_spec_inv_{subject}_{ident}"));
+    let const_name = gen_unique_ident(&format!("extern_spec_inv_{subject}_{ident}"));
 
     Ok(quote_spanned! {
         subject_span =>

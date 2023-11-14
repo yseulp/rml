@@ -15,6 +15,7 @@ mod kw {
 }
 
 ast_enum_of_structs! {
+    /// A location set describes a part of memory. Used to describe what a function may change.
     #[derive(Clone)]
     pub enum LocSet {
         /// A specific field of a term `obj.k` or `obj.0`.

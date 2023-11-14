@@ -7,7 +7,7 @@ use syn::{
 };
 
 use crate::util::{
-    gen_bool_spec_fn, gen_locset_spec_fn, gen_wf_spec_fn, generate_unique_ident, get_mut_ref_params,
+    gen_bool_spec_fn, gen_locset_spec_fn, gen_unique_ident, gen_wf_spec_fn, get_mut_ref_params,
 };
 
 pub(crate) fn fn_spec_item(
@@ -32,16 +32,23 @@ pub(crate) fn fn_spec_item(
         spec.pre_conds.push(parse_quote!(true));
     }
     let pre_idents: Vec<_> = (0..spec.pre_conds.len())
-        .map(|_| generate_unique_ident("spec_part_pre"))
+        .map(|_| gen_unique_ident("spec_part_pre"))
         .collect();
     let pre: Vec<_> = spec
         .pre_conds
         .into_iter()
         .enumerate()
         .map(|(i, p)| {
-            let id = pre_idents[i].clone();
+            let id = &pre_idents[i];
             let span = p.span();
-            gen_bool_spec_fn(id, span, p, parse_quote!(rml::spec::pre), &sig)
+            gen_bool_spec_fn(
+                id,
+                span,
+                p,
+                &parse_quote!(rml::spec::pre),
+                sig.inputs.pairs(),
+                &sig.generics,
+            )
         })
         .collect();
     let pre_strs = pre_idents.iter().map(|i| i.to_string());
@@ -51,13 +58,20 @@ pub(crate) fn fn_spec_item(
         spec.post_conds.push(parse_quote!(true))
     }
     let post_idents: Vec<_> = (0..spec.post_conds.len())
-        .map(|_| generate_unique_ident("spec_part_post"))
+        .map(|_| gen_unique_ident("spec_part_post"))
         .collect();
     let post = spec.post_conds.into_iter().enumerate().map(|(i, p)| {
-        let id = post_idents[i].clone();
+        let id = &post_idents[i];
         let span = p.span();
 
-        gen_bool_spec_fn(id, span, p, parse_quote!(rml::spec::post), &post_sig)
+        gen_bool_spec_fn(
+            id,
+            span,
+            p,
+            &parse_quote!(rml::spec::post),
+            post_sig.inputs.pairs(),
+            &post_sig.generics,
+        )
     });
     let post_strs = post_idents.iter().map(|i| i.to_string());
 
@@ -95,18 +109,32 @@ pub(crate) fn fn_spec_item(
             LocSet::Group(LocSetGroup { items: p })
         }
     };
-    let modi_id = generate_unique_ident("spec_part_modi");
+    let modi_id = gen_unique_ident("spec_part_modi");
     let modi_id_str = modi_id.to_string();
     let modi_attr: Attribute =
         parse_quote_spanned! { span => #[rml::spec_part_modi_ref=#modi_id_str] };
-    let modi = gen_locset_spec_fn(modi_id, span, locset, parse_quote!(rml::spec::modi), &sig);
+    let modi = gen_locset_spec_fn(
+        &modi_id,
+        span,
+        locset,
+        &parse_quote!(rml::spec::modi),
+        sig.inputs.pairs(),
+        &sig.generics,
+    );
 
     // variant
     let (var_attr, var) = if let Some(v) = spec.variant {
         let span = v.span();
-        let id = generate_unique_ident("spec_part_var");
+        let id = gen_unique_ident("spec_part_var");
         let id_str = id.to_string();
-        let item = gen_wf_spec_fn(id, span, v, parse_quote!(rml::spec::var), &sig);
+        let item = gen_wf_spec_fn(
+            &id,
+            span,
+            v,
+            &parse_quote!(rml::spec::var),
+            sig.inputs.pairs(),
+            &sig.generics,
+        );
         let var_attr: Attribute =
             parse_quote_spanned! { span => #[rml::spec_part_var_ref=#id_str] };
         (Some(var_attr), Some(item))
@@ -120,11 +148,18 @@ pub(crate) fn fn_spec_item(
         .map(|d| d.unwrap_or_else(|| parse_quote_spanned! { span => true }))
         .unwrap_or_else(|| parse_quote_spanned! { span => false });
     let (div, div_attr) = {
-        let id = generate_unique_ident("spec_part_div");
+        let id = gen_unique_ident("spec_part_div");
         let id_str = id.to_string();
         let span = diverges.span();
 
-        let item = gen_bool_spec_fn(id, span, diverges, parse_quote!(rml::spec::div), &sig);
+        let item = gen_bool_spec_fn(
+            &id,
+            span,
+            diverges,
+            &parse_quote!(rml::spec::div),
+            sig.inputs.pairs(),
+            &sig.generics,
+        );
         let attr: Attribute = parse_quote_spanned! { span => #[rml::spec_part_div_ref=#id_str] };
         (item, attr)
     };
