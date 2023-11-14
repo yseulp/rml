@@ -1,3 +1,5 @@
+//! RML Attributes for functions or data structures.
+
 use quote::ToTokens;
 use syn::{
     bracketed, parenthesized,

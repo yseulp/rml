@@ -1,3 +1,10 @@
+//! In the end, we want to serialize the HIR structures and make them available
+//! to other tools. Unfortunately, `rustc`'s data structures do not implement
+//! [Serialize] nor [Deserialize]. Neither can we implement them for foreign
+//! items.
+//!
+//! To get aroung this, we define wrappers.
+
 use rustc_hir::{def_id::LocalDefId, HirId, ItemId};
 use rustc_span::{def_id::DefId, symbol::Ident, Span, Symbol};
 use serde::{Deserialize, Serialize};

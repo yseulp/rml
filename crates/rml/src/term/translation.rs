@@ -1,3 +1,8 @@
+//! Handle translation of HIR structures to [Term], and the requires
+//! sub-structures.
+//!
+//! See especially: [FromHir], [HirInto].
+
 use rustc_ast::{
     BindingAnnotation, BorrowKind, ByRef, CaptureBy, FloatTy, IntTy, LitFloatType, LitIntType,
     LitKind, Movability, Mutability, StrStyle, TraitObjectSyntax, UintTy,
@@ -33,17 +38,29 @@ use super::{
     TermUintTy, TermUnOp, TermUnsafeSource,
 };
 
+/// Allows translating from `T` to `Self`, where `T` is a HIR structure. Since
+/// some structures reference bodies, we require access to the HIR.
 pub trait FromHir<'hir, T>
 where
     T: Sized,
 {
+    /// Translate from `value` to `Self`, where `T` is a HIR structure. Since
+    /// some structures reference bodies, we require access to the HIR via
+    /// `hir`.
     fn from_hir(value: T, hir: Map<'hir>) -> Self;
 }
 
+/// Allows translating from `Self` to `T`, where `Self` is a HIR structure.
+/// Since some structures reference bodies, we require access to the HIR.
+///
+/// **Do not implement this directly.** Use [FromHir] instead.
 pub trait HirInto<'hir, T>
 where
     T: Sized,
 {
+    /// Translate from `self` to `T`, where `self` is a HIR structure. Since
+    /// some structures reference bodies, we require access to the HIR via
+    /// `hir`.
     fn hir_into(self, hir: Map<'hir>) -> T;
 }
 

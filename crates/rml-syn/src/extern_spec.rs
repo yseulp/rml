@@ -1,3 +1,7 @@
+//! External RML specification for items outside the current crate. Since the
+//! source code is not available, attributes are not available and compiled
+//! away. Hence, developers must add specification in a different way.
+
 use std::mem;
 
 use proc_macro2::Span;
@@ -11,8 +15,8 @@ use syn::{
 
 use crate::attrs::{AttributeInvariant, FnAttribute};
 
-pub mod parsing;
-pub mod printing;
+mod parsing;
+mod printing;
 
 /// An external specification. Allows specifying functions and data structures
 /// outside of the current crate, i.e., when no source code is available.

@@ -1,3 +1,5 @@
+//! Rust compiler callbacks for RML.
+
 use std::{cell::RefCell, fs, thread_local};
 
 use rustc_driver::{Callbacks, Compilation};
@@ -12,6 +14,7 @@ thread_local! {
     static RML_CTXT: RefCell<Option<RmlCtxt<'static>>> = RefCell::new(None);
 }
 
+/// Extracts the RML specs.
 pub struct ExtractSpec {
     opts: Options,
 }
@@ -146,6 +149,7 @@ pub unsafe fn retrieve_rcx(_tcx: TyCtxt<'_>) -> RmlCtxt<'_> {
     unsafe { std::mem::transmute(rcx) }
 }
 
+/// Write specs to output. Possibly pretty printed.
 fn output_specs(specs: &SpecMap, out_file: &OutputFile, pretty_print: bool) {
     let specs = specs.serializable();
     let json = if pretty_print {

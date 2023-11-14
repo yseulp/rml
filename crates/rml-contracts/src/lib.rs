@@ -16,7 +16,8 @@
 //! add some specification to standard library items.
 //!
 //! If you want to add attributes to loops or closures to specify them, you must
-//! add the following features to your crate: ```
+//! add the following features to your crate:
+//! ```
 //! #![feature(stmt_expr_attributes)]
 //! #![feature(proc_macro_hygiene)]
 //! ```

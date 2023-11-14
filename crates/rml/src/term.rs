@@ -1,3 +1,5 @@
+//! Collect expressions that are actually terms encoded as expressions.
+
 use std::sync::Arc;
 
 use serde::{Deserialize, Serialize};
@@ -9,37 +11,83 @@ mod serialize;
 pub mod translation;
 pub mod wrappers;
 
+/// A term extracted from an expression that is an encoded term from rml_syn.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Term {
+    /// Id of the original expression.
     pub hir_id: HirIdWrapper,
+    /// Kind of the term.
     pub kind: TermKind,
+    /// Span of the original expression.
     pub span: SpanWrapper,
 }
 
+/// Kind of the [Term].
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum TermKind {
+    /// Array term, e.g., `[e1, e2, ..., eN]`.
     Array(Vec<Term>),
+    /// A call, e.g., `f(a1, ..., aN)`.
     Call(Box<Term>, Vec<Term>),
+    /// A method call, e.g., `x.foo::<'static, Bar, Baz>(a, b, c, d)`.
+    ///
+    /// The [TermPathSegment] is the path of the method, [Term] is the callee,
+    /// `Vec<Term>` are the arguments, and [SpanWrapper] is the original
+    /// expressions span.
     MethodCall(TermPathSegment, Box<Term>, Vec<Term>, SpanWrapper),
+    /// A tuple, e.g., `(e1, ..., eN)`.
     Tup(Vec<Term>),
+    /// A binary term, e.g., `e1 + eN`.
     Binary(TermBinOp, Box<Term>, Box<Term>),
+    /// A unary term, e.g., `!e`.
     Unary(TermUnOp, Box<Term>),
+    /// A term literal, e.g., `1`.
     Lit(TermLit),
+    /// A cast term, e.g., `foo as f64`.
     Cast(Box<Term>, TermTy),
+    /// A let `$pat = $term` term.
+    ///
+    /// These are not `Local` and only occur as terms. The `let Some(x) = foo()`
+    /// in `if let Some(x) = foo()` is an example of `Let(..)`.
     Let(TermLet),
+    /// An if block, with an optional else block.
+    ///
+    /// I.e., `if <term> { <term> } else { <term> }`.
     If(Box<Term>, Box<Term>, Option<Box<Term>>),
+    /// A `match` block, with a source that indicates whether or not it is the
+    /// result of a desugaring, and if so, which kind.
     Match(Box<Term>, Vec<TermArm>, TermMatchSource),
+    /// A closure (e.g., `|a, b, c| {a + b + c}`).
     Closure(TermClosure),
+    /// A block (e.g., `{ ... }`).
     Block(TermBlock),
+    /// Access of a named (e.g., `obj.foo`) or unnamed (e.g., `obj.0`) struct or
+    /// tuple field.
     Field(Box<Term>, IdentWrapper),
+    /// An indexing operation (`foo[2]`). Similar to [TermKind::MethodCall], the
+    /// final [SpanWrapper] represents the span of the brackets and index.
     Index(Box<Term>, Box<Term>, SpanWrapper),
+    /// Path to a definition, possibly containing lifetime or type parameters.
     Path(TermQPath),
+    /// A referencing operation (i.e., `&a` or `&mut a`).
+    ///
+    /// TODO: Remove?
     AddrOf(TermBorrowKind, TermMutability, Box<Term>),
+    /// A struct or struct-like variant literal term.
+    ///
+    /// E.g., `Foo {x: 1, y: 2}`, or `Foo {x: 1, .. base}`, where `base` is the
+    /// `Option<Expr>`.
     Struct(TermQPath, Vec<TermField>, Option<Box<Term>>),
+    /// An array literal constructed from one repeated element.
+    ///
+    /// E.g., `[1; 5]`. The first term is the element to be repeated; the
+    /// second is the number of times to repeat it.
     Repeat(Box<Term>, Box<TermArrayLen>),
 
     // RML special kinds
+    /// A quantor like `forall(|x: int| x > 0)`.
     Quantor(QuantorKind, QuantorParam, Box<Term>),
+    /// A model term, e.g., `x@`.
     Model(ModelKind, Box<Term>),
 }
 
