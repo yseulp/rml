@@ -91,72 +91,115 @@ pub enum TermKind {
     Model(ModelKind, Box<Term>),
 }
 
+/// The kind of a model term.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum ModelKind {
+    /// A shallow model, i.e., type parameters are _not_ altered.
+    ///
+    /// E.g.: A shallow model of `Vec<T>` is `Seq<T>`.
     Shallow,
+    /// A deep model, i.e., type parameters are transformed to their deep model.
+    ///
+    /// E.g.: A deep model of `Vec<T>` is `Seq<T::DeepModel>`.
     Deep,
 }
 
+/// A binary operator on terms.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TermBinOp {
     node: TermBinOpKind,
     span: SpanWrapper,
 }
 
+/// A unary operator on terms.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum TermUnOp {
     Deref,
     Not,
     Neg,
 }
-
+/// Different binary operator kinds.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum TermBinOpKind {
+    /// `a + b`.
     Add,
+    /// `a - b`.
     Sub,
+    /// `a * b`.
     Mul,
+    /// `a / b`.
     Div,
+    /// `a % b`.
     Rem,
+    /// `a && b`.
     And,
+    /// `a || b`.
     Or,
+    /// `a ^ b`.
     BitXor,
+    /// `a & b`.
     BitAnd,
+    /// `a | b`.
     BitOr,
+    /// `a << b`.
     Shl,
+    /// `a >> b`.
     Shr,
+    /// `a == b`.
     Eq,
+    /// `a < b`.
     Lt,
+    /// `a <= b`.
     Le,
+    /// `a != b`.
     Ne,
+    /// `a > b`.
     Ge,
+    /// `a >= b`.
     Gt,
 
-    // RML
+    /// RML-specific, logical equality, irrespective of implementations of [Eq].
+    ///
+    /// `a === b`.
     LogEq,
 }
 
+/// A literal.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TermLit {
     pub node: TermLitKind,
     pub span: SpanWrapper,
 }
 
+/// Kinds of term literal.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum TermLitKind {
+    /// String literal, e.g., `"hello"`.
     Str(SymbolWrapper, TermStrStyle),
+    /// Byte string literal, e.g., `b"hello"`.
     ByteStr(Arc<[u8]>, TermStrStyle),
+    /// C-string literal.
     CStr(Arc<[u8]>, TermStrStyle),
+    /// A raw byte.
     Byte(u8),
+    /// A char `'h'`.
     Char(char),
+    /// Integer literal and its bitsize, e.g., 42u128.
     Int(u128, TermLitIntType),
+    /// Float literal, e.g., `42.5f64`.
     Float(SymbolWrapper, TermLitFloatType),
+    /// Bool literal, i.e., `true` or `false`.
     Bool(bool),
 }
 
+/// Integer literal type.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum TermLitIntType {
+    /// `i8`, `i16`, ...
     Signed(TermIntTy),
+    /// `u8`, `u16`, ...
     Unsigned(TermUintTy),
+    /// No suffix.
     Unsuffixed,
 }
 
@@ -178,6 +221,9 @@ pub enum TermBorrowKind {
     Raw,
 }
 
+/// Matches may be declared by the user or are created when lowering the AST to
+/// HIR. This enum denotes whether this is the former
+/// ([TermMatchSource::Normal]) or the latter (including where it comes from).
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum TermMatchSource {
     Normal,
