@@ -94,7 +94,10 @@ pub(crate) fn gen_bool_spec_fn<'a>(
         span,
         attr_path,
         &parse_quote!(bool),
-        &vec![parse_quote!(let cond: bool = !!(#e);), parse_quote!(cond)],
+        &vec![
+            parse_quote!(let cond: bool = !!(#e);),
+            Stmt::Expr(parse_quote!(cond), None),
+        ],
         inputs,
         generics,
     )
@@ -116,7 +119,7 @@ pub(crate) fn gen_locset_spec_fn<'a>(
         span,
         attr_path,
         &parse_quote!(::rml_contracts::logic::LocSet),
-        &vec![parse_quote!(#e)],
+        &vec![Stmt::Expr(parse_quote!(#e), None)],
         inputs,
         generics,
     )
@@ -138,7 +141,7 @@ pub(crate) fn gen_wf_spec_fn<'a>(
         span,
         attr_path,
         &parse_quote!(impl ::rml_contracts::WellFounded),
-        &vec![parse_quote!(#e)],
+        &vec![Stmt::Expr(parse_quote!(#e), None)],
         inputs,
         generics,
     )
