@@ -1,7 +1,7 @@
 use core::fmt;
 
 use proc_macro2::{Ident, Span, TokenStream as TS2};
-use quote::{quote, quote_spanned};
+use quote::{quote, quote_spanned, ToTokens};
 use rml_syn::{
     attrs::{AttributeInvariant, AttributeSpec},
     extern_spec::{
@@ -157,13 +157,22 @@ fn handle_fn(
     let ctxt = match ctxt {
         FnContext::None => None,
         FnContext::Trait(ident, generics) => {
-            Some(quote!(#[rml::extern_spec_trait=#ident #generics]))
+            let s = quote!(#ident #generics).to_string();
+            Some(quote!(#[rml::extern_spec_trait=#s]))
         }
-        FnContext::Impl(target_ty) => Some(quote!(#[rml::extern_spec_impl=#target_ty])),
-        FnContext::TraitImpl { target_ty, trait_ } => Some(quote! {
-            #[rml::extern_spec_impl=#target_ty]
-            #[rml::extern_spec_trait_impl=#trait_]
-        }),
+        FnContext::Impl(target_ty) => {
+            let ty_str = target_ty.to_token_stream().to_string();
+            Some(quote!(#[rml::extern_spec_impl=#ty_str]))
+        }
+        FnContext::TraitImpl { target_ty, trait_ } => {
+            let ty_str = target_ty.to_token_stream().to_string();
+            let trait_str = trait_.to_token_stream().to_string();
+            Some(quote! {
+
+                #[rml::extern_spec_impl=#ty_str]
+                #[rml::extern_spec_trait_impl=#trait_str]
+            })
+        }
     };
 
     let spec_case_attrs = spec_case_refs
@@ -175,6 +184,8 @@ fn handle_fn(
 
     let f_ident = sig.ident;
 
+    let path = quote!(#prefix::#f_ident).to_string();
+
     Ok(quote_spanned! {
         subject_span =>
         #(#fn_spec_items)*
@@ -182,7 +193,7 @@ fn handle_fn(
         #purity_attr
         #(#spec_case_attrs)*
         #ctxt
-        #[rml::extern_spec_path=#prefix::#f_ident]
+        #[rml::extern_spec_path=#path]
         const #const_name: bool = false;
     })
 }
@@ -223,12 +234,14 @@ fn handle_inv(
 
     let const_name = gen_unique_ident(&format!("extern_spec_inv_{subject}_{ident}"));
 
+    let path = quote!(#prefix::#ident).to_string();
+
     Ok(quote_spanned! {
         subject_span =>
         #(#inv_fns)*
 
         #(#inv_attrs)*
-        #[rml::extern_spec_path=#prefix::#ident]
+        #[rml::extern_spec_path=#path]
         const #const_name: bool = false;
     })
 }
