@@ -1,5 +1,8 @@
 use proc_macro2::Span;
-use rml_syn::{Encode, LocSet, Term};
+use rml_syn::{
+    visit_mut::{MutVisitable, VisitMut},
+    Encode, LocSet, Term,
+};
 use syn::{
     parse_quote, parse_quote_spanned,
     punctuated::{Pair, Punctuated},
@@ -193,4 +196,24 @@ pub(crate) fn gen_self_params() -> Punctuated<syn::FnArg, Token![,]> {
     let mut inputs = Punctuated::new();
     inputs.push(parse_quote!(self));
     inputs
+}
+
+struct SelfReplacer<'a>(&'a Ident);
+
+impl<'a> syn::visit_mut::VisitMut for SelfReplacer<'a> {
+    fn visit_ident_mut(&mut self, i: &mut Ident) {
+        if *i == Ident::new("self", i.span()) {
+            *i = self.0.clone();
+        }
+    }
+}
+
+impl<'a> VisitMut for SelfReplacer<'a> {}
+
+pub(crate) fn replace_self<T>(target: &mut T, replace_with: &Ident)
+where
+    T: MutVisitable,
+{
+    let mut r = SelfReplacer(replace_with);
+    target.visit(&mut r);
 }

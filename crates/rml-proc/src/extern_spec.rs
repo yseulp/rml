@@ -16,7 +16,7 @@ use syn::{
 
 use crate::{
     func::fn_spec_item,
-    util::{gen_bool_spec_fn, gen_self_params, gen_unique_ident},
+    util::{gen_bool_spec_fn, gen_self_params, gen_unique_ident, replace_self},
 };
 
 enum InvSubject {
@@ -147,9 +147,9 @@ fn handle_fn(
                     ReturnType::Default => parse_quote! { result : () },
                     ReturnType::Type(_, ref ty) => parse_quote! { result : #ty },
                 };
-                let spec = spec.validate()?;
+                let mut spec = spec.validate()?;
                 spec_case_refs.push(spec_id.to_string());
-                // TODO: replace `self` by `rml_self`
+                replace_self(&mut spec, &parse_quote!(rml_self));
                 fn_spec_items.push(fn_spec_item(spec_id, sig.clone(), result, spec, span));
             }
         }

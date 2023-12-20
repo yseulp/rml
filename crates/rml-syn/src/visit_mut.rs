@@ -1,8 +1,9 @@
 use paste::paste;
 
 use crate::{
-    FieldPat, Pat, PatIdent, PatOr, PatParen, PatRest, PatSlice, PatStruct, PatTuple,
-    PatTupleStruct, PatType, PatWild, QuantArg, TBlock, TLocal, Term,
+    FieldPat, LocSet, LocSetField, LocSetFieldWildcard, LocSetGroup, LocSetIndex, LocSetNothing,
+    LocSetPath, Pat, PatIdent, PatOr, PatParen, PatRest, PatSlice, PatStruct, PatTuple,
+    PatTupleStruct, PatType, PatWild, QuantArg, Spec, TBlock, TLocal, Term,
     TermAngleBracketedGenericArguments, TermArm, TermArray, TermBinary, TermBlock, TermCall,
     TermCast, TermClosure, TermExists, TermField, TermFieldValue, TermForall,
     TermGenericMethodArgument, TermGroup, TermIf, TermImpl, TermIndex, TermLet, TermLit, TermLogEq,
@@ -12,70 +13,94 @@ use crate::{
 
 macro_rules! visit_mut {
     ($($name:ident : $ty:ty), *) => {
+        pub trait VisitMut: syn::visit_mut::VisitMut {
+            $(
+                paste!{
+                    fn [< visit_ $name _mut >] (&mut self, t: &mut $ty) {
+                        [< visit_ $name _mut >](self, t)
+                    }
+                }
+            )*
+        }
+
         $(
-            paste!{
-                fn [< visit_ $name _mut >] (&mut self, t: &mut $ty) {
-                    [< visit_ $name _mut >](self, t)
+            impl MutVisitable for $ty {
+                fn visit<V: VisitMut>(&mut self, v: &mut V) {
+                    paste!{
+                        v.[< visit_ $name _mut >](self)
+                    }
                 }
             }
         )*
     };
 }
 
-pub trait VisitMut: syn::visit_mut::VisitMut {
-    visit_mut! {
-        term: Term,
-        term_array: TermArray,
-        term_binary: TermBinary,
-        term_block: TermBlock,
-        term_call: TermCall,
-        term_cast: TermCast,
-        term_closure: TermClosure,
-        term_exists: TermExists,
-        term_field: TermField,
-        term_forall: TermForall,
-        term_group: TermGroup,
-        term_if: TermIf,
-        term_impl: TermImpl,
-        term_index: TermIndex,
-        term_let: TermLet,
-        term_lit: TermLit,
-        term_log_eq: TermLogEq,
-        term_match: TermMatch,
-        term_method_call: TermMethodCall,
-        term_model: TermModel,
-        term_old: TermOld,
-        term_paren: TermParen,
-        term_path: TermPath,
-        term_range: TermRange,
-        term_repeat: TermRepeat,
-        term_struct: TermStruct,
-        term_tuple: TermTuple,
-        term_unary: TermUnary,
+visit_mut! {
+    term: Term,
+    term_array: TermArray,
+    term_binary: TermBinary,
+    term_block: TermBlock,
+    term_call: TermCall,
+    term_cast: TermCast,
+    term_closure: TermClosure,
+    term_exists: TermExists,
+    term_field: TermField,
+    term_forall: TermForall,
+    term_group: TermGroup,
+    term_if: TermIf,
+    term_impl: TermImpl,
+    term_index: TermIndex,
+    term_let: TermLet,
+    term_lit: TermLit,
+    term_log_eq: TermLogEq,
+    term_match: TermMatch,
+    term_method_call: TermMethodCall,
+    term_model: TermModel,
+    term_old: TermOld,
+    term_paren: TermParen,
+    term_path: TermPath,
+    term_range: TermRange,
+    term_repeat: TermRepeat,
+    term_struct: TermStruct,
+    term_tuple: TermTuple,
+    term_unary: TermUnary,
 
-        tblock: TBlock,
-        term_stmt: TermStmt,
-        tlocal: TLocal,
-        term_arm: TermArm,
-        term_field_value: TermFieldValue,
-        term_angle_bracketed_generic_arguments: TermAngleBracketedGenericArguments,
-        term_generic_method_argument: TermGenericMethodArgument,
-        quant_arg: QuantArg,
+    tblock: TBlock,
+    term_stmt: TermStmt,
+    tlocal: TLocal,
+    term_arm: TermArm,
+    term_field_value: TermFieldValue,
+    term_angle_bracketed_generic_arguments: TermAngleBracketedGenericArguments,
+    term_generic_method_argument: TermGenericMethodArgument,
+    quant_arg: QuantArg,
 
-        tpat: Pat,
-        tpat_ident: PatIdent,
-        tpat_or: PatOr,
-        tpat_paren: PatParen,
-        tpat_rest: PatRest,
-        tpat_slice: PatSlice,
-        tpat_struct: PatStruct,
-        tpat_tuple: PatTuple,
-        tpat_tuple_struct: PatTupleStruct,
-        tpat_type: PatType,
-        tpat_wild: PatWild,
+    tpat: Pat,
+    tpat_ident: PatIdent,
+    tpat_or: PatOr,
+    tpat_paren: PatParen,
+    tpat_rest: PatRest,
+    tpat_slice: PatSlice,
+    tpat_struct: PatStruct,
+    tpat_tuple: PatTuple,
+    tpat_tuple_struct: PatTupleStruct,
+    tpat_type: PatType,
+    tpat_wild: PatWild,
 
-        tfield_pat: FieldPat
-    }
+    tfield_pat: FieldPat,
+
+    loc_set: LocSet,
+    loc_set_field: LocSetField,
+    loc_set_field_wildcard: LocSetFieldWildcard,
+    loc_set_index: LocSetIndex,
+    loc_set_path: LocSetPath,
+    loc_set_group: LocSetGroup,
+    loc_set_nothing: LocSetNothing,
+
+    spec: Spec
+}
+
+pub trait MutVisitable {
+    fn visit<V: VisitMut>(&mut self, v: &mut V);
 }
 
 pub fn visit_term_mut<V: VisitMut + ?Sized>(v: &mut V, t: &mut Term) {
@@ -376,4 +401,56 @@ pub fn visit_tpat_wild_mut<V: VisitMut + ?Sized>(_: &mut V, _: &mut PatWild) {}
 pub fn visit_tfield_pat_mut<V: VisitMut + ?Sized>(v: &mut V, t: &mut FieldPat) {
     v.visit_member_mut(&mut t.member);
     v.visit_tpat_mut(&mut t.pat);
+}
+
+pub fn visit_loc_set_mut<V: VisitMut + ?Sized>(v: &mut V, t: &mut LocSet) {
+    match t {
+        LocSet::Field(l) => v.visit_loc_set_field_mut(l),
+        LocSet::FieldWildcard(l) => v.visit_loc_set_field_wildcard_mut(l),
+        LocSet::Index(l) => v.visit_loc_set_index_mut(l),
+        LocSet::Path(l) => v.visit_loc_set_path_mut(l),
+        LocSet::Group(l) => v.visit_loc_set_group_mut(l),
+        LocSet::Nothing(l) => v.visit_loc_set_nothing_mut(l),
+    }
+}
+pub fn visit_loc_set_field_mut<V: VisitMut + ?Sized>(v: &mut V, t: &mut LocSetField) {
+    v.visit_term_mut(&mut t.base);
+    v.visit_member_mut(&mut t.member);
+}
+pub fn visit_loc_set_field_wildcard_mut<V: VisitMut + ?Sized>(
+    v: &mut V,
+    t: &mut LocSetFieldWildcard,
+) {
+    v.visit_term_mut(&mut t.base);
+}
+pub fn visit_loc_set_index_mut<V: VisitMut + ?Sized>(v: &mut V, t: &mut LocSetIndex) {
+    v.visit_term_mut(&mut t.term);
+    v.visit_term_mut(&mut t.index);
+}
+pub fn visit_loc_set_path_mut<V: VisitMut + ?Sized>(v: &mut V, t: &mut LocSetPath) {
+    v.visit_term_path_mut(&mut t.inner);
+}
+pub fn visit_loc_set_group_mut<V: VisitMut + ?Sized>(v: &mut V, t: &mut LocSetGroup) {
+    for l in &mut t.items {
+        v.visit_loc_set_mut(l);
+    }
+}
+pub fn visit_loc_set_nothing_mut<V: VisitMut + ?Sized>(_: &mut V, _: &mut LocSetNothing) {}
+
+pub fn visit_spec_mut<V: VisitMut + ?Sized>(v: &mut V, t: &mut Spec) {
+    for p in &mut t.pre_conds {
+        v.visit_term_mut(p);
+    }
+    if let Some(l) = &mut t.modifies {
+        v.visit_loc_set_mut(l);
+    }
+    if let Some(var) = &mut t.variant {
+        v.visit_term_mut(var);
+    }
+    if let Some(Some(d)) = &mut t.diverges {
+        v.visit_term_mut(d);
+    }
+    for p in &mut t.post_conds {
+        v.visit_term_mut(p);
+    }
 }
