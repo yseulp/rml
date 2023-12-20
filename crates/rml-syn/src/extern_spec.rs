@@ -126,6 +126,17 @@ pub enum FnContext {
     TraitImpl { target_ty: Type, trait_: Path },
 }
 
+impl FnContext {
+    pub fn self_ty(&self) -> Option<Type> {
+        match self {
+            FnContext::None => None,
+            FnContext::Trait(..) => todo!(),
+            FnContext::Impl(ty) => Some(ty.clone()),
+            FnContext::TraitImpl { target_ty, .. } => Some(target_ty.clone()),
+        }
+    }
+}
+
 /// The flattened external spec. See [`ExternSpecItem::flatten()`].
 pub enum FlattenedExternSpec {
     Struct(FlattenedStructSpec),

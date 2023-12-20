@@ -9,7 +9,10 @@ use rml_syn::{
         FlattenedStructSpec, FlattenedTraitSpec, FnContext,
     },
 };
-use syn::{parse_quote, spanned::Spanned, Attribute, ExprPath, Generics, Path, Result, ReturnType};
+use syn::{
+    parse_quote, spanned::Spanned, Attribute, ExprPath, FnArg, Generics, PatType, Path, Result,
+    ReturnType, Token,
+};
 
 use crate::{
     func::fn_spec_item,
@@ -99,7 +102,7 @@ fn handle_fn(
         span,
         attrs,
         prefix,
-        sig,
+        mut sig,
         ctxt,
     }: FlattenedFnSpec,
 ) -> Result<TS2> {
@@ -107,6 +110,18 @@ fn handle_fn(
     let mut is_strictly_pure = false;
     let mut fn_spec_items = vec![];
     let mut spec_case_refs = vec![];
+
+    for p in &mut sig.inputs {
+        if let FnArg::Receiver(s) = p.clone() {
+            let span = s.span();
+            *p = FnArg::Typed(PatType {
+                attrs: s.attrs,
+                pat: Box::new(parse_quote!(rml_self)),
+                colon_token: Token![:](span),
+                ty: ctxt.self_ty().unwrap().into(),
+            })
+        }
+    }
 
     for attr in attrs {
         let span = attr.span();
@@ -134,6 +149,7 @@ fn handle_fn(
                 };
                 let spec = spec.validate()?;
                 spec_case_refs.push(spec_id.to_string());
+                // TODO: replace `self` by `rml_self`
                 fn_spec_items.push(fn_spec_item(spec_id, sig.clone(), result, spec, span));
             }
         }
