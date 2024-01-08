@@ -9,7 +9,7 @@
 pub(crate) mod macros;
 pub(crate) mod print;
 
-pub mod visit_mut;
+pub mod visit;
 
 pub mod attrs;
 pub mod extern_spec;

@@ -1,6 +1,6 @@
 use proc_macro2::Span;
 use rml_syn::{
-    visit_mut::{MutVisitable, VisitMut},
+    visit::{MutVisitable, VisitMut},
     Encode, LocSet, Term,
 };
 use syn::{
