@@ -91,6 +91,13 @@ mod macros {
         pub fn old<T>(t: T) -> T {
             t
         }
+
+        #[rml::decl::logic]
+        #[rml::decl::internal]
+        #[rustc_diagnostic_item = "rml_final_value"]
+        pub fn final_value<T>(t: T) -> T {
+            t
+        }
     }
 }
 

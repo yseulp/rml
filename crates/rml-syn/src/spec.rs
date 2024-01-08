@@ -5,6 +5,7 @@ use quote::ToTokens;
 use syn::{
     braced, bracketed, parenthesized,
     parse::{Parse, ParseStream},
+    parse_quote_spanned,
     punctuated::Punctuated,
     spanned::Spanned,
     token::{self, Brace, Bracket, Paren},
@@ -33,6 +34,7 @@ impl SpecKind {
 #[derive(Debug)]
 pub enum SpecPart {
     /// `requires` takes a boolean term and specifies the pre-condition.
+    ///
     /// Defaults to `true`.
     Requires(SpecPartRequires),
     /// `ensures` takes a boolean term and specifies the post-condition in
@@ -107,6 +109,7 @@ pub struct SpecPartPanics {
 pub struct SpecPartDemands {
     pub demands_token: kw::demands,
     pub delimiter: MacroDelimiter,
+    pub reference: Option<(Term, Token![,])>,
     pub term: Term,
 }
 
@@ -230,8 +233,16 @@ impl SpecContent {
                         post_conds.push(t)
                     }
                 }
-                Demands(SpecPartDemands { term, .. }) => {
-                    dem_conds.push(term);
+                Demands(SpecPartDemands {
+                    term, reference, ..
+                }) => {
+                    let sp = term.span();
+                    dem_conds.push((
+                        reference
+                            .map(|r| r.0)
+                            .unwrap_or_else(|| parse_quote_spanned!(sp => result)),
+                        term,
+                    ));
                 }
                 Modifies(SpecPartModifies { locset, .. }) => {
                     if modifies.is_some() {
@@ -296,7 +307,7 @@ pub struct Spec {
     pub kind: SpecKind,
     pub pre_conds: Vec<Term>,
     pub post_conds: Vec<Term>,
-    pub dem_conds: Vec<Term>,
+    pub dem_conds: Vec<(Term, Term)>,
     pub modifies: Option<LocSet>,
     pub variant: Option<Term>,
     pub diverges: Option<Option<Term>>,
@@ -377,13 +388,27 @@ impl Parse for SpecPartPanics {
 
 impl Parse for SpecPartDemands {
     fn parse(input: ParseStream) -> Result<Self> {
+        struct DemandsContent(Option<(Term, Token![,])>, Term);
+
+        impl Parse for DemandsContent {
+            fn parse(input: ParseStream) -> Result<Self> {
+                let t: Term = input.parse()?;
+                if input.peek(Token![,]) {
+                    Ok(Self(Some((t, input.parse()?)), input.parse()?))
+                } else {
+                    Ok(Self(None, t))
+                }
+            }
+        }
+
         let demands_token = input.parse()?;
         let (delimiter, tokens) = parse_delimiter(input)?;
-        let term = syn::parse(tokens.into())?;
+        let DemandsContent(reference, term) = syn::parse(tokens.into())?;
 
         Ok(Self {
             demands_token,
             delimiter,
+            reference,
             term,
         })
     }

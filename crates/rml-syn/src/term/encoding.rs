@@ -129,7 +129,6 @@ impl Encode for Term {
             }),
             Term::Final(TermFinal { term, .. }) => {
                 let expr = term.encode();
-                // TODO: Add stub
                 parse_quote_spanned! {sp => ::rml_contracts::stubs::final_value(#expr)}
             }
             Term::Forall(TermForall { args, term, .. }) => {
