@@ -5,7 +5,7 @@ use crate::{
     LocSetPath, Pat, PatIdent, PatOr, PatParen, PatRest, PatSlice, PatStruct, PatTuple,
     PatTupleStruct, PatType, PatWild, QuantArg, Spec, TBlock, TLocal, Term,
     TermAngleBracketedGenericArguments, TermArm, TermArray, TermBinary, TermBlock, TermCall,
-    TermCast, TermClosure, TermExists, TermField, TermFieldValue, TermForall,
+    TermCast, TermClosure, TermExists, TermField, TermFieldValue, TermFinal, TermForall,
     TermGenericMethodArgument, TermGroup, TermIf, TermImpl, TermIndex, TermLet, TermLit, TermLogEq,
     TermMatch, TermMethodCall, TermModel, TermOld, TermParen, TermPath, TermRange, TermRepeat,
     TermStmt, TermStruct, TermTuple, TermUnary,
@@ -45,6 +45,7 @@ visit_mut! {
     term_closure: TermClosure,
     term_exists: TermExists,
     term_field: TermField,
+    term_final: TermFinal,
     term_forall: TermForall,
     term_group: TermGroup,
     term_if: TermIf,
@@ -113,6 +114,7 @@ pub fn visit_term_mut<V: VisitMut + ?Sized>(v: &mut V, t: &mut Term) {
         Term::Closure(t) => v.visit_term_closure_mut(t),
         Term::Exists(t) => v.visit_term_exists_mut(t),
         Term::Field(t) => v.visit_term_field_mut(t),
+        Term::Final(t) => v.visit_term_final_mut(t),
         Term::Forall(t) => v.visit_term_forall_mut(t),
         Term::Group(t) => v.visit_term_group_mut(t),
         Term::If(t) => v.visit_term_if_mut(t),
@@ -182,6 +184,9 @@ pub fn visit_term_exists_mut<V: VisitMut + ?Sized>(v: &mut V, t: &mut TermExists
 pub fn visit_term_field_mut<V: VisitMut + ?Sized>(v: &mut V, t: &mut TermField) {
     v.visit_term_mut(&mut t.base);
     v.visit_member_mut(&mut t.member);
+}
+pub fn visit_term_final_mut<V: VisitMut + ?Sized>(v: &mut V, t: &mut TermFinal) {
+    v.visit_term_mut(&mut t.term);
 }
 pub fn visit_term_forall_mut<V: VisitMut + ?Sized>(v: &mut V, t: &mut TermForall) {
     for a in &mut t.args {

@@ -11,10 +11,10 @@ use syn::{
 use super::Term;
 use crate::{
     Encode, TBlock, TLocal, TermAngleBracketedGenericArguments, TermArm, TermArray, TermBinary,
-    TermBlock, TermCall, TermCast, TermClosure, TermExists, TermField, TermFieldValue, TermForall,
-    TermGenericMethodArgument, TermGroup, TermIf, TermImpl, TermIndex, TermLet, TermLit, TermLogEq,
-    TermMatch, TermMethodCall, TermModel, TermOld, TermParen, TermPath, TermRange, TermRepeat,
-    TermStmt, TermStruct, TermTuple, TermUnary,
+    TermBlock, TermCall, TermCast, TermClosure, TermExists, TermField, TermFieldValue, TermFinal,
+    TermForall, TermGenericMethodArgument, TermGroup, TermIf, TermImpl, TermIndex, TermLet,
+    TermLit, TermLogEq, TermMatch, TermMethodCall, TermModel, TermOld, TermParen, TermPath,
+    TermRange, TermRepeat, TermStmt, TermStruct, TermTuple, TermUnary,
 };
 
 impl Encode for Term {
@@ -127,6 +127,11 @@ impl Encode for Term {
                 dot_token,
                 member,
             }),
+            Term::Final(TermFinal { term, .. }) => {
+                let expr = term.encode();
+                // TODO: Add stub
+                parse_quote_spanned! {sp => ::rml_contracts::stubs::final_value(#expr)}
+            }
             Term::Forall(TermForall { args, term, .. }) => {
                 let mut body = term.encode();
                 for arg in args.into_iter().rev() {

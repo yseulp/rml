@@ -45,10 +45,16 @@ pub enum SpecPart {
     ///
     /// Defaults to `true`.
     Panics(SpecPartPanics),
+    /// `demands` takes a boolean term and specifies what the function demands
+    /// of the caller w.r.t. the returned mut reference.
+    ///
+    /// Has no default.
+    Demands(SpecPartDemands),
     /// `modifies` takes a [LocSet] and specifies the locations the function may
     /// change.
     ///
-    /// Defaults to ???.
+    /// Defaults to all locations that may be mutable based on the function's
+    /// inputs.
     Modifies(SpecPartModifies),
     /// `variant` takes any term implementing the `WellFounded` trait defined in
     /// `rml-contracts`. It specifies the variant for a recursive function.
@@ -62,6 +68,7 @@ pub enum SpecPart {
 }
 
 /// `requires` takes a boolean term and specifies the pre-condition.
+///
 /// Defaults to `true`.
 #[derive(Debug)]
 pub struct SpecPartRequires {
@@ -90,6 +97,17 @@ pub struct SpecPartPanics {
     pub panics_token: kw::panics,
     pub delimiter: Option<MacroDelimiter>,
     pub term: Option<Term>,
+}
+
+/// `demands` takes a boolean term and specifies what the function demands
+/// of the caller w.r.t. the returned mut reference.
+///
+/// Has no default.
+#[derive(Debug)]
+pub struct SpecPartDemands {
+    pub demands_token: kw::demands,
+    pub delimiter: MacroDelimiter,
+    pub term: Term,
 }
 
 /// `modifies` takes a [LocSet] and specifies the locations the function may
@@ -170,6 +188,7 @@ impl SpecContent {
         let span = self.span();
         let mut pre_conds = Vec::new();
         let mut post_conds = Vec::new();
+        let mut dem_conds = Vec::new();
         let mut modifies = None;
         let mut variant = None;
         let mut diverges = None;
@@ -210,6 +229,9 @@ impl SpecContent {
                     if let Some(t) = term {
                         post_conds.push(t)
                     }
+                }
+                Demands(SpecPartDemands { term, .. }) => {
+                    dem_conds.push(term);
                 }
                 Modifies(SpecPartModifies { locset, .. }) => {
                     if modifies.is_some() {
@@ -260,6 +282,7 @@ impl SpecContent {
             kind,
             pre_conds,
             post_conds,
+            dem_conds,
             modifies,
             variant,
             diverges,
@@ -273,6 +296,7 @@ pub struct Spec {
     pub kind: SpecKind,
     pub pre_conds: Vec<Term>,
     pub post_conds: Vec<Term>,
+    pub dem_conds: Vec<Term>,
     pub modifies: Option<LocSet>,
     pub variant: Option<Term>,
     pub diverges: Option<Option<Term>>,
@@ -351,6 +375,20 @@ impl Parse for SpecPartPanics {
     }
 }
 
+impl Parse for SpecPartDemands {
+    fn parse(input: ParseStream) -> Result<Self> {
+        let demands_token = input.parse()?;
+        let (delimiter, tokens) = parse_delimiter(input)?;
+        let term = syn::parse(tokens.into())?;
+
+        Ok(Self {
+            demands_token,
+            delimiter,
+            term,
+        })
+    }
+}
+
 impl Parse for SpecPartModifies {
     fn parse(input: syn::parse::ParseStream) -> syn::Result<Self> {
         let modifies_token = input.parse()?;
@@ -417,6 +455,7 @@ mod kw {
     syn::custom_keyword!(modifies);
     syn::custom_keyword!(variant);
     syn::custom_keyword!(diverges);
+    syn::custom_keyword!(demands);
 }
 
 impl Parse for SpecPart {
@@ -427,6 +466,8 @@ impl Parse for SpecPart {
             Ok(Self::Ensures(input.parse()?))
         } else if input.peek(kw::panics) {
             Ok(Self::Panics(input.parse()?))
+        } else if input.peek(kw::demands) {
+            Ok(Self::Demands(input.parse()?))
         } else if input.peek(kw::modifies) {
             Ok(Self::Modifies(input.parse()?))
         } else if input.peek(kw::variant) {
@@ -505,6 +546,7 @@ impl ToTokens for SpecPart {
             SpecPart::Requires(p) => p.to_tokens(tokens),
             SpecPart::Ensures(p) => p.to_tokens(tokens),
             SpecPart::Panics(p) => p.to_tokens(tokens),
+            SpecPart::Demands(p) => p.to_tokens(tokens),
             SpecPart::Modifies(p) => p.to_tokens(tokens),
             SpecPart::Variant(p) => p.to_tokens(tokens),
             SpecPart::Diverges(p) => p.to_tokens(tokens),
@@ -542,6 +584,16 @@ impl ToTokens for SpecPartPanics {
                 self.term.to_tokens(tokens);
             });
         }
+    }
+}
+
+impl ToTokens for SpecPartDemands {
+    fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
+        self.demands_token.to_tokens(tokens);
+
+        surround_delim(&self.delimiter, tokens, |tokens| {
+            self.term.to_tokens(tokens);
+        });
     }
 }
 

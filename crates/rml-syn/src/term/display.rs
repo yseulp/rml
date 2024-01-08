@@ -6,9 +6,9 @@ use syn::BinOp;
 use super::Term;
 use crate::{
     TBlock, TermArray, TermBinary, TermBlock, TermCall, TermCast, TermClosure, TermExists,
-    TermField, TermForall, TermGroup, TermIf, TermImpl, TermIndex, TermLet, TermLit, TermLogEq,
-    TermMatch, TermMethodCall, TermModel, TermOld, TermParen, TermPath, TermRange, TermRepeat,
-    TermStmt, TermStruct, TermTuple, TermUnary,
+    TermField, TermFinal, TermForall, TermGroup, TermIf, TermImpl, TermIndex, TermLet, TermLit,
+    TermLogEq, TermMatch, TermMethodCall, TermModel, TermOld, TermParen, TermPath, TermRange,
+    TermRepeat, TermStmt, TermStruct, TermTuple, TermUnary,
 };
 
 impl fmt::Display for Term {
@@ -22,6 +22,7 @@ impl fmt::Display for Term {
             Term::Closure(t) => fmt::Display::fmt(t, f),
             Term::Exists(t) => fmt::Display::fmt(t, f),
             Term::Field(t) => fmt::Display::fmt(t, f),
+            Term::Final(t) => fmt::Display::fmt(t, f),
             Term::Forall(t) => fmt::Display::fmt(t, f),
             Term::Group(t) => fmt::Display::fmt(t, f),
             Term::If(t) => fmt::Display::fmt(t, f),
@@ -175,6 +176,12 @@ impl fmt::Display for TermExists {
 impl fmt::Display for TermField {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}.{}", self.base, self.member.to_token_stream())
+    }
+}
+
+impl fmt::Display for TermFinal {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "^{}", self.term)
     }
 }
 

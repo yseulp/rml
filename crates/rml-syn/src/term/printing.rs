@@ -186,6 +186,13 @@ impl ToTokens for TermImpl {
     }
 }
 
+impl ToTokens for TermFinal {
+    fn to_tokens(&self, tokens: &mut TokenStream) {
+        self.final_token.to_tokens(tokens);
+        self.term.to_tokens(tokens);
+    }
+}
+
 impl ToTokens for TermForall {
     fn to_tokens(&self, tokens: &mut TokenStream) {
         self.forall_token.to_tokens(tokens);
@@ -366,8 +373,9 @@ impl ToTokens for TermArm {
 
 impl ToTokens for TermModel {
     fn to_tokens(&self, tokens: &mut TokenStream) {
-        self.at_token.to_tokens(tokens);
-        self.term.to_tokens(tokens);
+        self.model_token.to_tokens(tokens);
+        self.paren_token
+            .surround(tokens, |tokens| self.term.to_tokens(tokens));
     }
 }
 

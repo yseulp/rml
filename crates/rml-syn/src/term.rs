@@ -19,6 +19,7 @@ mod kw {
     syn::custom_keyword!(forall);
     syn::custom_keyword!(exists);
     syn::custom_keyword!(old);
+    syn::custom_keyword!(model);
 }
 
 ast_enum_of_structs! {
@@ -50,6 +51,9 @@ ast_enum_of_structs! {
         /// Access of a named struct field (`obj.k`) or unnamed tuple struct
         /// field (`obj.0`).
         Field(TermField),
+
+        /// Final value of a mutable reference. Only allowed in `demands` parts: `^x`
+        Final(TermFinal),
 
         /// Logical universal quantification: `forall(|x: u32| x >= 0)`.
         Forall(TermForall),
@@ -92,7 +96,7 @@ ast_enum_of_structs! {
         /// A method call term: `x.foo::<T>(a, b)`.
         MethodCall(TermMethodCall),
 
-        /// A model term: `x@`.
+        /// A model term: `model(x)`.
         Model(TermModel),
 
         /// An `old` term: `old(x)`.
@@ -248,6 +252,13 @@ ast_struct! {
 }
 
 ast_struct! {
+    pub struct TermFinal {
+        pub final_token: Token![^],
+        pub term: Box<Term>,
+    }
+}
+
+ast_struct! {
     /// Logical universal quantification: `forall(|x: u32| x >= 0)`.
     pub struct TermForall {
         pub forall_token: kw::forall,
@@ -335,8 +346,9 @@ ast_struct! {
 ast_struct! {
     /// A model term: `x@`.
     pub struct TermModel{
+        pub model_token: kw::model,
+        pub paren_token: token::Paren,
         pub term: Box<Term>,
-        pub at_token: Token![@],
     }
 }
 
