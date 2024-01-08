@@ -2,17 +2,19 @@ use proc_macro2::Span;
 use syn::spanned::Spanned;
 
 use crate::{
-    visit::{visit_term, Visit},
+    visit::{visit_term, Visit, Visitable},
     Spec,
 };
 
 pub fn check_final(spec: &Spec) -> Option<Span> {
     let mut c = FinalChecker::default();
-    c.visit_spec(spec);
+    spec.visit(&mut c);
     c.final_outside_demands
 }
 
-/// Checks that [TermFinal] only occurs in `demands` spec parts.
+/// Checks that [final terms] only occur in `demands` spec parts.
+///
+/// [final terms]: [crate::TermFinal]
 #[derive(Default)]
 struct FinalChecker {
     final_outside_demands: Option<Span>,

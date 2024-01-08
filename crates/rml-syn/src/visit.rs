@@ -1,3 +1,11 @@
+//! Syntax tree traversal to walk a shared or mutable borrow of a syntax tree of
+//! term data structures. Similar to [syn::visit] and [syn::visit_mut].
+//!
+//! Each method of the [Visit] and [VisitMut] traits is a hook that can be
+//! overridden to customize the behavior when visiting the corresponding type of
+//! node. By default, every method recursively visits the substructure of the
+//! input by invoking the right visitor method of each of its fields.
+
 use paste::paste;
 
 use crate::{
@@ -14,6 +22,7 @@ use crate::{
 macro_rules! create_visitor_traits {
     ($($name:ident : $ty:ty), *) => {
 
+        /// Syntax tree traversal to walk a shared borrow of a [Term] syntax tree.
         pub trait Visit<'ast>: syn::visit::Visit<'ast> {
             $(
                 paste!{
@@ -24,6 +33,7 @@ macro_rules! create_visitor_traits {
             )*
         }
 
+        /// Syntax tree traversal to walk a mutable borrow of a [Term] syntax tree.
         pub trait VisitMut: syn::visit_mut::VisitMut {
             $(
                 paste!{
@@ -121,10 +131,12 @@ create_visitor_traits! {
     spec: Spec
 }
 
+/// Conveniance trait for traversal of a shared borrow of a syntax tree.
 pub trait Visitable {
     fn visit<'ast, V: Visit<'ast>>(&'ast self, v: &mut V);
 }
 
+/// Conveniance trait for traversal of a mutable borrow of a syntax tree.
 pub trait MutVisitable {
     fn visit<V: VisitMut>(&mut self, v: &mut V);
 }
