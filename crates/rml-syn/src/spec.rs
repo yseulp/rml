@@ -12,7 +12,10 @@ use syn::{
     LitStr, MacroDelimiter, Result, Token,
 };
 
+use self::validation::check_final;
 use crate::{locset::LocSet, Term};
+
+mod validation;
 
 /// The kind of a specification, i.e., whether it specifies normal
 /// or panic behavior.
@@ -288,7 +291,7 @@ impl SpecContent {
             }
         };
 
-        Ok(Spec {
+        let spec = Spec {
             name: self.name.map(|n| n.0.value().to_string()),
             kind,
             pre_conds,
@@ -297,7 +300,16 @@ impl SpecContent {
             modifies,
             variant,
             diverges,
-        })
+        };
+
+        if let Some(span) = check_final(&spec) {
+            return Err(syn::Error::new(
+                span,
+                "Final terms are only allowed inside 'demands' spec parts",
+            ));
+        }
+
+        Ok(spec)
     }
 }
 
