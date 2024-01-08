@@ -182,7 +182,7 @@ pub struct SpecPartDiverges {
 /// term ::= _see [`Term`]_
 #[derive(Debug)]
 pub struct SpecContent {
-    pub name: Option<(LitStr, Token![,])>,
+    pub name: Option<(kw::name, Token![=], LitStr, Token![,])>,
     pub parts: Punctuated<SpecPart, Token![,]>,
 }
 
@@ -292,7 +292,7 @@ impl SpecContent {
         };
 
         let spec = Spec {
-            name: self.name.map(|n| n.0.value().to_string()),
+            name: self.name.map(|n| n.2.value().to_string()),
             kind,
             pre_conds,
             post_conds,
@@ -493,6 +493,7 @@ mod kw {
     syn::custom_keyword!(variant);
     syn::custom_keyword!(diverges);
     syn::custom_keyword!(demands);
+    syn::custom_keyword!(name);
 }
 
 impl Parse for SpecPart {
@@ -545,9 +546,15 @@ impl Parse for SpecContent {
     fn parse(input: syn::parse::ParseStream) -> syn::Result<Self> {
         let mut parts = Punctuated::new();
 
-        let name = match input.parse::<Option<LitStr>>()? {
-            Some(n) => Some((n, input.parse()?)),
-            _ => None,
+        let name = if input.peek(kw::name) {
+            Some((
+                input.parse()?,
+                input.parse()?,
+                input.parse()?,
+                input.parse()?,
+            ))
+        } else {
+            None
         };
 
         loop {
@@ -569,7 +576,9 @@ impl Parse for SpecContent {
 
 impl ToTokens for SpecContent {
     fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
-        if let Some((name, comma)) = &self.name {
+        if let Some((name_token, eq_token, name, comma)) = &self.name {
+            name_token.to_tokens(tokens);
+            eq_token.to_tokens(tokens);
             name.to_tokens(tokens);
             comma.to_tokens(tokens);
         }

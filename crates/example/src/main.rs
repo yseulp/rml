@@ -4,7 +4,7 @@
 extern crate rml_contracts;
 use rml_contracts::*;
 
-#[spec { "normal",
+#[spec { name = "normal",
     requires(a + b <= i32::MAX),
     requires(a + b >= i32::MIN),
     ensures(result == a + b)
@@ -14,8 +14,8 @@ fn add(a: i32, b: i32) -> i32 {
     a + b
 }
 
-#[spec("b is not zero", requires(b != 0), ensures(result == a / b))]
-#[spec("b is zero", requires(b == 0), panics)]
+#[spec(name = "b is not zero", requires(b != 0), ensures(result == a / b))]
+#[spec(name = "b is zero", requires(b == 0), panics)]
 #[pure]
 fn div(a: u64, b: u64) -> u64 {
     a / b
@@ -23,7 +23,7 @@ fn div(a: u64, b: u64) -> u64 {
 
 #[allow(clippy::needless_range_loop)]
 #[spec {
-    "main",
+    name = "main",
     ensures(exists(| i: usize, j: usize | result[i] == 0)),
     modifies(v[..])
 }]
@@ -41,8 +41,8 @@ fn no_name(a: i32, b: i32) -> i32 {
     a + b
 }
 
-#[spec("anchor", requires(n == 0), ensures(result == 0), ensures(no_name(1, 1) != 0))]
-#[spec("step", requires(n > 0), variant(n), ensures(result == 0))]
+#[spec(name = "anchor", requires(n == 0), ensures(result == 0), ensures(no_name(1, 1) != 0))]
+#[spec(name = "step", requires(n > 0), variant(n), ensures(result == 0))]
 fn rec(n: u128) -> u128 {
     if n == 0 {
         0
@@ -90,7 +90,7 @@ trait T {
 #[extern_spec(std::mem)]
 impl<T> Option<T> {
     #[spec {
-        "name",
+        name = "name",
         requires(true),
         ensures[result == match self { Some(_) => true, _ => false }]
     }]
