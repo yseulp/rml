@@ -227,6 +227,7 @@ pub enum TermBorrowKind {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum TermMatchSource {
     Normal,
+    Postfix,
     ForLoopDesugar,
     TryDesugar(HirIdWrapper),
     AwaitDesugar,
@@ -235,7 +236,6 @@ pub enum TermMatchSource {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TermLet {
-    pub hir_id: HirIdWrapper,
     pub span: SpanWrapper,
     pub pat: TermPat,
     pub ty: Option<TermTy>,
@@ -247,7 +247,7 @@ pub struct TermArm {
     pub hir_id: HirIdWrapper,
     pub span: SpanWrapper,
     pub pat: TermPat,
-    pub guard: Option<TermGuard>,
+    pub guard: Option<Term>,
     pub body: Box<Term>,
 }
 
@@ -262,7 +262,6 @@ pub struct TermClosure {
     pub body: TermBody,
     pub fn_decl_span: SpanWrapper,
     pub fn_arg_span: Option<SpanWrapper>,
-    pub movability: Option<TermMovability>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -281,12 +280,6 @@ pub enum TermConstness {
 pub enum TermCaptureBy {
     Value { move_kw: SpanWrapper },
     Ref,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum TermMovability {
-    Static,
-    Movable,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -311,12 +304,6 @@ pub enum TermUnsafeSource {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum TermGuard {
-    If(Box<Term>),
-    IfLet(TermLet),
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TermStmt {
     pub hir_id: HirIdWrapper,
     pub kind: TermStmtKind,
@@ -325,17 +312,17 @@ pub struct TermStmt {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum TermStmtKind {
-    Local(TermLocal),
+    Let(TermLetStmt),
     Item(ItemIdWrapper),
     Term(Box<Term>),
     Semi(Box<Term>),
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct TermLocal {
+pub struct TermLetStmt {
     pub pat: TermPat,
     pub ty: Option<TermTy>,
-    pub init: Option<Box<Term>>,
+    pub init: Box<Term>,
     pub hir_id: HirIdWrapper,
     pub span: SpanWrapper,
 }
@@ -375,7 +362,7 @@ pub struct TermPat {
 pub enum TermPatKind {
     Wild,
     Binding(
-        TermBindingAnnotation,
+        TermBindingMode,
         HirIdWrapper,
         IdentWrapper,
         Option<Box<TermPat>>,
@@ -390,6 +377,9 @@ pub enum TermPatKind {
     Lit(Box<Term>),
     Range(Option<Box<Term>>, Option<Box<Term>>, TermRangeEnd),
     Slice(Vec<TermPat>, Option<Box<TermPat>>, Vec<TermPat>),
+    Never,
+    Deref(Box<TermPat>),
+    Err,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -402,11 +392,11 @@ pub enum TermRangeEnd {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct TermBindingAnnotation(pub TermByRef, pub TermMutability);
+pub struct TermBindingMode(pub TermByRef, pub TermMutability);
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum TermByRef {
-    Yes,
+    Yes { mutable: bool },
     No,
 }
 
@@ -461,13 +451,12 @@ pub enum TermTypeBindingKind {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum HirTerm {
     Ty(TermTy),
-    Const(TermAnonConst),
+    Const(TermConstArg),
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum TermGenericBound {
-    Trait(TermPolyTraitRef, TermTraitBoundModifier),
-    LangItemTrait(TermLangItem, SpanWrapper, HirIdWrapper, TermGenericArgs),
+    Trait(TermPolyTraitRef),
     Outlives(TermLifetime),
 }
 
@@ -482,7 +471,7 @@ pub enum TermTraitBoundModifier {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TermGenericArgs {
     pub args: Vec<TermGenericArg>,
-    pub bindings: Vec<TermTypeBinding>,
+    // pub constraints: ,
     pub parenthesized: TermGenericArgsParentheses,
     pub span_ext: SpanWrapper,
 }
@@ -504,8 +493,15 @@ pub enum TermGenericArg {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TermConstArg {
-    pub value: TermAnonConst,
-    pub span: SpanWrapper,
+    pub hir_id: HirIdWrapper,
+    pub kind: TermConstArgKind,
+    pub is_desugared_from_effects: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum TermConstArgKind {
+    Path(TermQPath),
+    Anon(TermAnonConst),
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -546,16 +542,30 @@ pub enum TermTyKind {
     Never,
     Tup(Vec<TermTy>),
     Path(TermQPath),
-    OpaqueDef(ItemIdWrapper, Vec<TermGenericArg>, bool),
+    OpaqueDef(TermOpaqueTy, Vec<TermGenericArg>),
     TraitObject(Vec<TermPolyTraitRef>, TermLifetime, TermTraitObjectSyntax),
     Typeof(Box<TermAnonConst>),
+    InferDelegation(DefIdWrapper),
+    AnonAdt(ItemIdWrapper),
+    Pat(Box<TermTy>, TermPat),
     Infer,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TermOpaqueTy {
+    pub hir_id: HirIdWrapper,
+    pub def_id: LocalDefIdWrapper,
+    // pub generics
+    // pub bounds
+    // pub origin
+    // pub lifetime_mapping,
+    pub span: SpanWrapper,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum TermArrayLen {
-    Infer(HirIdWrapper, SpanWrapper),
-    Body(TermAnonConst),
+    Infer(TermInferArg),
+    Body(TermConstArg),
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -585,8 +595,8 @@ pub enum TermFnRetTy {
 pub enum TermImplicitSelfKind {
     Imm,
     Mut,
-    ImmRef,
-    MutRef,
+    RefImm,
+    RefMut,
     None,
 }
 
@@ -689,7 +699,9 @@ pub enum TermGenericParamKind {
     },
     Const {
         ty: TermTy,
-        default: Option<TermAnonConst>,
+        default: Option<TermConstArg>,
+        is_host_effect: bool,
+        synthetic: bool,
     },
 }
 
@@ -710,7 +722,7 @@ pub enum TermGenericParamSource {
 pub enum TermQPath {
     Resolved(Option<Box<TermTy>>, TermPath),
     TypeRelative(Box<TermTy>, TermPathSegment),
-    LangItem(TermLangItem, SpanWrapper, Option<HirIdWrapper>),
+    LangItem(TermLangItem, SpanWrapper),
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -780,7 +792,7 @@ pub enum TermDefKind {
     GlobalAsm,
     Impl { of_trait: bool },
     Closure,
-    Coroutine,
+    SyntheticCoroutineBody,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -815,8 +827,10 @@ pub enum TermUintTy {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum TermFloatTy {
+    F16,
     F32,
     F64,
+    F128,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -838,14 +852,35 @@ pub enum TermMacroKind {
     Derive,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum TermLangItem {
+macro_rules! basic_enum {
+    ($name:ident, $p:path, $($vars:ident),*) => {
+        #[derive(Debug, Clone, Serialize, Deserialize)]
+        pub enum $name {
+            $($vars),*
+        }
+
+        impl<'hir> From<&'hir $p> for $name {
+            fn from(value: &'hir $p) -> Self {
+                use $p::*;
+                match value {
+                    $(
+                        $vars => Self::$vars
+                    ),*
+                }
+            }
+        }
+    };
+}
+
+basic_enum!(
+    TermLangItem,
+    rustc_hir::lang_items::LangItem,
     Sized,
     Unsize,
     StructuralPeq,
-    StructuralTeq,
     Copy,
     Clone,
+    CloneFn,
     Sync,
     DiscriminantKind,
     Discriminant,
@@ -857,6 +892,18 @@ pub enum TermLangItem {
     FnPtrAddr,
     Drop,
     Destruct,
+    AsyncDrop,
+    AsyncDestruct,
+    AsyncDropInPlace,
+    SurfaceAsyncDropInPlace,
+    AsyncDropSurfaceDropInPlace,
+    AsyncDropSlice,
+    AsyncDropChain,
+    AsyncDropNoop,
+    AsyncDropDeferredDropInPlace,
+    AsyncDropFuse,
+    AsyncDropDefer,
+    AsyncDropEither,
     CoerceUnsized,
     DispatchFromDyn,
     TransmuteOpts,
@@ -889,18 +936,34 @@ pub enum TermLangItem {
     VaList,
     Deref,
     DerefMut,
+    DerefPure,
     DerefTarget,
     Receiver,
     Fn,
     FnMut,
     FnOnce,
+    AsyncFn,
+    AsyncFnMut,
+    AsyncFnOnce,
+    AsyncFnOnceOutput,
+    CallOnceFuture,
+    CallRefFuture,
+    AsyncFnKindHelper,
+    AsyncFnKindUpvars,
     FnOnceOutput,
     Iterator,
+    FusedIterator,
     Future,
-    Coroutine,
+    FutureOutput,
+    AsyncIterator,
     CoroutineState,
+    Coroutine,
+    CoroutineReturn,
+    CoroutineYield,
+    CoroutineResume,
     Unpin,
     Pin,
+    OrderingEnum,
     PartialEq,
     PartialOrd,
     CVoid,
@@ -915,6 +978,24 @@ pub enum TermLangItem {
     PanicImpl,
     PanicCannotUnwind,
     PanicInCleanup,
+    PanicAddOverflow,
+    PanicSubOverflow,
+    PanicMulOverflow,
+    PanicDivOverflow,
+    PanicRemOverflow,
+    PanicNegOverflow,
+    PanicShrOverflow,
+    PanicShlOverflow,
+    PanicDivZero,
+    PanicRemZero,
+    PanicCoroutineResumed,
+    PanicAsyncFnResumed,
+    PanicAsyncGenFnResumed,
+    PanicGenFnNone,
+    PanicCoroutineResumedPanic,
+    PanicAsyncFnResumedPanic,
+    PanicAsyncGenFnResumedPanic,
+    PanicGenFnNonePanic,
     BeginPanic,
     FormatAlignment,
     FormatArgument,
@@ -923,13 +1004,14 @@ pub enum TermLangItem {
     FormatPlaceholder,
     FormatUnsafeArg,
     ExchangeMalloc,
-    BoxFree,
     DropInPlace,
+    FallbackSurfaceDrop,
     AllocLayout,
     Start,
     EhPersonality,
     EhCatchTypeinfo,
     OwnedBox,
+    GlobalAlloc,
     PtrUnique,
     PhantomData,
     ManuallyDrop,
@@ -945,13 +1027,19 @@ pub enum TermLangItem {
     TryTraitFromYeet,
     PointerLike,
     ConstParamTy,
+    UnsizedConstParamTy,
     Poll,
     PollReady,
     PollPending,
+    AsyncGenReady,
+    AsyncGenPending,
+    AsyncGenFinished,
     ResumeTy,
     GetContext,
     Context,
     FuturePoll,
+    AsyncIteratorPollNext,
+    IntoAsyncIterIntoIter,
     Option,
     OptionSome,
     OptionNone,
@@ -972,4 +1060,11 @@ pub enum TermLangItem {
     RangeTo,
     String,
     CStr,
-}
+    EffectsRuntime,
+    EffectsNoRuntime,
+    EffectsMaybe,
+    EffectsIntersection,
+    EffectsIntersectionOutput,
+    EffectsCompat,
+    EffectsTyCompat
+);

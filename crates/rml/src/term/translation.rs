@@ -4,18 +4,19 @@
 //! See especially: [FromHir], [HirInto].
 
 use rustc_ast::{
-    BindingAnnotation, BorrowKind, ByRef, CaptureBy, FloatTy, IntTy, LitFloatType, LitIntType,
-    LitKind, Movability, Mutability, StrStyle, TraitObjectSyntax, UintTy,
+    expand::autodiff_attrs::valid_ret_activity, BindingMode, BorrowKind, ByRef, CaptureBy, FloatTy,
+    IntTy, LitFloatType, LitIntType, LitKind, Movability, Mutability, StrStyle, TraitObjectSyntax,
+    UintTy,
 };
 use rustc_hir::{
     def::{CtorKind, CtorOf, DefKind, NonMacroAttrKind, Res},
     AnonConst, Arm, ArrayLen, BareFnTy, BinOp, BinOpKind, Block, BlockCheckMode, Body, Closure,
-    ClosureBinder, ConstArg, Constness, DotDotPos, Expr, ExprField, ExprKind, FnDecl, FnRetTy,
-    GenericArg, GenericArgs, GenericArgsParentheses, GenericBound, GenericParam, GenericParamKind,
-    GenericParamSource, Guard, ImplicitSelfKind, InferArg, LangItem, Let, Lifetime, LifetimeName,
-    LifetimeParamKind, Lit, Local, MatchSource, MutTy, Param, ParamName, Pat, PatField, PatKind,
-    Path, PathSegment, PolyTraitRef, PrimTy, QPath, RangeEnd, Stmt, StmtKind, TraitBoundModifier,
-    TraitRef, Ty, TyKind, TypeBinding, TypeBindingKind, UnOp, UnsafeSource,
+    ClosureBinder, ConstArg, ConstArgKind, Constness, DotDotPos, Expr, ExprField, ExprKind, FnDecl,
+    FnRetTy, GenericArg, GenericArgs, GenericArgsParentheses, GenericBound, GenericParam,
+    GenericParamKind, GenericParamSource, ImplicitSelfKind, InferArg, LangItem, LetExpr, LetStmt,
+    Lifetime, LifetimeName, LifetimeParamKind, Lit, MatchSource, MutTy, OpaqueTy, Param, ParamName,
+    Pat, PatField, PatKind, Path, PathSegment, PolyTraitRef, PrimTy, QPath, RangeEnd, Stmt,
+    StmtKind, TraitRef, Ty, TyKind, UnOp, UnsafeSource,
 };
 use rustc_middle::hir::map::Map;
 use rustc_span::{MacroKind, Symbol};
@@ -23,19 +24,19 @@ use rustc_target::spec::abi::Abi;
 
 use super::{
     HirTerm, QuantorKind, QuantorParam, Term, TermAbi, TermAnonConst, TermArm, TermArrayLen,
-    TermBareFnTy, TermBinOp, TermBinOpKind, TermBindingAnnotation, TermBlock, TermBlockCheckMode,
+    TermBareFnTy, TermBinOp, TermBinOpKind, TermBindingMode, TermBlock, TermBlockCheckMode,
     TermBody, TermBorrowKind, TermByRef, TermCaptureBy, TermClosure, TermClosureBinder,
-    TermConstArg, TermConstness, TermCtorKind, TermCtorOf, TermDefKind, TermDotDotPos, TermField,
-    TermFloatTy, TermFnDecl, TermFnRetTy, TermGenericArg, TermGenericArgs,
-    TermGenericArgsParentheses, TermGenericBound, TermGenericParam, TermGenericParamKind,
-    TermGenericParamSource, TermGuard, TermImplicitSelfKind, TermInferArg, TermIntTy, TermKind,
-    TermLangItem, TermLet, TermLifetime, TermLifetimeName, TermLifetimeParamKind, TermLit,
-    TermLitFloatType, TermLitIntType, TermLitKind, TermLocal, TermMacroKind, TermMatchSource,
-    TermMovability, TermMutTy, TermMutability, TermNonMacroAttrKind, TermParam, TermParamName,
-    TermPat, TermPatField, TermPatKind, TermPath, TermPathSegment, TermPolyTraitRef, TermPrimTy,
-    TermQPath, TermRangeEnd, TermRes, TermStmt, TermStmtKind, TermStrStyle, TermTraitBoundModifier,
-    TermTraitObjectSyntax, TermTraitRef, TermTy, TermTyKind, TermTypeBinding, TermTypeBindingKind,
-    TermUintTy, TermUnOp, TermUnsafeSource,
+    TermConstArg, TermConstArgKind, TermConstness, TermCtorKind, TermCtorOf, TermDefKind,
+    TermDotDotPos, TermField, TermFloatTy, TermFnDecl, TermFnRetTy, TermGenericArg,
+    TermGenericArgs, TermGenericArgsParentheses, TermGenericBound, TermGenericParam,
+    TermGenericParamKind, TermGenericParamSource, TermImplicitSelfKind, TermInferArg, TermIntTy,
+    TermKind, TermLangItem, TermLet, TermLetStmt, TermLifetime, TermLifetimeName,
+    TermLifetimeParamKind, TermLit, TermLitFloatType, TermLitIntType, TermLitKind, TermMacroKind,
+    TermMatchSource, TermMutTy, TermMutability, TermNonMacroAttrKind, TermOpaqueTy, TermParam,
+    TermParamName, TermPat, TermPatField, TermPatKind, TermPath, TermPathSegment, TermPolyTraitRef,
+    TermPrimTy, TermQPath, TermRangeEnd, TermRes, TermStmt, TermStmtKind, TermStrStyle,
+    TermTraitBoundModifier, TermTraitObjectSyntax, TermTraitRef, TermTy, TermTyKind,
+    TermTypeBinding, TermTypeBindingKind, TermUintTy, TermUnOp, TermUnsafeSource,
 };
 
 /// Allows translating from `T` to `Self`, where `T` is a HIR structure. Since
@@ -243,23 +244,34 @@ impl From<BorrowKind> for TermBorrowKind {
     }
 }
 
-impl<'hir> FromHir<'hir, ArrayLen> for TermArrayLen {
-    fn from_hir(value: ArrayLen, hir: Map<'hir>) -> Self {
+impl<'hir> FromHir<'hir, ArrayLen<'hir>> for TermArrayLen {
+    fn from_hir(value: ArrayLen<'hir>, hir: Map<'hir>) -> Self {
         match value {
-            ArrayLen::Infer(hid, sp) => Self::Infer(hid.into(), sp.into()),
+            ArrayLen::Infer(a) => Self::Infer((&a).into()),
             ArrayLen::Body(c) => Self::Body(c.hir_into(hir)),
         }
     }
 }
 
-impl<'hir> FromHir<'hir, &'hir Let<'hir>> for TermLet {
-    fn from_hir(value: &'hir Let<'hir>, hir: Map<'hir>) -> Self {
+impl<'hir> FromHir<'hir, &'hir LetExpr<'hir>> for TermLet {
+    fn from_hir(value: &'hir LetExpr<'hir>, hir: Map<'hir>) -> Self {
+        Self {
+            span: value.span.into(),
+            pat: value.pat.hir_into(hir),
+            ty: value.ty.map(|t| t.hir_into(hir)),
+            init: Box::new(value.init.hir_into(hir)),
+        }
+    }
+}
+
+impl<'hir> FromHir<'hir, &'hir LetStmt<'hir>> for TermLetStmt {
+    fn from_hir(value: &'hir LetStmt<'hir>, hir: Map<'hir>) -> Self {
         Self {
             hir_id: value.hir_id.into(),
             span: value.span.into(),
             pat: value.pat.hir_into(hir),
             ty: value.ty.map(|ty| ty.hir_into(hir)),
-            init: Box::new(value.init.hir_into(hir)),
+            init: Box::new(value.init.unwrap().hir_into(hir)),
         }
     }
 }
@@ -292,7 +304,6 @@ impl<'hir> FromHir<'hir, &'hir Closure<'hir>> for TermClosure {
             body: hir.body(value.body).hir_into(hir),
             fn_decl_span: value.fn_decl_span.into(),
             fn_arg_span: value.fn_arg_span.map(|s| s.into()),
-            movability: value.movability.map(|m| m.into()),
         }
     }
 }
@@ -352,18 +363,9 @@ impl From<ImplicitSelfKind> for TermImplicitSelfKind {
         match value {
             ImplicitSelfKind::Imm => Self::Imm,
             ImplicitSelfKind::Mut => Self::Mut,
-            ImplicitSelfKind::ImmRef => Self::ImmRef,
-            ImplicitSelfKind::MutRef => Self::MutRef,
+            ImplicitSelfKind::RefImm => Self::RefImm,
+            ImplicitSelfKind::RefMut => Self::RefMut,
             ImplicitSelfKind::None => Self::None,
-        }
-    }
-}
-
-impl From<Movability> for TermMovability {
-    fn from(value: Movability) -> Self {
-        match value {
-            Movability::Static => Self::Static,
-            Movability::Movable => Self::Movable,
         }
     }
 }
@@ -410,15 +412,6 @@ impl<'hir> FromHir<'hir, &'hir ExprField<'hir>> for TermField {
     }
 }
 
-impl<'hir> FromHir<'hir, Guard<'hir>> for TermGuard {
-    fn from_hir(value: Guard<'hir>, hir: Map<'hir>) -> Self {
-        match value {
-            Guard::If(e) => Self::If(Box::new(e.hir_into(hir))),
-            Guard::IfLet(l) => Self::IfLet(l.hir_into(hir)),
-        }
-    }
-}
-
 impl<'hir> FromHir<'hir, &'hir Stmt<'hir>> for TermStmt {
     fn from_hir(value: &'hir Stmt<'hir>, hir: Map<'hir>) -> Self {
         Self {
@@ -432,22 +425,10 @@ impl<'hir> FromHir<'hir, &'hir Stmt<'hir>> for TermStmt {
 impl<'hir> FromHir<'hir, StmtKind<'hir>> for TermStmtKind {
     fn from_hir(value: StmtKind<'hir>, hir: Map<'hir>) -> Self {
         match value {
-            StmtKind::Local(l) => Self::Local(l.hir_into(hir)),
+            StmtKind::Let(l) => Self::Let(l.hir_into(hir)),
             StmtKind::Item(i) => Self::Item(i.into()),
             StmtKind::Expr(e) => Self::Term(Box::new(e.hir_into(hir))),
             StmtKind::Semi(e) => Self::Semi(Box::new(e.hir_into(hir))),
-        }
-    }
-}
-
-impl<'hir> FromHir<'hir, &'hir Local<'hir>> for TermLocal {
-    fn from_hir(value: &'hir Local<'hir>, hir: Map<'hir>) -> Self {
-        Self {
-            pat: value.pat.hir_into(hir),
-            ty: value.ty.map(|ty| ty.hir_into(hir)),
-            init: value.init.map(|e| Box::new(e.hir_into(hir))),
-            hir_id: value.hir_id.into(),
-            span: value.span.into(),
         }
     }
 }
@@ -521,7 +502,16 @@ impl<'hir> FromHir<'hir, PatKind<'hir>> for TermPatKind {
                 mid.map(|m| Box::new(m.hir_into(hir))),
                 end.iter().map(|p| p.hir_into(hir)).collect(),
             ),
+            PatKind::Never => Self::Never,
+            PatKind::Deref(pat) => Self::Deref(Box::new(pat.hir_into(hir))),
+            PatKind::Err(_) => Self::Err,
         }
+    }
+}
+
+impl From<BindingMode> for TermBindingMode {
+    fn from(value: BindingMode) -> Self {
+        Self(value.0.into(), value.1.into())
     }
 }
 
@@ -552,16 +542,11 @@ impl From<RangeEnd> for TermRangeEnd {
     }
 }
 
-impl From<BindingAnnotation> for TermBindingAnnotation {
-    fn from(value: BindingAnnotation) -> Self {
-        Self(value.0.into(), value.1.into())
-    }
-}
-
 impl From<ByRef> for TermByRef {
     fn from(value: ByRef) -> Self {
         match value {
-            ByRef::Yes => Self::Yes,
+            ByRef::Yes(Mutability::Mut) => Self::Yes { mutable: true },
+            ByRef::Yes(Mutability::Not) => Self::Yes { mutable: false },
             ByRef::No => Self::No,
         }
     }
@@ -602,10 +587,9 @@ impl<'hir> FromHir<'hir, TyKind<'hir>> for TermTyKind {
             TyKind::Never => Self::Never,
             TyKind::Tup(tys) => Self::Tup(tys.iter().map(|ty| ty.hir_into(hir)).collect()),
             TyKind::Path(p) => Self::Path(p.hir_into(hir)),
-            TyKind::OpaqueDef(id, args, in_def) => Self::OpaqueDef(
-                id.into(),
+            TyKind::OpaqueDef(ty, args) => Self::OpaqueDef(
+                ty.hir_into(hir),
                 args.iter().map(|a| a.hir_into(hir)).collect(),
-                in_def,
             ),
             TyKind::TraitObject(prefs, l, syn) => Self::TraitObject(
                 prefs.iter().map(|r| r.hir_into(hir)).collect(),
@@ -614,7 +598,20 @@ impl<'hir> FromHir<'hir, TyKind<'hir>> for TermTyKind {
             ),
             TyKind::Typeof(c) => Self::Typeof(Box::new(c.hir_into(hir))),
             TyKind::Infer => Self::Infer,
+            TyKind::InferDelegation(did, _) => Self::InferDelegation(did.into()),
+            TyKind::AnonAdt(id) => Self::AnonAdt(id.into()),
+            TyKind::Pat(ty, pat) => Self::Pat(Box::new(ty.hir_into(hir)), pat.hir_into(hir)),
             TyKind::Err(_) => unreachable!(),
+        }
+    }
+}
+
+impl<'hir> FromHir<'hir, &'hir OpaqueTy<'hir>> for TermOpaqueTy {
+    fn from_hir(value: &'hir OpaqueTy<'hir>, hir: Map<'hir>) -> Self {
+        Self {
+            hir_id: value.hir_id.into(),
+            def_id: value.def_id.into(),
+            span: value.span.into(),
         }
     }
 }
@@ -663,20 +660,18 @@ impl From<Abi> for TermAbi {
             Abi::PtxKernel => Self::PtxKernel,
             Abi::Msp430Interrupt => Self::Msp430Interrupt,
             Abi::X86Interrupt => Self::X86Interrupt,
-            Abi::AmdGpuKernel => Self::AmdGpuKernel,
             Abi::EfiApi => Self::EfiApi,
             Abi::AvrInterrupt => Self::AvrNonBlockingInterrupt,
             Abi::AvrNonBlockingInterrupt => Self::AvrNonBlockingInterrupt,
             Abi::CCmseNonSecureCall => Self::CCmseNonSecureCall,
-            Abi::Wasm => Self::Wasm,
             Abi::System { unwind } => Self::System { unwind },
             Abi::RustIntrinsic => Self::RustIntrinsic,
             Abi::RustCall => Self::RustCall,
-            Abi::PlatformIntrinsic => Self::PlatformIntrinsic,
             Abi::Unadjusted => Self::Unadjusted,
             Abi::RustCold => Self::RustCold,
             Abi::RiscvInterruptM => Self::RiscvInterruptM,
             Abi::RiscvInterruptS => Self::RiscvInterruptS,
+            _ => todo!("Abi"),
         }
     }
 }
@@ -752,10 +747,10 @@ impl<'hir> From<&'hir LitKind> for TermLitKind {
             LitKind::CStr(sl, style) => Self::CStr(sl.clone(), style.into()),
             LitKind::Byte(b) => Self::Byte(*b),
             LitKind::Char(c) => Self::Char(*c),
-            LitKind::Int(i, t) => Self::Int(*i, t.into()),
+            LitKind::Int(i, t) => Self::Int(i.0, t.into()),
             LitKind::Float(sym, t) => Self::Float((*sym).into(), t.into()),
             LitKind::Bool(b) => Self::Bool(*b),
-            LitKind::Err => unreachable!(),
+            LitKind::Err(_) => unreachable!(),
         }
     }
 }
@@ -792,6 +787,7 @@ impl From<MatchSource> for TermMatchSource {
     fn from(value: MatchSource) -> Self {
         match value {
             MatchSource::Normal => Self::Normal,
+            MatchSource::Postfix => Self::Postfix,
             MatchSource::ForLoopDesugar => Self::ForLoopDesugar,
             MatchSource::TryDesugar(hir_id) => Self::TryDesugar(hir_id.into()),
             MatchSource::AwaitDesugar => Self::AwaitDesugar,
@@ -809,9 +805,7 @@ impl<'hir> FromHir<'hir, QPath<'hir>> for TermQPath {
             QPath::TypeRelative(ty, ps) => {
                 Self::TypeRelative(Box::new(ty.hir_into(hir)), ps.hir_into(hir))
             }
-            QPath::LangItem(li, sp, hid) => {
-                Self::LangItem((&li).into(), sp.into(), hid.map(|id| id.into()))
-            }
+            QPath::LangItem(li, sp) => Self::LangItem((&li).into(), sp.into()),
         }
     }
 }
@@ -826,7 +820,7 @@ impl<'hir> FromHir<'hir, &'hir GenericArgs<'hir>> for TermGenericArgs {
     fn from_hir(value: &'hir GenericArgs<'hir>, hir: Map<'hir>) -> Self {
         Self {
             args: value.args.iter().map(|a| a.hir_into(hir)).collect(),
-            bindings: value.bindings.iter().map(|b| b.hir_into(hir)).collect(),
+            // bindings: value.bindings.iter().map(|b| b.hir_into(hir)).collect(),
             parenthesized: value.parenthesized.into(),
             span_ext: value.span_ext.into(),
         }
@@ -838,7 +832,7 @@ impl<'hir> FromHir<'hir, &'hir GenericArg<'hir>> for TermGenericArg {
         match value {
             GenericArg::Lifetime(l) => Self::Lifetime((*l).into()),
             GenericArg::Type(ty) => Self::Type((*ty).hir_into(hir)),
-            GenericArg::Const(c) => Self::Const(c.hir_into(hir)),
+            GenericArg::Const(c) => Self::Const((*c).hir_into(hir)),
             GenericArg::Infer(i) => Self::Infer(i.into()),
         }
     }
@@ -866,11 +860,21 @@ impl From<LifetimeName> for TermLifetimeName {
     }
 }
 
-impl<'hir> FromHir<'hir, &'hir ConstArg> for TermConstArg {
-    fn from_hir(value: &'hir ConstArg, hir: Map<'hir>) -> Self {
+impl<'hir> FromHir<'hir, &'hir ConstArg<'hir>> for TermConstArg {
+    fn from_hir(value: &'hir ConstArg<'hir>, hir: Map<'hir>) -> Self {
         Self {
-            value: value.value.hir_into(hir),
-            span: value.span.into(),
+            hir_id: value.hir_id.into(),
+            kind: (&value.kind).hir_into(hir),
+            is_desugared_from_effects: value.is_desugared_from_effects,
+        }
+    }
+}
+
+impl<'hir> FromHir<'hir, &'hir ConstArgKind<'hir>> for TermConstArgKind {
+    fn from_hir(value: &'hir ConstArgKind<'hir>, hir: Map<'hir>) -> Self {
+        match value {
+            ConstArgKind::Path(q) => Self::Path(q.hir_into(hir)),
+            ConstArgKind::Anon(a) => Self::Anon((*a).hir_into(hir)),
         }
     }
 }
@@ -894,31 +898,6 @@ impl From<GenericArgsParentheses> for TermGenericArgsParentheses {
     }
 }
 
-impl<'hir> FromHir<'hir, &'hir TypeBinding<'hir>> for TermTypeBinding {
-    fn from_hir(value: &'hir TypeBinding, hir: Map<'hir>) -> Self {
-        Self {
-            hir_id: value.hir_id.into(),
-            ident: value.ident.into(),
-            gen_args: value.gen_args.hir_into(hir),
-            kind: value.kind.hir_into(hir),
-            span: value.span.into(),
-        }
-    }
-}
-
-impl<'hir> FromHir<'hir, TypeBindingKind<'hir>> for TermTypeBindingKind {
-    fn from_hir(value: TypeBindingKind<'hir>, hir: Map<'hir>) -> Self {
-        match value {
-            TypeBindingKind::Constraint { bounds } => Self::Constraint {
-                bounds: bounds.iter().map(|b| b.hir_into(hir)).collect(),
-            },
-            TypeBindingKind::Equality { term } => Self::Equality {
-                hir_term: term.hir_into(hir),
-            },
-        }
-    }
-}
-
 impl<'hir> FromHir<'hir, rustc_hir::Term<'hir>> for HirTerm {
     fn from_hir(value: rustc_hir::Term<'hir>, hir: Map<'hir>) -> Self {
         match value {
@@ -931,25 +910,9 @@ impl<'hir> FromHir<'hir, rustc_hir::Term<'hir>> for HirTerm {
 impl<'hir> FromHir<'hir, &'hir GenericBound<'hir>> for TermGenericBound {
     fn from_hir(value: &'hir GenericBound<'hir>, hir: Map<'hir>) -> Self {
         match value {
-            GenericBound::Trait(pr, bm) => Self::Trait(pr.hir_into(hir), bm.into()),
-            GenericBound::LangItemTrait(li, sp, hid, args) => Self::LangItemTrait(
-                li.into(),
-                (*sp).into(),
-                (*hid).into(),
-                (*args).hir_into(hir),
-            ),
+            GenericBound::Trait(pr) => Self::Trait(pr.hir_into(hir)),
             GenericBound::Outlives(l) => Self::Outlives((*l).into()),
-        }
-    }
-}
-
-impl<'hir> From<&'hir TraitBoundModifier> for TermTraitBoundModifier {
-    fn from(value: &'hir TraitBoundModifier) -> Self {
-        match value {
-            TraitBoundModifier::None => Self::None,
-            TraitBoundModifier::Negative => Self::Negative,
-            TraitBoundModifier::Maybe => Self::Maybe,
-            TraitBoundModifier::MaybeConst => Self::MaybeConst,
+            GenericBound::Use(..) => todo!("GenericBound::Use"),
         }
     }
 }
@@ -1001,9 +964,16 @@ impl<'hir> FromHir<'hir, GenericParamKind<'hir>> for TermGenericParamKind {
                 default: default.map(|ty| ty.hir_into(hir)),
                 synthetic,
             },
-            GenericParamKind::Const { ty, default } => Self::Const {
+            GenericParamKind::Const {
+                ty,
+                default,
+                is_host_effect,
+                synthetic,
+            } => Self::Const {
                 ty: ty.hir_into(hir),
                 default: default.map(|ac| ac.hir_into(hir)),
+                is_host_effect,
+                synthetic,
             },
         }
     }
@@ -1013,14 +983,14 @@ impl From<LifetimeParamKind> for TermLifetimeParamKind {
     fn from(value: LifetimeParamKind) -> Self {
         match value {
             LifetimeParamKind::Explicit => Self::Explicit,
-            LifetimeParamKind::Elided => Self::Elided,
+            LifetimeParamKind::Elided(..) => Self::Elided,
             LifetimeParamKind::Error => Self::Error,
         }
     }
 }
 
-impl<'hir> FromHir<'hir, AnonConst> for TermAnonConst {
-    fn from_hir(value: AnonConst, hir: Map<'hir>) -> Self {
+impl<'hir> FromHir<'hir, &'hir AnonConst> for TermAnonConst {
+    fn from_hir(value: &'hir AnonConst, hir: Map<'hir>) -> Self {
         Self {
             hir_id: value.hir_id.into(),
             def_id: value.def_id.into(),
@@ -1106,7 +1076,7 @@ impl From<DefKind> for TermDefKind {
             DefKind::Fn => Self::Fn,
             DefKind::Const => Self::Const,
             DefKind::ConstParam => Self::ConstParam,
-            DefKind::Static(m) => Self::Static(m.into()),
+            DefKind::Static { mutability, .. } => Self::Static(mutability.into()),
             DefKind::Ctor(of, kind) => Self::Ctor(of.into(), kind.into()),
             DefKind::AssocFn => Self::AssocFn,
             DefKind::AssocConst => Self::AnonConst,
@@ -1122,7 +1092,7 @@ impl From<DefKind> for TermDefKind {
             DefKind::GlobalAsm => Self::GlobalAsm,
             DefKind::Impl { of_trait } => Self::Impl { of_trait },
             DefKind::Closure => Self::Closure,
-            DefKind::Coroutine => Self::Coroutine,
+            DefKind::SyntheticCoroutineBody => Self::SyntheticCoroutineBody,
         }
     }
 }
@@ -1217,146 +1187,10 @@ impl From<UintTy> for TermUintTy {
 impl From<FloatTy> for TermFloatTy {
     fn from(value: FloatTy) -> Self {
         match value {
+            FloatTy::F16 => Self::F16,
             FloatTy::F32 => Self::F32,
             FloatTy::F64 => Self::F64,
-        }
-    }
-}
-
-impl<'hir> From<&'hir LangItem> for TermLangItem {
-    fn from(value: &'hir LangItem) -> Self {
-        match value {
-            LangItem::Sized => Self::Sized,
-            LangItem::Unsize => Self::Unsize,
-            LangItem::StructuralPeq => Self::StructuralPeq,
-            LangItem::StructuralTeq => Self::StructuralTeq,
-            LangItem::Copy => Self::Copy,
-            LangItem::Clone => Self::Clone,
-            LangItem::Sync => Self::Sync,
-            LangItem::DiscriminantKind => Self::DiscriminantKind,
-            LangItem::Discriminant => Self::Discriminant,
-            LangItem::PointeeTrait => Self::PointeeTrait,
-            LangItem::Metadata => Self::Metadata,
-            LangItem::DynMetadata => Self::DynMetadata,
-            LangItem::Freeze => Self::Freeze,
-            LangItem::FnPtrTrait => Self::FnPtrTrait,
-            LangItem::FnPtrAddr => Self::FnPtrAddr,
-            LangItem::Drop => Self::Drop,
-            LangItem::Destruct => Self::Destruct,
-            LangItem::CoerceUnsized => Self::CoerceUnsized,
-            LangItem::DispatchFromDyn => Self::DispatchFromDyn,
-            LangItem::TransmuteOpts => Self::TransmuteOpts,
-            LangItem::TransmuteTrait => Self::TransmuteTrait,
-            LangItem::Add => Self::Add,
-            LangItem::Sub => Self::Sub,
-            LangItem::Mul => Self::Mul,
-            LangItem::Div => Self::Div,
-            LangItem::Rem => Self::Rem,
-            LangItem::Neg => Self::Neg,
-            LangItem::Not => Self::Not,
-            LangItem::BitXor => Self::BitXor,
-            LangItem::BitAnd => Self::BitAnd,
-            LangItem::BitOr => Self::BitOr,
-            LangItem::Shl => Self::Shl,
-            LangItem::Shr => Self::Shr,
-            LangItem::AddAssign => Self::AddAssign,
-            LangItem::SubAssign => Self::SubAssign,
-            LangItem::MulAssign => Self::MulAssign,
-            LangItem::DivAssign => Self::DivAssign,
-            LangItem::RemAssign => Self::RemAssign,
-            LangItem::BitXorAssign => Self::BitXorAssign,
-            LangItem::BitAndAssign => Self::BitAndAssign,
-            LangItem::BitOrAssign => Self::BitOrAssign,
-            LangItem::ShlAssign => Self::ShlAssign,
-            LangItem::ShrAssign => Self::ShrAssign,
-            LangItem::Index => Self::Index,
-            LangItem::IndexMut => Self::IndexMut,
-            LangItem::UnsafeCell => Self::UnsafeCell,
-            LangItem::VaList => Self::VaList,
-            LangItem::Deref => Self::Deref,
-            LangItem::DerefMut => Self::DerefMut,
-            LangItem::DerefTarget => Self::DerefTarget,
-            LangItem::Receiver => Self::Receiver,
-            LangItem::Fn => Self::Fn,
-            LangItem::FnMut => Self::FnMut,
-            LangItem::FnOnce => Self::FnOnce,
-            LangItem::FnOnceOutput => Self::FnOnceOutput,
-            LangItem::Iterator => Self::Iterator,
-            LangItem::Future => Self::Future,
-            LangItem::Coroutine => Self::Coroutine,
-            LangItem::CoroutineState => Self::CoroutineState,
-            LangItem::Unpin => Self::Unpin,
-            LangItem::Pin => Self::Pin,
-            LangItem::PartialEq => Self::PartialEq,
-            LangItem::PartialOrd => Self::PartialOrd,
-            LangItem::CVoid => Self::CVoid,
-            LangItem::Panic => Self::Panic,
-            LangItem::PanicNounwind => Self::PanicNounwind,
-            LangItem::PanicFmt => Self::PanicFmt,
-            LangItem::ConstPanicFmt => Self::ConstPanicFmt,
-            LangItem::PanicBoundsCheck => Self::PanicBoundsCheck,
-            LangItem::PanicMisalignedPointerDereference => Self::PanicMisalignedPointerDereference,
-            LangItem::PanicInfo => Self::PanicInfo,
-            LangItem::PanicLocation => Self::PanicLocation,
-            LangItem::PanicImpl => Self::PanicImpl,
-            LangItem::PanicCannotUnwind => Self::PanicCannotUnwind,
-            LangItem::BeginPanic => Self::BeginPanic,
-            LangItem::PanicInCleanup => Self::PanicInCleanup,
-            LangItem::FormatAlignment => Self::FormatAlignment,
-            LangItem::FormatArgument => Self::FormatArgument,
-            LangItem::FormatArguments => Self::FormatArguments,
-            LangItem::FormatCount => Self::FormatCount,
-            LangItem::FormatPlaceholder => Self::FormatPlaceholder,
-            LangItem::FormatUnsafeArg => Self::FormatUnsafeArg,
-            LangItem::ExchangeMalloc => Self::ExchangeMalloc,
-            LangItem::DropInPlace => Self::DropInPlace,
-            LangItem::AllocLayout => Self::AllocLayout,
-            LangItem::Start => Self::Start,
-            LangItem::EhPersonality => Self::EhPersonality,
-            LangItem::EhCatchTypeinfo => Self::EhCatchTypeinfo,
-            LangItem::OwnedBox => Self::OwnedBox,
-            LangItem::PtrUnique => Self::PtrUnique,
-            LangItem::PhantomData => Self::PhantomData,
-            LangItem::ManuallyDrop => Self::ManuallyDrop,
-            LangItem::MaybeUninit => Self::MaybeUninit,
-            LangItem::AlignOffset => Self::AlignOffset,
-            LangItem::Termination => Self::Termination,
-            LangItem::Try => Self::Try,
-            LangItem::Tuple => Self::Tuple,
-            LangItem::SliceLen => Self::SliceLen,
-            LangItem::TryTraitFromResidual => Self::TryTraitFromResidual,
-            LangItem::TryTraitFromOutput => Self::TryTraitFromOutput,
-            LangItem::TryTraitBranch => Self::TryTraitBranch,
-            LangItem::TryTraitFromYeet => Self::TryTraitFromYeet,
-            LangItem::PointerLike => Self::PointerLike,
-            LangItem::ConstParamTy => Self::ConstParamTy,
-            LangItem::Poll => Self::Poll,
-            LangItem::PollReady => Self::PollReady,
-            LangItem::PollPending => Self::PollPending,
-            LangItem::ResumeTy => Self::ResumeTy,
-            LangItem::GetContext => Self::GetContext,
-            LangItem::Context => Self::Context,
-            LangItem::FuturePoll => Self::FuturePoll,
-            LangItem::Option => Self::Option,
-            LangItem::OptionSome => Self::OptionSome,
-            LangItem::OptionNone => Self::OptionNone,
-            LangItem::ResultOk => Self::ResultOk,
-            LangItem::ResultErr => Self::ResultErr,
-            LangItem::ControlFlowContinue => Self::ControlFlowContinue,
-            LangItem::ControlFlowBreak => Self::ControlFlowBreak,
-            LangItem::IntoFutureIntoFuture => Self::IntoFutureIntoFuture,
-            LangItem::IntoIterIntoIter => Self::IntoIterIntoIter,
-            LangItem::IteratorNext => Self::IteratorNext,
-            LangItem::PinNewUnchecked => Self::PinNewUnchecked,
-            LangItem::RangeFrom => Self::RangeFrom,
-            LangItem::RangeFull => Self::RangeFull,
-            LangItem::RangeInclusiveStruct => Self::RangeInclusiveStruct,
-            LangItem::RangeInclusiveNew => Self::RangeInclusiveNew,
-            LangItem::Range => Self::Range,
-            LangItem::RangeToInclusive => Self::RangeToInclusive,
-            LangItem::RangeTo => Self::RangeTo,
-            LangItem::String => Self::String,
-            LangItem::CStr => Self::CStr,
+            FloatTy::F128 => Self::F128,
         }
     }
 }

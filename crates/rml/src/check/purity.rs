@@ -54,10 +54,10 @@ impl<'tcx> RmlCtxt<'tcx> {
         let tcx = self.tcx;
         let (thir, expr) = tcx
             .thir_body(did)
-            .unwrap_or_else(|_| Error::from(RmlErr).emit(tcx.sess));
+            .unwrap_or_else(|_| Error::from(RmlErr).emit(todo!()));
         let thir = thir.borrow();
         if thir.exprs.is_empty() {
-            Error::new(tcx.def_span(did), "type checking failed").emit(tcx.sess);
+            Error::new(tcx.def_span(did), "type checking failed").emit(todo!());
         }
 
         let did = did.to_def_id();
@@ -104,7 +104,7 @@ impl<'a, 'tcx> thir::visit::Visitor<'a, 'tcx> for PurityVisitor<'a, 'tcx> {
         self.thir
     }
 
-    fn visit_expr(&mut self, expr: &thir::Expr<'tcx>) {
+    fn visit_expr(&mut self, expr: &'a thir::Expr<'tcx>) {
         if let ExprKind::Call { fun, .. } = expr.kind {
             if let &ty::FnDef(func_did, _) = self.thir[fun].ty.kind() {
                 let called_purity = get_purity(self.tcx, func_did);
@@ -122,11 +122,12 @@ impl<'a, 'tcx> thir::visit::Visitor<'a, 'tcx> for PurityVisitor<'a, 'tcx> {
                         )
                     };
 
-                    self.tcx.sess.span_err_with_code(
-                        self.thir[fun].span,
-                        msg,
-                        rustc_errors::DiagnosticId::Error(String::from("rml")),
-                    );
+                    todo!("Error handling")
+                    // self.tcx.sess.span_err_with_code(
+                    // self.thir[fun].span,
+                    // msg,
+                    // rustc_errors::DiagnosticId::Error(String::from("rml")),
+                    // );
                 }
             } else {
                 todo!("Why is this an error? {fun:?}")

@@ -4,7 +4,7 @@
 use std::collections::HashMap;
 
 pub(crate) use hir::{collect_hir_specs, HirSpecMap};
-use rustc_hir::{Block, Body, Expr, ExprKind, HirId, Local, StmtKind};
+use rustc_hir::{Block, Body, Expr, ExprKind, HirId, LetStmt, StmtKind};
 use rustc_middle::{hir::map::Map, ty::TyCtxt};
 use rustc_span::def_id::DefId;
 use serde::{Deserialize, Serialize};
@@ -286,7 +286,7 @@ fn get_expr_from_did(hir: Map<'_>, did: DefId) -> &Expr {
     let body = get_body(hir, did);
     match body.value.kind {
         ExprKind::Block(Block { stmts, .. }, None) => match stmts[0].kind {
-            StmtKind::Local(Local { init: Some(e), .. }) => e,
+            StmtKind::Let(LetStmt { init: Some(e), .. }) => e,
             _ => unreachable!(),
         },
         _ => unreachable!(),
@@ -304,6 +304,5 @@ fn get_return_from_did(hir: Map<'_>, did: DefId) -> &Expr {
 
 /// Get the body for function `did`.
 fn get_body(hir: Map<'_>, did: DefId) -> &Body<'_> {
-    let bid = hir.body_owned_by(did.expect_local());
-    hir.body(bid)
+    hir.body_owned_by(did.expect_local())
 }

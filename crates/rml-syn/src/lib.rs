@@ -1,4 +1,4 @@
-#![feature(box_patterns)]
+#![feature(box_patterns, doc_cfg)]
 
 //! RML-Syn is a library for the syntax of an RML specification, based on `syn`.
 //!

@@ -124,7 +124,7 @@ fn setup_plugin() {
 
 fn sysroot_path() -> String {
     let toolchain: toml::Value =
-        toml::from_str(include_str!("../../../../rust-toolchain")).unwrap();
+        toml::from_str(include_str!("../../../../rust-toolchain.toml")).unwrap();
     let channel = toolchain["toolchain"]["channel"].as_str().unwrap();
 
     let output = Command::new("rustup")

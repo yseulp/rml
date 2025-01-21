@@ -1,7 +1,5 @@
 //! Error handling.
-
-use rustc_errors::DiagnosticId;
-use rustc_session::Session;
+use rustc_session::{EarlyDiagCtxt, Session};
 use rustc_span::{Span, DUMMY_SP};
 
 /// Collects all errors encountered by RML.
@@ -21,12 +19,8 @@ impl Error {
     }
 
     /// Emit the error through `rustc`.
-    pub(crate) fn emit(self, sess: &Session) -> ! {
-        sess.span_fatal_with_code(
-            self.span,
-            self.msg,
-            DiagnosticId::Error(String::from("rml")),
-        )
+    pub(crate) fn emit(self, diag: &EarlyDiagCtxt) -> ! {
+        todo!("error reporting")
     }
 }
 
