@@ -17,7 +17,7 @@ use crate::util::{is_logic, is_spec};
 /// Creusot and "trick" the compiler by replacing the body with an empty loop.
 ///
 /// Naturally, we only do so for spec functions.
-pub(crate) fn suppress_borrowck<'tcx>(tcx: TyCtxt<'tcx>, did: DefId, body: &mut Body<'tcx>) {
+pub fn suppress_borrowck<'tcx>(tcx: TyCtxt<'tcx>, did: DefId, body: &mut Body<'tcx>) {
     if should_suppress_borrowck(tcx, did) {
         *body.basic_blocks_mut() = make_loop(tcx);
         body.var_debug_info = Vec::new();

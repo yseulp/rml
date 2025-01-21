@@ -22,7 +22,7 @@ pub mod ctx;
 pub mod error;
 pub mod locset;
 pub mod spec;
-pub(crate) mod suppress_borrowck;
+pub mod suppress_borrowck;
 pub mod term;
 pub(crate) mod util;
 
