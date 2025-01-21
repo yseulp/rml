@@ -106,35 +106,41 @@ impl<'a, 'tcx> thir::visit::Visitor<'a, 'tcx> for PurityVisitor<'a, 'tcx> {
 
     fn visit_expr(&mut self, expr: &'a thir::Expr<'tcx>) {
         if let ExprKind::Call { fun, .. } = expr.kind {
-            if let &ty::FnDef(func_did, _) = self.thir[fun].ty.kind() {
-                let called_purity = get_purity(self.tcx, func_did);
-                if !self.purity.may_call(called_purity) {
-                    let msg = if called_purity.is_logic() {
-                        let name = self.tcx.def_path_str(func_did);
-                        let caller = self.tcx.def_path_str(self.did);
-                        format!("called logical function '{name}' in program function {caller}")
-                    } else {
-                        format!(
-                            "called {} function '{}' from {} function",
-                            called_purity,
-                            self.tcx.def_path_str(func_did),
-                            self.purity
-                        )
-                    };
+            let ty = self.thir[fun].ty.kind();
+            match ty {
+                &ty::FnDef(func_did, _) => {
+                    let called_purity = get_purity(self.tcx, func_did);
+                    if !self.purity.may_call(called_purity) {
+                        let msg = if called_purity.is_logic() {
+                            let name = self.tcx.def_path_str(func_did);
+                            let caller = self.tcx.def_path_str(self.did);
+                            format!("called logical function '{name}' in program function {caller}")
+                        } else {
+                            format!(
+                                "called {} function '{}' from {} function",
+                                called_purity,
+                                self.tcx.def_path_str(func_did),
+                                self.purity
+                            )
+                        };
 
-                    todo!("Error handling")
-                    // self.tcx.sess.span_err_with_code(
-                    // self.thir[fun].span,
-                    // msg,
-                    // rustc_errors::DiagnosticId::Error(String::from("rml")),
-                    // );
+                        todo!("Error handling")
+                        // self.tcx.sess.span_err_with_code(
+                        // self.thir[fun].span,
+                        // msg,
+                        // rustc_errors::DiagnosticId::Error(String::from("rml"
+                        // )), );
+                    }
                 }
-            } else {
-                let ty = self.thir[fun].ty.kind();
-                eprintln!("Encountered error in function {fun:?}");
-                eprintln!("Expr: {expr:?}");
-                eprintln!("Type of callee: {ty:?}");
-                todo!("Why is this an error?")
+                &ty::FnPtr(..) => {
+                    // TODO
+                }
+                _ => {
+                    eprintln!("Encountered error in function {fun:?}");
+                    eprintln!("Expr: {expr:?}");
+                    eprintln!("Type of callee: {ty:?}");
+                    todo!("Why is this an error?")
+                }
             }
         }
         thir::visit::walk_expr(self, expr)
