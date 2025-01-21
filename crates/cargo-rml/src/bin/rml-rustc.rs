@@ -5,31 +5,33 @@ extern crate rustc_driver;
 extern crate rustc_errors;
 extern crate rustc_interface;
 extern crate rustc_session;
+extern crate termcolor;
 
 #[macro_use]
 extern crate log;
 
-use std::{env, panic, panic::PanicInfo, process::Command};
+use std::{env, panic, panic::PanicHookInfo, process::Command};
 
 use cargo_rml::options::{Args, RmlArgs};
 use clap::*;
 use rml::callbacks::*;
 use rustc_driver::{RunCompiler, DEFAULT_LOCALE_RESOURCES};
-use rustc_errors::emitter::EmitterWriter;
+use rustc_errors::emitter::HumanEmitter;
 use rustc_interface::interface::try_print_query_stack;
-use rustc_session::{config::ErrorOutputType, EarlyErrorHandler};
+use rustc_session::{config::ErrorOutputType, EarlyDiagCtxt};
+use termcolor::{ColorChoice, StandardStream};
 
 const BUG_REPORT_URL: &str = "https://github.com/Drodt/rml/issues/new";
 
 lazy_static::lazy_static! {
-    static ref ICE_HOOK: Box<dyn Fn(&panic::PanicInfo<'_>) + Sync + Send + 'static> = {
+    static ref ICE_HOOK: Box<dyn Fn(&panic::PanicHookInfo<'_>) + Sync + Send + 'static> = {
         let hook = panic::take_hook();
         panic::set_hook(Box::new(report_panic));
         hook
     };
 }
 
-fn report_panic(info: &PanicInfo) {
+fn report_panic(info: &PanicHookInfo) {
     (*ICE_HOOK)(info);
 
     // Separate the output with an empty line
@@ -37,13 +39,14 @@ fn report_panic(info: &PanicInfo) {
     let fallback_bundle =
         rustc_errors::fallback_fluent_bundle(DEFAULT_LOCALE_RESOURCES.to_vec(), false);
 
-    let emitter = Box::new(EmitterWriter::stderr(
-        rustc_errors::ColorConfig::Auto,
+    let emitter = Box::new(HumanEmitter::new(
+        Box::new(StandardStream::stderr(ColorChoice::Auto)),
         fallback_bundle,
     ));
-    let handler = rustc_errors::Handler::with_emitter(emitter);
+    let diag_ctxt = rustc_errors::DiagCtxt::new(emitter);
+    let handle = diag_ctxt.handle();
 
-    let mut diagnostic = handler.struct_note_without_error("RML has panic-ed!");
+    let mut diagnostic = handle.struct_note("RML has panic-ed!");
     diagnostic.note("Oops, that shouldn't have happened, sorry about that.");
     diagnostic.note(format!(
         "Please report this bug over here: {}",
@@ -56,7 +59,7 @@ fn report_panic(info: &PanicInfo) {
     let backtrace = env::var_os("RUST_BACKTRACE").map_or(false, |x| &x != "0");
 
     if backtrace {
-        try_print_query_stack(&handler, None, None);
+        try_print_query_stack(handle, None, None);
     }
 }
 
@@ -64,7 +67,7 @@ struct DefaultCallbacks;
 impl rustc_driver::Callbacks for DefaultCallbacks {}
 
 fn main() {
-    let handler = EarlyErrorHandler::new(ErrorOutputType::default());
+    let handler = EarlyDiagCtxt::new(ErrorOutputType::default());
     rustc_driver::init_rustc_env_logger(&handler);
     env_logger::init();
     lazy_static::initialize(&ICE_HOOK);
