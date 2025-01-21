@@ -1,4 +1,4 @@
-use super::logic;
+use super::{logic, trusted};
 
 /// Taken from Creusot:
 ///
@@ -9,6 +9,7 @@ use super::logic;
 pub trait ShallowModel {
     type ShallowModelTy;
 
+    #[trusted]
     #[logic]
     fn shallow_model(self) -> Self::ShallowModelTy;
 }
@@ -22,6 +23,7 @@ pub trait ShallowModel {
 pub trait DeepModel {
     type DeepModelTy;
 
+    #[trusted]
     #[logic]
     fn deep_model(self) -> Self::DeepModelTy;
 }
@@ -32,6 +34,7 @@ where
 {
     type DeepModelTy = T::DeepModelTy;
 
+    #[trusted]
     #[logic]
     fn deep_model(self) -> Self::DeepModelTy {
         (*self).deep_model()
@@ -44,6 +47,7 @@ where
 {
     type ShallowModelTy = T::ShallowModelTy;
 
+    #[trusted]
     #[logic]
     fn shallow_model(self) -> Self::ShallowModelTy {
         (*self).shallow_model()
@@ -56,6 +60,7 @@ where
 {
     type DeepModelTy = T::DeepModelTy;
 
+    #[trusted]
     #[logic]
     fn deep_model(self) -> Self::DeepModelTy {
         (*self).deep_model()
@@ -68,6 +73,7 @@ where
 {
     type ShallowModelTy = T::ShallowModelTy;
 
+    #[trusted]
     #[logic]
     fn shallow_model(self) -> Self::ShallowModelTy {
         (*self).shallow_model()
@@ -77,6 +83,7 @@ where
 impl DeepModel for bool {
     type DeepModelTy = bool;
 
+    #[trusted]
     #[logic]
     fn deep_model(self) -> Self::DeepModelTy {
         self

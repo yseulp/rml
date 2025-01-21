@@ -6,6 +6,7 @@ use rustc_middle::{
     ty::{self, TyCtxt},
 };
 
+use self::util::is_trusted;
 use crate::{
     ctx::RmlCtxt,
     error::{Error, RmlErr},
@@ -63,7 +64,7 @@ impl<'tcx> RmlCtxt<'tcx> {
         let did = did.to_def_id();
         // Internal items (e.g., the `exists` and `forall` functions) should not be
         // checked
-        if is_internal(tcx, did) {
+        if is_internal(tcx, did) || is_trusted(tcx, did) {
             return;
         }
         let purity = get_purity(tcx, did);
@@ -116,15 +117,20 @@ impl<'a, 'tcx> thir::visit::Visitor<'a, 'tcx> for PurityVisitor<'a, 'tcx> {
                             let caller = self.tcx.def_path_str(self.did);
                             format!("called logical function '{name}' in program function {caller}")
                         } else {
+                            let caller = self.tcx.def_path_str(self.did);
                             format!(
-                                "called {} function '{}' from {} function",
+                                "called {} function '{}' from {} function {}",
                                 called_purity,
                                 self.tcx.def_path_str(func_did),
-                                self.purity
+                                self.purity,
+                                caller
                             )
                         };
 
-                        todo!("Error handling")
+                        todo!(
+                            "Error handling {msg} {:?}",
+                            self.tcx.get_attrs_unchecked(self.did)
+                        )
                         // self.tcx.sess.span_err_with_code(
                         // self.thir[fun].span,
                         // msg,

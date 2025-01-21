@@ -17,6 +17,9 @@ impl<T: ?Sized> Deref for Ghost<T> {
 impl<T: ShallowModel + ?Sized> ShallowModel for Ghost<T> {
     type ShallowModelTy = T::ShallowModelTy;
 
+    // Some comment
+
+    #[trusted]
     #[logic]
     fn shallow_model(self) -> Self::ShallowModelTy {
         panic!()

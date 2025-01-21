@@ -40,6 +40,10 @@ pub(crate) fn is_internal(tcx: TyCtxt, def_id: DefId) -> bool {
     .is_some()
 }
 
+pub(crate) fn is_trusted(tcx: TyCtxt, def_id: DefId) -> bool {
+    get_attr(tcx.get_attrs_unchecked(def_id), &["rml", "decl", "trusted"]).is_some()
+}
+
 pub(crate) fn is_spec(tcx: TyCtxt, def_id: DefId) -> bool {
     get_spec_part(tcx.get_attrs_unchecked(def_id)).is_some()
 }

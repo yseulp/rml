@@ -104,6 +104,7 @@ fn setup_plugin() {
     // Did the user ask to compile this crate? Either they explicitly invoked
     // `rml-rustc` or this is a primary package.
     let user_asked_for = !is_wrapper || primary_package;
+    // eprintln!("{is_wrapper} {primary_package} {has_contracts}");
 
     if normal_rustc || !(user_asked_for || has_contracts) {
         RunCompiler::new(&args, &mut DefaultCallbacks {})
