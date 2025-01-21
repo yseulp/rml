@@ -130,7 +130,11 @@ impl<'a, 'tcx> thir::visit::Visitor<'a, 'tcx> for PurityVisitor<'a, 'tcx> {
                     // );
                 }
             } else {
-                todo!("Why is this an error? {fun:?}")
+                let ty = self.thir[fun].ty.kind();
+                eprintln!("Encountered error in function {fun:?}");
+                eprintln!("Expr: {expr:?}");
+                eprintln!("Type of callee: {ty:?}");
+                todo!("Why is this an error?")
             }
         }
         thir::visit::walk_expr(self, expr)
