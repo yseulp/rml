@@ -36,10 +36,10 @@ pub use logic::{int::Int, ops::IndexLogic, seq::Seq};
 pub use model::{DeepModel, ShallowModel};
 pub use well_founded::{well_founded_check, WellFounded};
 
-#[cfg(creusot)]
+#[cfg(rml)]
 pub mod ghost;
 
-#[cfg(not(creusot))]
+#[cfg(not(rml))]
 pub mod ghost {
     pub struct Ghost<T>(std::marker::PhantomData<T>)
     where
