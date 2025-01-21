@@ -30,7 +30,7 @@ ast_enum_of_structs! {
         /// A slice literal term: `[a, b, c, d]`.
         Array(TermArray),
 
-        /// A binary operation: `a + b`, `a += b`.
+        /// A binary operation: `a + b`.
         Binary(TermBinary),
 
         /// A blocked scope: `{ ... }`.
