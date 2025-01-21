@@ -14,3 +14,6 @@ syn = { version = "2.0.22", features = [
     "visit",
     "visit-mut",
 ] }
+
+[lints.rust]
+unexpected_cfgs = { level = "warn", check-cfg = ['cfg(doc_cfg)'] }

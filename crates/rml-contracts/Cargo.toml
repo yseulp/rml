@@ -7,3 +7,6 @@ edition = "2021"
 [dependencies]
 rml-proc = { path = "../rml-proc" }
 rml-proc-dummy = { path = "../rml-proc-dummy" }
+
+[lints.rust]
+unexpected_cfgs = { level = "warn", check-cfg = ['cfg(rml)', 'cfg(doc_cfg)'] }
