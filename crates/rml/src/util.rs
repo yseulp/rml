@@ -3,7 +3,7 @@ use rustc_hir::def_id::DefId;
 use rustc_middle::ty::TyCtxt;
 use rustc_span::Symbol;
 
-pub(crate) fn is_attr(attr: &Attribute, str: &str) -> bool {
+pub fn is_attr(attr: &Attribute, str: &str) -> bool {
     match &attr.kind {
         AttrKind::DocComment(..) => false,
         AttrKind::Normal(attr) => {
@@ -15,7 +15,7 @@ pub(crate) fn is_attr(attr: &Attribute, str: &str) -> bool {
     }
 }
 
-pub(crate) fn is_spec_attr(attr: &Attribute, str: &str) -> bool {
+pub fn is_spec_attr(attr: &Attribute, str: &str) -> bool {
     match &attr.kind {
         AttrKind::DocComment(..) => false,
         AttrKind::Normal(attr) => {
@@ -28,11 +28,11 @@ pub(crate) fn is_spec_attr(attr: &Attribute, str: &str) -> bool {
     }
 }
 
-pub(crate) fn is_logic(tcx: TyCtxt, def_id: DefId) -> bool {
+pub fn is_logic(tcx: TyCtxt, def_id: DefId) -> bool {
     get_attr(tcx.get_attrs_unchecked(def_id), &["rml", "decl", "logic"]).is_some()
 }
 
-pub(crate) fn is_internal(tcx: TyCtxt, def_id: DefId) -> bool {
+pub fn is_internal(tcx: TyCtxt, def_id: DefId) -> bool {
     get_attr(
         tcx.get_attrs_unchecked(def_id),
         &["rml", "decl", "internal"],
@@ -40,23 +40,23 @@ pub(crate) fn is_internal(tcx: TyCtxt, def_id: DefId) -> bool {
     .is_some()
 }
 
-pub(crate) fn is_trusted(tcx: TyCtxt, def_id: DefId) -> bool {
+pub fn is_trusted(tcx: TyCtxt, def_id: DefId) -> bool {
     get_attr(tcx.get_attrs_unchecked(def_id), &["rml", "decl", "trusted"]).is_some()
 }
 
-pub(crate) fn is_spec(tcx: TyCtxt, def_id: DefId) -> bool {
+pub fn is_spec(tcx: TyCtxt, def_id: DefId) -> bool {
     get_spec_part(tcx.get_attrs_unchecked(def_id)).is_some()
 }
 
 /// Whether the item has a `#[pure]` attribute. Even if this returns `false`, it
 /// might be pure.
-pub(crate) fn is_declared_pure(tcx: TyCtxt, def_id: DefId) -> bool {
+pub fn is_declared_pure(tcx: TyCtxt, def_id: DefId) -> bool {
     get_attr(tcx.get_attrs_unchecked(def_id), &["rml", "decl", "pure"]).is_some()
 }
 
 /// Whether the item has a `#[strictly_pure]` attribute. Even if this returns
 /// `false`, it might be strictly pure or pure.
-pub(crate) fn is_declared_strictly_pure(tcx: TyCtxt, def_id: DefId) -> bool {
+pub fn is_declared_strictly_pure(tcx: TyCtxt, def_id: DefId) -> bool {
     get_attr(
         tcx.get_attrs_unchecked(def_id),
         &["rml", "decl", "strictly_pure"],
@@ -64,7 +64,7 @@ pub(crate) fn is_declared_strictly_pure(tcx: TyCtxt, def_id: DefId) -> bool {
     .is_some()
 }
 
-pub(crate) fn get_spec_part<'a>(attrs: &'a [Attribute]) -> Option<(Symbol, &'a AttrItem)> {
+pub fn get_spec_part<'a>(attrs: &'a [Attribute]) -> Option<(Symbol, &'a AttrItem)> {
     for attr in attrs.iter() {
         if attr.is_doc_comment() {
             continue;
@@ -85,7 +85,7 @@ pub(crate) fn get_spec_part<'a>(attrs: &'a [Attribute]) -> Option<(Symbol, &'a A
     None
 }
 
-pub(crate) fn get_attr<'a>(attrs: &'a [Attribute], path: &[&str]) -> Option<&'a AttrItem> {
+pub fn get_attr<'a>(attrs: &'a [Attribute], path: &[&str]) -> Option<&'a AttrItem> {
     for attr in attrs.iter() {
         if attr.is_doc_comment() {
             continue;

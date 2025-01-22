@@ -4,19 +4,18 @@
 //! See especially: [FromHir], [HirInto].
 
 use rustc_ast::{
-    expand::autodiff_attrs::valid_ret_activity, BindingMode, BorrowKind, ByRef, CaptureBy, FloatTy,
-    IntTy, LitFloatType, LitIntType, LitKind, Movability, Mutability, StrStyle, TraitObjectSyntax,
-    UintTy,
+    BindingMode, BorrowKind, ByRef, CaptureBy, FloatTy, IntTy, LitFloatType, LitIntType, LitKind,
+    Mutability, StrStyle, TraitObjectSyntax, UintTy,
 };
 use rustc_hir::{
     def::{CtorKind, CtorOf, DefKind, NonMacroAttrKind, Res},
     AnonConst, Arm, ArrayLen, BareFnTy, BinOp, BinOpKind, Block, BlockCheckMode, Body, Closure,
     ClosureBinder, ConstArg, ConstArgKind, Constness, DotDotPos, Expr, ExprField, ExprKind, FnDecl,
     FnRetTy, GenericArg, GenericArgs, GenericArgsParentheses, GenericBound, GenericParam,
-    GenericParamKind, GenericParamSource, ImplicitSelfKind, InferArg, LangItem, LetExpr, LetStmt,
-    Lifetime, LifetimeName, LifetimeParamKind, Lit, MatchSource, MutTy, OpaqueTy, Param, ParamName,
-    Pat, PatField, PatKind, Path, PathSegment, PolyTraitRef, PrimTy, QPath, RangeEnd, Stmt,
-    StmtKind, TraitRef, Ty, TyKind, UnOp, UnsafeSource,
+    GenericParamKind, GenericParamSource, ImplicitSelfKind, InferArg, LetExpr, LetStmt, Lifetime,
+    LifetimeName, LifetimeParamKind, Lit, MatchSource, MutTy, OpaqueTy, Param, ParamName, Pat,
+    PatField, PatKind, Path, PathSegment, PolyTraitRef, PrimTy, QPath, RangeEnd, Stmt, StmtKind,
+    TraitRef, Ty, TyKind, UnOp, UnsafeSource,
 };
 use rustc_middle::hir::map::Map;
 use rustc_span::{MacroKind, Symbol};
@@ -30,13 +29,12 @@ use super::{
     TermDotDotPos, TermField, TermFloatTy, TermFnDecl, TermFnRetTy, TermGenericArg,
     TermGenericArgs, TermGenericArgsParentheses, TermGenericBound, TermGenericParam,
     TermGenericParamKind, TermGenericParamSource, TermImplicitSelfKind, TermInferArg, TermIntTy,
-    TermKind, TermLangItem, TermLet, TermLetStmt, TermLifetime, TermLifetimeName,
-    TermLifetimeParamKind, TermLit, TermLitFloatType, TermLitIntType, TermLitKind, TermMacroKind,
-    TermMatchSource, TermMutTy, TermMutability, TermNonMacroAttrKind, TermOpaqueTy, TermParam,
-    TermParamName, TermPat, TermPatField, TermPatKind, TermPath, TermPathSegment, TermPolyTraitRef,
-    TermPrimTy, TermQPath, TermRangeEnd, TermRes, TermStmt, TermStmtKind, TermStrStyle,
-    TermTraitBoundModifier, TermTraitObjectSyntax, TermTraitRef, TermTy, TermTyKind,
-    TermTypeBinding, TermTypeBindingKind, TermUintTy, TermUnOp, TermUnsafeSource,
+    TermKind, TermLet, TermLetStmt, TermLifetime, TermLifetimeName, TermLifetimeParamKind, TermLit,
+    TermLitFloatType, TermLitIntType, TermLitKind, TermMacroKind, TermMatchSource, TermMutTy,
+    TermMutability, TermNonMacroAttrKind, TermOpaqueTy, TermParam, TermParamName, TermPat,
+    TermPatField, TermPatKind, TermPath, TermPathSegment, TermPolyTraitRef, TermPrimTy, TermQPath,
+    TermRangeEnd, TermRes, TermStmt, TermStmtKind, TermStrStyle, TermTraitObjectSyntax,
+    TermTraitRef, TermTy, TermTyKind, TermUintTy, TermUnOp, TermUnsafeSource,
 };
 
 /// Allows translating from `T` to `Self`, where `T` is a HIR structure. Since
@@ -637,7 +635,7 @@ impl<'hir> FromHir<'hir, TyKind<'hir>> for TermTyKind {
 }
 
 impl<'hir> FromHir<'hir, &'hir OpaqueTy<'hir>> for TermOpaqueTy {
-    fn from_hir(value: &'hir OpaqueTy<'hir>, hir: Map<'hir>) -> Self {
+    fn from_hir(value: &'hir OpaqueTy<'hir>, _hir: Map<'hir>) -> Self {
         Self {
             hir_id: value.hir_id.into(),
             def_id: value.def_id.into(),

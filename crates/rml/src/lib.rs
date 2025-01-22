@@ -24,7 +24,7 @@ pub mod locset;
 pub mod spec;
 pub mod suppress_borrowck;
 pub mod term;
-pub(crate) mod util;
+pub mod util;
 
 /// Options for RML.
 #[derive(Debug, Clone)]
