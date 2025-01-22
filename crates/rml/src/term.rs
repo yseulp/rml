@@ -26,25 +26,34 @@ pub struct Term {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum TermKind {
     /// Array term, e.g., `[e1, e2, ..., eN]`.
-    Array(Vec<Term>),
+    Array { terms: Vec<Term> },
     /// A call, e.g., `f(a1, ..., aN)`.
-    Call(Box<Term>, Vec<Term>),
+    Call { callee: Box<Term>, args: Vec<Term> },
     /// A method call, e.g., `x.foo::<'static, Bar, Baz>(a, b, c, d)`.
     ///
     /// The [TermPathSegment] is the path of the method, [Term] is the callee,
     /// `Vec<Term>` are the arguments, and [SpanWrapper] is the original
     /// expressions span.
-    MethodCall(TermPathSegment, Box<Term>, Vec<Term>, SpanWrapper),
+    MethodCall {
+        path: TermPathSegment,
+        callee: Box<Term>,
+        args: Vec<Term>,
+        span: SpanWrapper,
+    },
     /// A tuple, e.g., `(e1, ..., eN)`.
-    Tup(Vec<Term>),
+    Tup { terms: Vec<Term> },
     /// A binary term, e.g., `e1 + eN`.
-    Binary(TermBinOp, Box<Term>, Box<Term>),
+    Binary {
+        op: TermBinOp,
+        left: Box<Term>,
+        right: Box<Term>,
+    },
     /// A unary term, e.g., `!e`.
-    Unary(TermUnOp, Box<Term>),
+    Unary { op: TermUnOp, child: Box<Term> },
     /// A term literal, e.g., `1`.
     Lit(TermLit),
     /// A cast term, e.g., `foo as f64`.
-    Cast(Box<Term>, TermTy),
+    Cast { term: Box<Term>, ty: TermTy },
     /// A let `$pat = $term` term.
     ///
     /// These are not `Local` and only occur as terms. The `let Some(x) = foo()`
@@ -53,42 +62,72 @@ pub enum TermKind {
     /// An if block, with an optional else block.
     ///
     /// I.e., `if <term> { <term> } else { <term> }`.
-    If(Box<Term>, Box<Term>, Option<Box<Term>>),
+    If {
+        cond: Box<Term>,
+        then: Box<Term>,
+        r#else: Option<Box<Term>>,
+    },
     /// A `match` block, with a source that indicates whether or not it is the
     /// result of a desugaring, and if so, which kind.
-    Match(Box<Term>, Vec<TermArm>, TermMatchSource),
+    Match {
+        term: Box<Term>,
+        arms: Vec<TermArm>,
+        src: TermMatchSource,
+    },
     /// A closure (e.g., `|a, b, c| {a + b + c}`).
     Closure(TermClosure),
     /// A block (e.g., `{ ... }`).
     Block(TermBlock),
     /// Access of a named (e.g., `obj.foo`) or unnamed (e.g., `obj.0`) struct or
     /// tuple field.
-    Field(Box<Term>, IdentWrapper),
+    Field {
+        term: Box<Term>,
+        field: IdentWrapper,
+    },
     /// An indexing operation (`foo[2]`). Similar to [TermKind::MethodCall], the
     /// final [SpanWrapper] represents the span of the brackets and index.
-    Index(Box<Term>, Box<Term>, SpanWrapper),
+    Index {
+        term: Box<Term>,
+        idx: Box<Term>,
+        span: SpanWrapper,
+    },
     /// Path to a definition, possibly containing lifetime or type parameters.
     Path(TermQPath),
     /// A referencing operation (i.e., `&a` or `&mut a`).
     ///
     /// TODO: Remove?
-    AddrOf(TermBorrowKind, TermMutability, Box<Term>),
+    AddrOf {
+        kind: TermBorrowKind,
+        mutability: TermMutability,
+        term: Box<Term>,
+    },
     /// A struct or struct-like variant literal term.
     ///
     /// E.g., `Foo {x: 1, y: 2}`, or `Foo {x: 1, .. base}`, where `base` is the
     /// `Option<Expr>`.
-    Struct(TermQPath, Vec<TermField>, Option<Box<Term>>),
+    Struct {
+        path: TermQPath,
+        fields: Vec<TermField>,
+        rest: Option<Box<Term>>,
+    },
     /// An array literal constructed from one repeated element.
     ///
     /// E.g., `[1; 5]`. The first term is the element to be repeated; the
     /// second is the number of times to repeat it.
-    Repeat(Box<Term>, Box<TermArrayLen>),
+    Repeat {
+        term: Box<Term>,
+        len: Box<TermArrayLen>,
+    },
 
     // RML special kinds
     /// A quantor like `forall(|x: int| x > 0)`.
-    Quantor(QuantorKind, QuantorParam, Box<Term>),
+    Quantor {
+        kind: QuantorKind,
+        param: QuantorParam,
+        term: Box<Term>,
+    },
     /// A model term, e.g., `x@`.
-    Model(ModelKind, Box<Term>),
+    Model { kind: ModelKind, term: Box<Term> },
 }
 
 /// The kind of a model term.
@@ -175,19 +214,31 @@ pub struct TermLit {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum TermLitKind {
     /// String literal, e.g., `"hello"`.
-    Str(SymbolWrapper, TermStrStyle),
+    Str {
+        symbol: SymbolWrapper,
+        style: TermStrStyle,
+    },
     /// Byte string literal, e.g., `b"hello"`.
-    ByteStr(Arc<[u8]>, TermStrStyle),
+    ByteStr {
+        bytes: Arc<[u8]>,
+        style: TermStrStyle,
+    },
     /// C-string literal.
-    CStr(Arc<[u8]>, TermStrStyle),
+    CStr {
+        bytes: Arc<[u8]>,
+        style: TermStrStyle,
+    },
     /// A raw byte.
     Byte(u8),
     /// A char `'h'`.
     Char(char),
     /// Integer literal and its bitsize, e.g., 42u128.
-    Int(u128, TermLitIntType),
+    Int { value: u128, ty: TermLitIntType },
     /// Float literal, e.g., `42.5f64`.
-    Float(SymbolWrapper, TermLitFloatType),
+    Float {
+        symbol: SymbolWrapper,
+        ty: TermLitFloatType,
+    },
     /// Bool literal, i.e., `true` or `false`.
     Bool(bool),
 }

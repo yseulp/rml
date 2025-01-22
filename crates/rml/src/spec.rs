@@ -196,15 +196,27 @@ impl LoopSpec {
 #[derive(Debug, Clone, Serialize)]
 pub struct SerializableSpecMap<'s> {
     /// All specified functions and their specifications.
-    pub fn_specs: Vec<(DefIdWrapper, &'s FnSpec)>,
+    pub fn_specs: Vec<SerializableEntry<DefIdWrapper, &'s FnSpec>>,
     /// All specified structs and their specifications.
-    pub struct_invs: Vec<(DefIdWrapper, &'s ItemInvs)>,
+    pub struct_invs: Vec<SerializableEntry<DefIdWrapper, &'s ItemInvs>>,
     /// All specified enums and their specifications.
-    pub enum_invs: Vec<(DefIdWrapper, &'s ItemInvs)>,
+    pub enum_invs: Vec<SerializableEntry<DefIdWrapper, &'s ItemInvs>>,
     /// All specified traits and their specifications.
-    pub trait_invs: Vec<(DefIdWrapper, &'s ItemInvs)>,
+    pub trait_invs: Vec<SerializableEntry<DefIdWrapper, &'s ItemInvs>>,
     /// All specified loops and their specifications.
-    pub loop_specs: Vec<(HirIdWrapper, &'s LoopSpec)>,
+    pub loop_specs: Vec<SerializableEntry<HirIdWrapper, &'s LoopSpec>>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct SerializableEntry<K, V> {
+    id: K,
+    value: V,
+}
+
+impl<K, V> SerializableEntry<K, V> {
+    pub fn new(id: K, value: V) -> Self {
+        Self { id, value }
+    }
 }
 
 /// All specs collected from the crate.
@@ -272,11 +284,31 @@ impl<'hir> SpecMap {
     /// Make the structure serializable. See [SerializableSpecMap].
     pub fn serializable(&self) -> SerializableSpecMap {
         SerializableSpecMap {
-            fn_specs: self.fn_specs.iter().map(|(did, s)| (*did, s)).collect(),
-            struct_invs: self.struct_invs.iter().map(|(did, i)| (*did, i)).collect(),
-            enum_invs: self.enum_invs.iter().map(|(did, i)| (*did, i)).collect(),
-            trait_invs: self.trait_invs.iter().map(|(did, i)| (*did, i)).collect(),
-            loop_specs: self.loop_specs.iter().map(|(hid, s)| (*hid, s)).collect(),
+            fn_specs: self
+                .fn_specs
+                .iter()
+                .map(|(did, s)| SerializableEntry::new(*did, s))
+                .collect(),
+            struct_invs: self
+                .struct_invs
+                .iter()
+                .map(|(did, i)| SerializableEntry::new(*did, i))
+                .collect(),
+            enum_invs: self
+                .enum_invs
+                .iter()
+                .map(|(did, i)| SerializableEntry::new(*did, i))
+                .collect(),
+            trait_invs: self
+                .trait_invs
+                .iter()
+                .map(|(did, i)| SerializableEntry::new(*did, i))
+                .collect(),
+            loop_specs: self
+                .loop_specs
+                .iter()
+                .map(|(hid, s)| SerializableEntry::new(*hid, s))
+                .collect(),
         }
     }
 }

@@ -87,7 +87,9 @@ impl<'hir> FromHir<'hir, &'hir Expr<'hir>> for Term {
 impl<'hir> FromHir<'hir, ExprKind<'hir>> for TermKind {
     fn from_hir(value: ExprKind<'hir>, hir: Map<'hir>) -> Self {
         match value {
-            ExprKind::Array(exprs) => Self::Array(exprs.iter().map(|e| e.hir_into(hir)).collect()),
+            ExprKind::Array(exprs) => Self::Array {
+                terms: exprs.iter().map(|e| e.hir_into(hir)).collect(),
+            },
             ExprKind::Call(recv, args) => match recv.kind {
                 ExprKind::Path(QPath::Resolved(None, Path { segments, .. }))
                     if is_rml_fn(segments) =>
@@ -118,7 +120,11 @@ impl<'hir> FromHir<'hir, ExprKind<'hir>> for TermKind {
 
                         let term = clo.body.value;
 
-                        return Self::Quantor(qkind, param, term);
+                        return Self::Quantor {
+                            kind: qkind,
+                            param,
+                            term,
+                        };
                     }
 
                     match kind {
@@ -126,30 +132,40 @@ impl<'hir> FromHir<'hir, ExprKind<'hir>> for TermKind {
                             let left: Term = (&args[0]).hir_into(hir);
                             let right: Term = (&args[1]).hir_into(hir);
 
-                            TermKind::Binary(
-                                TermBinOp {
+                            TermKind::Binary {
+                                op: TermBinOp {
                                     node: TermBinOpKind::LogEq,
                                     span: recv.span.into(),
                                 },
-                                left.into(),
-                                right.into(),
-                            )
+                                left: left.into(),
+                                right: right.into(),
+                            }
                         }
                         RmlFnKind::Stub(_) => unreachable!(),
                         RmlFnKind::TraitFn(TraitFn::ShallowModel) => {
                             let term: Term = (&args[0]).hir_into(hir);
-                            TermKind::Model(super::ModelKind::Shallow, term.into())
+                            TermKind::Model {
+                                kind: super::ModelKind::Shallow,
+                                term: term.into(),
+                            }
                         }
                         RmlFnKind::TraitFn(TraitFn::DeepModel) => {
                             let term: Term = (&args[0]).hir_into(hir);
-                            TermKind::Model(super::ModelKind::Deep, term.into())
+                            TermKind::Model {
+                                kind: super::ModelKind::Deep,
+                                term: term.into(),
+                            }
                         }
                         RmlFnKind::TraitFn(TraitFn::Index) => {
                             let term: Term = (&args[0]).hir_into(hir);
                             let index: Term = (&args[1]).hir_into(hir);
                             let span = index.span;
 
-                            TermKind::Index(term.into(), index.into(), span)
+                            TermKind::Index {
+                                term: term.into(),
+                                idx: index.into(),
+                                span,
+                            }
                         }
                         RmlFnKind::TraitFn(
                             ord @ TraitFn::OrdLt
@@ -168,68 +184,82 @@ impl<'hir> FromHir<'hir, ExprKind<'hir>> for TermKind {
                                 _ => unreachable!(),
                             };
 
-                            TermKind::Binary(
-                                TermBinOp {
+                            TermKind::Binary {
+                                op: TermBinOp {
                                     node,
                                     span: recv.span.into(),
                                 },
-                                left.into(),
-                                right.into(),
-                            )
+                                left: left.into(),
+                                right: right.into(),
+                            }
                         }
                     }
                 }
-                _ => Self::Call(
-                    Box::new(recv.hir_into(hir)),
-                    args.iter().map(|a| a.hir_into(hir)).collect(),
-                ),
+                _ => Self::Call {
+                    callee: Box::new(recv.hir_into(hir)),
+                    args: args.iter().map(|a| a.hir_into(hir)).collect(),
+                },
             },
-            ExprKind::MethodCall(path, recv, args, span) => Self::MethodCall(
-                path.hir_into(hir),
-                Box::new(recv.hir_into(hir)),
-                args.iter().map(|a| a.hir_into(hir)).collect(),
-                span.into(),
-            ),
-            ExprKind::Tup(exprs) => Self::Tup(exprs.iter().map(|e| e.hir_into(hir)).collect()),
-            ExprKind::Binary(op, left, right) => Self::Binary(
-                op.into(),
-                Box::new(left.hir_into(hir)),
-                Box::new(right.hir_into(hir)),
-            ),
-            ExprKind::Unary(op, expr) => Self::Unary(op.into(), Box::new(expr.hir_into(hir))),
+            ExprKind::MethodCall(path, recv, args, span) => Self::MethodCall {
+                path: path.hir_into(hir),
+                callee: Box::new(recv.hir_into(hir)),
+                args: args.iter().map(|a| a.hir_into(hir)).collect(),
+                span: span.into(),
+            },
+            ExprKind::Tup(exprs) => Self::Tup {
+                terms: exprs.iter().map(|e| e.hir_into(hir)).collect(),
+            },
+            ExprKind::Binary(op, left, right) => Self::Binary {
+                op: op.into(),
+                left: Box::new(left.hir_into(hir)),
+                right: Box::new(right.hir_into(hir)),
+            },
+            ExprKind::Unary(op, expr) => Self::Unary {
+                op: op.into(),
+                child: Box::new(expr.hir_into(hir)),
+            },
             ExprKind::Lit(lit) => Self::Lit(lit.into()),
-            ExprKind::Cast(expr, ty) => Self::Cast(Box::new(expr.hir_into(hir)), ty.hir_into(hir)),
+            ExprKind::Cast(expr, ty) => Self::Cast {
+                term: Box::new(expr.hir_into(hir)),
+                ty: ty.hir_into(hir),
+            },
             ExprKind::Let(l) => Self::Let(l.hir_into(hir)),
-            ExprKind::If(cond, then, els) => Self::If(
-                Box::new(cond.hir_into(hir)),
-                Box::new(then.hir_into(hir)),
-                els.map(|e| Box::new(e.hir_into(hir))),
-            ),
-            ExprKind::Match(expr, arms, source) => Self::Match(
-                Box::new(expr.hir_into(hir)),
-                arms.iter().map(|a| a.hir_into(hir)).collect(),
-                source.into(),
-            ),
+            ExprKind::If(cond, then, els) => Self::If {
+                cond: Box::new(cond.hir_into(hir)),
+                then: Box::new(then.hir_into(hir)),
+                r#else: els.map(|e| Box::new(e.hir_into(hir))),
+            },
+            ExprKind::Match(expr, arms, source) => Self::Match {
+                term: Box::new(expr.hir_into(hir)),
+                arms: arms.iter().map(|a| a.hir_into(hir)).collect(),
+                src: source.into(),
+            },
             ExprKind::Closure(c) => Self::Closure(c.hir_into(hir)),
             ExprKind::Block(b, _) => Self::Block(b.hir_into(hir)),
-            ExprKind::Field(expr, field) => Self::Field(Box::new(expr.hir_into(hir)), field.into()),
-            ExprKind::Index(expr, idx, span) => Self::Index(
-                Box::new(expr.hir_into(hir)),
-                Box::new(idx.hir_into(hir)),
-                span.into(),
-            ),
+            ExprKind::Field(expr, field) => Self::Field {
+                term: Box::new(expr.hir_into(hir)),
+                field: field.into(),
+            },
+            ExprKind::Index(expr, idx, span) => Self::Index {
+                term: Box::new(expr.hir_into(hir)),
+                idx: Box::new(idx.hir_into(hir)),
+                span: span.into(),
+            },
             ExprKind::Path(p) => Self::Path(p.hir_into(hir)),
-            ExprKind::AddrOf(brw, m, expr) => {
-                Self::AddrOf(brw.into(), m.into(), Box::new(expr.hir_into(hir)))
-            }
-            ExprKind::Struct(p, fields, rest) => Self::Struct(
-                p.hir_into(hir),
-                fields.iter().map(|f| f.hir_into(hir)).collect(),
-                rest.map(|r| Box::new(r.hir_into(hir))),
-            ),
-            ExprKind::Repeat(expr, len) => {
-                Self::Repeat(Box::new(expr.hir_into(hir)), Box::new(len.hir_into(hir)))
-            }
+            ExprKind::AddrOf(brw, m, expr) => Self::AddrOf {
+                kind: brw.into(),
+                mutability: m.into(),
+                term: Box::new(expr.hir_into(hir)),
+            },
+            ExprKind::Struct(p, fields, rest) => Self::Struct {
+                path: p.hir_into(hir),
+                fields: fields.iter().map(|f| f.hir_into(hir)).collect(),
+                rest: rest.map(|r| Box::new(r.hir_into(hir))),
+            },
+            ExprKind::Repeat(expr, len) => Self::Repeat {
+                term: Box::new(expr.hir_into(hir)),
+                len: Box::new(len.hir_into(hir)),
+            },
             k => panic!("Unsupported kind {k:?}"),
         }
     }
@@ -742,13 +772,28 @@ impl<'hir> From<&'hir Lit> for TermLit {
 impl<'hir> From<&'hir LitKind> for TermLitKind {
     fn from(value: &'hir LitKind) -> Self {
         match value {
-            LitKind::Str(sym, style) => Self::Str((*sym).into(), style.into()),
-            LitKind::ByteStr(sl, style) => Self::ByteStr(sl.clone(), style.into()),
-            LitKind::CStr(sl, style) => Self::CStr(sl.clone(), style.into()),
+            LitKind::Str(sym, style) => Self::Str {
+                symbol: (*sym).into(),
+                style: style.into(),
+            },
+            LitKind::ByteStr(sl, style) => Self::ByteStr {
+                bytes: sl.clone(),
+                style: style.into(),
+            },
+            LitKind::CStr(sl, style) => Self::CStr {
+                bytes: sl.clone(),
+                style: style.into(),
+            },
             LitKind::Byte(b) => Self::Byte(*b),
             LitKind::Char(c) => Self::Char(*c),
-            LitKind::Int(i, t) => Self::Int(i.0, t.into()),
-            LitKind::Float(sym, t) => Self::Float((*sym).into(), t.into()),
+            LitKind::Int(i, t) => Self::Int {
+                value: i.0,
+                ty: t.into(),
+            },
+            LitKind::Float(sym, t) => Self::Float {
+                symbol: (*sym).into(),
+                ty: t.into(),
+            },
             LitKind::Bool(b) => Self::Bool(*b),
             LitKind::Err(_) => unreachable!(),
         }
