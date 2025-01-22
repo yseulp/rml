@@ -102,8 +102,8 @@ impl<'hir> FromHir<'hir, ExprKind<'hir>> for TermKind {
                         let param = {
                             let c_param = &clo.body.params[0];
 
-                            let ident = match c_param.pat.kind {
-                                TermPatKind::Binding(_, _, ident, _) => ident,
+                            let ident = match &c_param.pat.kind {
+                                TermPatKind::Binding(_, _, ident, _) => ident.clone(),
                                 _ => unreachable!(),
                             };
 

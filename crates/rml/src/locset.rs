@@ -5,7 +5,7 @@ mod translation;
 use serde::{Deserialize, Serialize};
 
 use crate::term::{
-    wrappers::{HirIdWrapper, IdentWrapper, SpanWrapper},
+    wrappers::{HirId as HirIdWrapper, Ident as IdentWrapper, Span as SpanWrapper},
     Term, TermQPath,
 };
 

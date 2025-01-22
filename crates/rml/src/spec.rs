@@ -14,13 +14,12 @@ use crate::{
     locset::LocSet,
     term::{
         translation::HirInto,
-        wrappers::{DefIdWrapper, HirIdWrapper},
+        wrappers::{DefId as TermDefId, HirId as TermHirId},
         Term,
     },
 };
 
 pub(crate) mod hir;
-pub(crate) mod serialize;
 
 /// The kind of a function specification.
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
@@ -35,7 +34,7 @@ pub enum SpecKind {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SpecCase {
     /// DefId of the spec function.
-    pub did: DefIdWrapper,
+    pub did: TermDefId,
     /// Kind of the case. Defines the execution.
     pub kind: SpecKind,
     /// Name of the case.
@@ -109,7 +108,7 @@ impl<'hir> SpecCase {
 #[derive(Debug, Clone, Serialize)]
 pub struct FnSpec {
     /// The specified function.
-    pub target: DefIdWrapper,
+    pub target: TermDefId,
     /// All cases of the specification.
     pub cases: Vec<SpecCase>,
 }
@@ -138,7 +137,7 @@ impl<'hir> FnSpec {
 #[derive(Debug, Clone, Serialize)]
 pub struct ItemInvs {
     /// The item which the invariants describe.
-    pub target: DefIdWrapper,
+    pub target: TermDefId,
     /// All invariants.
     pub invariants: Vec<Term>,
 }
@@ -160,7 +159,7 @@ impl<'hir> ItemInvs {
 #[derive(Debug, Clone, Serialize)]
 pub struct LoopSpec {
     /// The specified loop.
-    pub target: HirIdWrapper,
+    pub target: TermHirId,
     /// Invariants of the loop.
     pub invariants: Vec<Term>,
     /// What the loop may modify.
@@ -196,15 +195,15 @@ impl LoopSpec {
 #[derive(Debug, Clone, Serialize)]
 pub struct SerializableSpecMap<'s> {
     /// All specified functions and their specifications.
-    pub fn_specs: Vec<SerializableEntry<DefIdWrapper, &'s FnSpec>>,
+    pub fn_specs: Vec<SerializableEntry<TermDefId, &'s FnSpec>>,
     /// All specified structs and their specifications.
-    pub struct_invs: Vec<SerializableEntry<DefIdWrapper, &'s ItemInvs>>,
+    pub struct_invs: Vec<SerializableEntry<TermDefId, &'s ItemInvs>>,
     /// All specified enums and their specifications.
-    pub enum_invs: Vec<SerializableEntry<DefIdWrapper, &'s ItemInvs>>,
+    pub enum_invs: Vec<SerializableEntry<TermDefId, &'s ItemInvs>>,
     /// All specified traits and their specifications.
-    pub trait_invs: Vec<SerializableEntry<DefIdWrapper, &'s ItemInvs>>,
+    pub trait_invs: Vec<SerializableEntry<TermDefId, &'s ItemInvs>>,
     /// All specified loops and their specifications.
-    pub loop_specs: Vec<SerializableEntry<HirIdWrapper, &'s LoopSpec>>,
+    pub loop_specs: Vec<SerializableEntry<TermHirId, &'s LoopSpec>>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -223,15 +222,15 @@ impl<K, V> SerializableEntry<K, V> {
 #[derive(Debug, Clone)]
 pub struct SpecMap {
     /// Map from specified functions to their specs.
-    pub fn_specs: HashMap<DefIdWrapper, FnSpec>,
+    pub fn_specs: HashMap<TermDefId, FnSpec>,
     /// Map from specified structs to their invariants.
-    pub struct_invs: HashMap<DefIdWrapper, ItemInvs>,
+    pub struct_invs: HashMap<TermDefId, ItemInvs>,
     /// Map from specified enums to their invariants.
-    pub enum_invs: HashMap<DefIdWrapper, ItemInvs>,
+    pub enum_invs: HashMap<TermDefId, ItemInvs>,
     /// Map from specified traits to their invariants.
-    pub trait_invs: HashMap<DefIdWrapper, ItemInvs>,
+    pub trait_invs: HashMap<TermDefId, ItemInvs>,
     /// Map from specified loops to their invariants.
-    pub loop_specs: HashMap<HirIdWrapper, LoopSpec>,
+    pub loop_specs: HashMap<TermHirId, LoopSpec>,
 }
 
 impl<'hir> SpecMap {
@@ -268,7 +267,7 @@ impl<'hir> SpecMap {
         let mut loop_specs = HashMap::with_capacity(hir_smap.loop_specs.len());
         for (hir_id, hspec) in &hir_smap.loop_specs {
             let spec = LoopSpec::new(*hir_id, hir, hspec);
-            let hir_id_w = (*hir_id).into();
+            let hir_id_w: TermHirId = (*hir_id).into();
             loop_specs.insert(hir_id_w, spec);
         }
 

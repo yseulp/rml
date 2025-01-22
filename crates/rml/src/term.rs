@@ -3,11 +3,13 @@
 use std::sync::Arc;
 
 use serde::{Deserialize, Serialize};
-use wrappers::{LocalDefIdWrapper, SpanWrapper};
+use wrappers::{LocalDefId as LocalDefIdWrapper, Span as SpanWrapper};
 
-use self::wrappers::{DefIdWrapper, HirIdWrapper, IdentWrapper, ItemIdWrapper, SymbolWrapper};
+use self::wrappers::{
+    DefId as DefIdWrapper, HirId as HirIdWrapper, Ident as IdentWrapper, ItemId as ItemIdWrapper,
+    Symbol as SymbolWrapper,
+};
 
-mod serialize;
 pub mod translation;
 pub mod wrappers;
 
