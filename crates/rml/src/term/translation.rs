@@ -216,12 +216,14 @@ impl<'hir> FromHir<'hir, ExprKind<'hir>> for TermKind {
                 op: op.into(),
                 child: Box::new(expr.hir_into(hir)),
             },
-            ExprKind::Lit(lit) => Self::Lit(lit.into()),
+            ExprKind::Lit(lit) => Self::Lit { lit: lit.into() },
             ExprKind::Cast(expr, ty) => Self::Cast {
                 term: Box::new(expr.hir_into(hir)),
                 ty: ty.hir_into(hir),
             },
-            ExprKind::Let(l) => Self::Let(l.hir_into(hir)),
+            ExprKind::Let(l) => Self::Let {
+                r#let: l.hir_into(hir),
+            },
             ExprKind::If(cond, then, els) => Self::If {
                 cond: Box::new(cond.hir_into(hir)),
                 then: Box::new(then.hir_into(hir)),
@@ -232,8 +234,12 @@ impl<'hir> FromHir<'hir, ExprKind<'hir>> for TermKind {
                 arms: arms.iter().map(|a| a.hir_into(hir)).collect(),
                 src: source.into(),
             },
-            ExprKind::Closure(c) => Self::Closure(c.hir_into(hir)),
-            ExprKind::Block(b, _) => Self::Block(b.hir_into(hir)),
+            ExprKind::Closure(c) => Self::Closure {
+                closure: c.hir_into(hir),
+            },
+            ExprKind::Block(b, _) => Self::Block {
+                block: b.hir_into(hir),
+            },
             ExprKind::Field(expr, field) => Self::Field {
                 term: Box::new(expr.hir_into(hir)),
                 field: field.into(),
@@ -243,7 +249,9 @@ impl<'hir> FromHir<'hir, ExprKind<'hir>> for TermKind {
                 idx: Box::new(idx.hir_into(hir)),
                 span: span.into(),
             },
-            ExprKind::Path(p) => Self::Path(p.hir_into(hir)),
+            ExprKind::Path(p) => Self::Path {
+                path: p.hir_into(hir),
+            },
             ExprKind::AddrOf(brw, m, expr) => Self::AddrOf {
                 kind: brw.into(),
                 mutability: m.into(),
@@ -782,8 +790,8 @@ impl<'hir> From<&'hir LitKind> for TermLitKind {
                 bytes: sl.clone(),
                 style: style.into(),
             },
-            LitKind::Byte(b) => Self::Byte(*b),
-            LitKind::Char(c) => Self::Char(*c),
+            LitKind::Byte(b) => Self::Byte { value: *b },
+            LitKind::Char(c) => Self::Char { value: *c },
             LitKind::Int(i, t) => Self::Int {
                 value: i.0,
                 ty: t.into(),
@@ -792,7 +800,7 @@ impl<'hir> From<&'hir LitKind> for TermLitKind {
                 symbol: (*sym).into(),
                 ty: t.into(),
             },
-            LitKind::Bool(b) => Self::Bool(*b),
+            LitKind::Bool(b) => Self::Bool { value: *b },
             LitKind::Err(_) => unreachable!(),
         }
     }
@@ -802,7 +810,7 @@ impl<'hir> From<&'hir StrStyle> for TermStrStyle {
     fn from(value: &'hir StrStyle) -> Self {
         match value {
             StrStyle::Cooked => Self::Cooked,
-            StrStyle::Raw(r) => Self::Raw(*r),
+            StrStyle::Raw(r) => Self::Raw { number: *r },
         }
     }
 }
@@ -810,8 +818,8 @@ impl<'hir> From<&'hir StrStyle> for TermStrStyle {
 impl<'hir> From<&'hir LitIntType> for TermLitIntType {
     fn from(value: &'hir LitIntType) -> Self {
         match value {
-            LitIntType::Signed(s) => Self::Signed((*s).into()),
-            LitIntType::Unsigned(u) => Self::Unsigned((*u).into()),
+            LitIntType::Signed(s) => Self::Signed { ty: (*s).into() },
+            LitIntType::Unsigned(u) => Self::Unsigned { ty: (*u).into() },
             LitIntType::Unsuffixed => Self::Unsuffixed,
         }
     }
@@ -820,7 +828,7 @@ impl<'hir> From<&'hir LitIntType> for TermLitIntType {
 impl<'hir> From<&'hir LitFloatType> for TermLitFloatType {
     fn from(value: &'hir LitFloatType) -> Self {
         match value {
-            LitFloatType::Suffixed(s) => Self::Suffixed((*s).into()),
+            LitFloatType::Suffixed(s) => Self::Suffixed { ty: (*s).into() },
             LitFloatType::Unsuffixed => Self::Unsuffixed,
         }
     }
@@ -842,13 +850,18 @@ impl From<MatchSource> for TermMatchSource {
 impl<'hir> FromHir<'hir, QPath<'hir>> for TermQPath {
     fn from_hir(value: QPath<'hir>, hir: Map<'hir>) -> Self {
         match value {
-            QPath::Resolved(ty, path) => {
-                Self::Resolved(ty.map(|ty| Box::new(ty.hir_into(hir))), path.hir_into(hir))
-            }
-            QPath::TypeRelative(ty, ps) => {
-                Self::TypeRelative(Box::new(ty.hir_into(hir)), ps.hir_into(hir))
-            }
-            QPath::LangItem(li, sp) => Self::LangItem((&li).into(), sp.into()),
+            QPath::Resolved(ty, path) => Self::Resolved {
+                ty: ty.map(|ty| Box::new(ty.hir_into(hir))),
+                path: path.hir_into(hir),
+            },
+            QPath::TypeRelative(ty, ps) => Self::TypeRelative {
+                ty: Box::new(ty.hir_into(hir)),
+                seg: ps.hir_into(hir),
+            },
+            QPath::LangItem(li, sp) => Self::LangItem {
+                item: (&li).into(),
+                span: sp.into(),
+            },
         }
     }
 }
@@ -1079,8 +1092,11 @@ where
 {
     fn from(value: Res<Id1>) -> Self {
         match value {
-            Res::Def(dk, did) => Self::Def(dk.into(), did.into()),
-            Res::PrimTy(ty) => Self::PrimTy(ty.into()),
+            Res::Def(dk, did) => Self::Def {
+                def: dk.into(),
+                id: did.into(),
+            },
+            Res::PrimTy(ty) => Self::PrimTy { ty: ty.into() },
             Res::SelfTyParam { trait_ } => Self::SelfTyParam {
                 trait_: trait_.into(),
             },
@@ -1093,10 +1109,10 @@ where
                 forbid_generic,
                 is_trait_impl,
             },
-            Res::SelfCtor(c) => Self::SelfCtor(c.into()),
-            Res::Local(l) => Self::Local(l.into()),
+            Res::SelfCtor(c) => Self::SelfCtor { id: c.into() },
+            Res::Local(l) => Self::Local { id: l.into() },
             Res::ToolMod => Self::ToolMod,
-            Res::NonMacroAttr(n) => Self::NonMacroAttr(n.into()),
+            Res::NonMacroAttr(n) => Self::NonMacroAttr { kind: n.into() },
             Res::Err => Self::Err,
         }
     }

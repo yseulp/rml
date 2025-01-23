@@ -26,6 +26,7 @@ pub struct Term {
 
 /// Kind of the [Term].
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(tag = "serde_tag")]
 pub enum TermKind {
     /// Array term, e.g., `[e1, e2, ..., eN]`.
     Array { terms: Vec<Term> },
@@ -53,14 +54,14 @@ pub enum TermKind {
     /// A unary term, e.g., `!e`.
     Unary { op: TermUnOp, child: Box<Term> },
     /// A term literal, e.g., `1`.
-    Lit(TermLit),
+    Lit { lit: TermLit },
     /// A cast term, e.g., `foo as f64`.
     Cast { term: Box<Term>, ty: TermTy },
     /// A let `$pat = $term` term.
     ///
     /// These are not `Local` and only occur as terms. The `let Some(x) = foo()`
     /// in `if let Some(x) = foo()` is an example of `Let(..)`.
-    Let(TermLet),
+    Let { r#let: TermLet },
     /// An if block, with an optional else block.
     ///
     /// I.e., `if <term> { <term> } else { <term> }`.
@@ -77,9 +78,9 @@ pub enum TermKind {
         src: TermMatchSource,
     },
     /// A closure (e.g., `|a, b, c| {a + b + c}`).
-    Closure(TermClosure),
+    Closure { closure: TermClosure },
     /// A block (e.g., `{ ... }`).
-    Block(TermBlock),
+    Block { block: TermBlock },
     /// Access of a named (e.g., `obj.foo`) or unnamed (e.g., `obj.0`) struct or
     /// tuple field.
     Field {
@@ -94,7 +95,7 @@ pub enum TermKind {
         span: SpanWrapper,
     },
     /// Path to a definition, possibly containing lifetime or type parameters.
-    Path(TermQPath),
+    Path { path: TermQPath },
     /// A referencing operation (i.e., `&a` or `&mut a`).
     ///
     /// TODO: Remove?
@@ -214,6 +215,7 @@ pub struct TermLit {
 
 /// Kinds of term literal.
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(tag = "serde_tag")]
 pub enum TermLitKind {
     /// String literal, e.g., `"hello"`.
     Str {
@@ -231,9 +233,9 @@ pub enum TermLitKind {
         style: TermStrStyle,
     },
     /// A raw byte.
-    Byte(u8),
+    Byte { value: u8 },
     /// A char `'h'`.
-    Char(char),
+    Char { value: char },
     /// Integer literal and its bitsize, e.g., 42u128.
     Int { value: u128, ty: TermLitIntType },
     /// Float literal, e.g., `42.5f64`.
@@ -242,30 +244,33 @@ pub enum TermLitKind {
         ty: TermLitFloatType,
     },
     /// Bool literal, i.e., `true` or `false`.
-    Bool(bool),
+    Bool { value: bool },
 }
 
 /// Integer literal type.
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(tag = "serde_tag")]
 pub enum TermLitIntType {
     /// `i8`, `i16`, ...
-    Signed(TermIntTy),
+    Signed { ty: TermIntTy },
     /// `u8`, `u16`, ...
-    Unsigned(TermUintTy),
+    Unsigned { ty: TermUintTy },
     /// No suffix.
     Unsuffixed,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(tag = "serde_tag")]
 pub enum TermLitFloatType {
-    Suffixed(TermFloatTy),
+    Suffixed { ty: TermFloatTy },
     Unsuffixed,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(tag = "serde_tag")]
 pub enum TermStrStyle {
     Cooked,
-    Raw(u8),
+    Raw { number: u8 },
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -772,10 +777,20 @@ pub enum TermGenericParamSource {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(tag = "serde_tag")]
 pub enum TermQPath {
-    Resolved(Option<Box<TermTy>>, TermPath),
-    TypeRelative(Box<TermTy>, TermPathSegment),
-    LangItem(TermLangItem, SpanWrapper),
+    Resolved {
+        ty: Option<Box<TermTy>>,
+        path: TermPath,
+    },
+    TypeRelative {
+        ty: Box<TermTy>,
+        seg: TermPathSegment,
+    },
+    LangItem {
+        item: TermLangItem,
+        span: SpanWrapper,
+    },
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -786,9 +801,15 @@ pub struct TermPolyTraitRef {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(tag = "serde_tag")]
 pub enum TermRes<Id = HirIdWrapper> {
-    Def(TermDefKind, DefIdWrapper),
-    PrimTy(TermPrimTy),
+    Def {
+        def: TermDefKind,
+        id: DefIdWrapper,
+    },
+    PrimTy {
+        ty: TermPrimTy,
+    },
     SelfTyParam {
         trait_: DefIdWrapper,
     },
@@ -797,10 +818,16 @@ pub enum TermRes<Id = HirIdWrapper> {
         forbid_generic: bool,
         is_trait_impl: bool,
     },
-    SelfCtor(DefIdWrapper),
-    Local(Id),
+    SelfCtor {
+        id: DefIdWrapper,
+    },
+    Local {
+        id: Id,
+    },
     ToolMod,
-    NonMacroAttr(TermNonMacroAttrKind),
+    NonMacroAttr {
+        kind: TermNonMacroAttrKind,
+    },
     Err,
 }
 
