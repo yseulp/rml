@@ -4,7 +4,7 @@
 use std::collections::HashMap;
 
 pub(crate) use hir::{collect_hir_specs, HirSpecMap};
-use rustc_hir::{Block, Body, Expr, ExprKind, HirId, LetStmt, StmtKind};
+use rustc_hir::{Block, Body, Expr, ExprKind, HirId, LetStmt, Param, StmtKind};
 use rustc_middle::{hir::map::Map, ty::TyCtxt};
 use rustc_span::def_id::DefId;
 use serde::{Deserialize, Serialize};
@@ -15,7 +15,7 @@ use crate::{
     term::{
         translation::HirInto,
         wrappers::{DefId as TermDefId, HirId as TermHirId},
-        Term,
+        Term, TermParam,
     },
 };
 
@@ -30,6 +30,24 @@ pub enum SpecKind {
     Panic,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct WithParams<T>
+where
+    T: std::fmt::Debug + Clone + Serialize,
+{
+    pub params: Vec<TermParam>,
+    pub value: T,
+}
+
+impl<T> WithParams<T>
+where
+    T: std::fmt::Debug + Clone + Serialize,
+{
+    pub fn new(params: Vec<TermParam>, value: T) -> Self {
+        Self { params, value }
+    }
+}
+
 /// A case of a specification. Extracted from a spec function.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SpecCase {
@@ -40,14 +58,14 @@ pub struct SpecCase {
     /// Name of the case.
     pub name: String,
     /// Pre-conditions.
-    pub pre: Vec<Term>,
+    pub pre: Vec<WithParams<Term>>,
     /// Post-conditions.
-    pub post: Vec<Term>,
+    pub post: Vec<WithParams<Term>>,
     /// Variant of recursive functions.
-    pub variant: Option<Term>,
+    pub variant: Option<WithParams<Term>>,
     /// Condition for diverging execution. I.e., whether the function must
     /// terminate.
-    pub diverges: Term,
+    pub diverges: WithParams<Term>,
 }
 
 impl<'hir> SpecCase {
@@ -60,21 +78,26 @@ impl<'hir> SpecCase {
         let pre = hcase
             .pre
             .iter()
-            .map(|did| get_expr_from_did(hir, *did).hir_into(hir))
+            .copied()
+            .map(|did| get_params_and_term(did, hir))
             .collect();
         let post = hcase
             .post
             .iter()
-            .map(|did| get_expr_from_did(hir, *did).hir_into(hir))
+            .copied()
+            .map(|did| get_params_and_term(did, hir))
             .collect();
         let variant = hcase.variant.map(|did| {
             let body = get_body(hir, did);
             match body.value.kind {
-                ExprKind::Block(Block { expr: Some(e), .. }, None) => (*e).hir_into(hir),
+                ExprKind::Block(Block { expr: Some(e), .. }, None) => WithParams::new(
+                    (body.params.iter().map(|p| p.hir_into(hir))).collect(),
+                    (*e).hir_into(hir),
+                ),
                 _ => unreachable!(),
             }
         });
-        let diverges = get_expr_from_did(hir, hcase.diverges.unwrap()).hir_into(hir);
+        let diverges = get_params_and_term(hcase.diverges.unwrap(), hir);
         let name = if let Some(sym) = hcase.name {
             sym.to_string()
         } else {
@@ -102,6 +125,13 @@ impl<'hir> SpecCase {
             diverges,
         }
     }
+}
+
+fn get_params_and_term<'hir>(did: DefId, hir: Map<'hir>) -> WithParams<Term> {
+    let (params, e) = get_params_and_expr_from_did(hir, did);
+    let ps: Vec<TermParam> = params.iter().map(|p| p.hir_into(hir)).collect();
+    let t: Term = e.hir_into(hir);
+    WithParams::new(ps, t)
 }
 
 /// Complete specification for a function.
@@ -139,7 +169,7 @@ pub struct ItemInvs {
     /// The item which the invariants describe.
     pub target: TermDefId,
     /// All invariants.
-    pub invariants: Vec<Term>,
+    pub invariants: Vec<WithParams<Term>>,
 }
 
 impl<'hir> ItemInvs {
@@ -149,7 +179,7 @@ impl<'hir> ItemInvs {
             invariants: invs
                 .invariants
                 .iter()
-                .map(|i| get_expr_from_did(hir, *i).hir_into(hir))
+                .map(|i| get_params_and_term(*i, hir))
                 .collect(),
         }
     }
@@ -161,11 +191,11 @@ pub struct LoopSpec {
     /// The specified loop.
     pub target: TermHirId,
     /// Invariants of the loop.
-    pub invariants: Vec<Term>,
+    pub invariants: Vec<WithParams<Term>>,
     /// What the loop may modify.
-    pub modifies: Option<LocSet>,
+    pub modifies: Option<WithParams<LocSet>>,
     /// The variant of the loop.
-    pub variant: Option<Term>,
+    pub variant: Option<WithParams<Term>>,
 }
 
 impl LoopSpec {
@@ -175,14 +205,22 @@ impl LoopSpec {
             invariants: spec
                 .invariants
                 .iter()
-                .map(|did| get_expr_from_did(hir, *did).hir_into(hir))
+                .map(|did| get_params_and_term(*did, hir))
                 .collect(),
-            modifies: spec
-                .modifies
-                .map(|did| get_expr_from_did(hir, did).hir_into(hir)),
-            variant: spec
-                .variant
-                .map(|did| get_return_from_did(hir, did).hir_into(hir)),
+            modifies: spec.modifies.map(|did| {
+                let (params, e) = get_params_and_expr_from_did(hir, did);
+                WithParams::new(
+                    params.iter().map(|p| p.hir_into(hir)).collect(),
+                    e.hir_into(hir),
+                )
+            }),
+            variant: spec.variant.map(|did| {
+                let (params, e) = get_return_from_did(hir, did);
+                WithParams::new(
+                    params.iter().map(|p| p.hir_into(hir)).collect(),
+                    e.hir_into(hir),
+                )
+            }),
         }
     }
 }
@@ -313,11 +351,11 @@ impl<'hir> SpecMap {
 }
 
 /// Get the expression from the function at `did`.
-fn get_expr_from_did(hir: Map<'_>, did: DefId) -> &Expr {
+fn get_params_and_expr_from_did(hir: Map<'_>, did: DefId) -> (&[Param], &Expr) {
     let body = get_body(hir, did);
     match body.value.kind {
         ExprKind::Block(Block { stmts, .. }, None) => match stmts[0].kind {
-            StmtKind::Let(LetStmt { init: Some(e), .. }) => e,
+            StmtKind::Let(LetStmt { init: Some(e), .. }) => (body.params, e),
             _ => unreachable!(),
         },
         _ => unreachable!(),
@@ -325,10 +363,10 @@ fn get_expr_from_did(hir: Map<'_>, did: DefId) -> &Expr {
 }
 
 /// Get the returned expression from the function at `did`.
-fn get_return_from_did(hir: Map<'_>, did: DefId) -> &Expr {
+fn get_return_from_did(hir: Map<'_>, did: DefId) -> (&[Param], &Expr) {
     let body = get_body(hir, did);
     match body.value.kind {
-        ExprKind::Block(Block { expr: Some(e), .. }, None) => e,
+        ExprKind::Block(Block { expr: Some(e), .. }, None) => (body.params, e),
         _ => unreachable!(),
     }
 }

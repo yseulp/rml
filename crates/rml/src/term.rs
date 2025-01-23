@@ -417,26 +417,59 @@ pub struct TermPat {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(tag = "serde_tag")]
 pub enum TermPatKind {
     Wild,
-    Binding(
-        TermBindingMode,
-        HirIdWrapper,
-        IdentWrapper,
-        Option<Box<TermPat>>,
-    ),
-    Struct(TermQPath, Vec<TermPatField>, bool),
-    TupleStruct(TermQPath, Vec<TermPat>, TermDotDotPos),
-    Or(Vec<TermPat>),
-    Path(TermQPath),
-    Tuple(Vec<TermPat>, TermDotDotPos),
-    Box(Box<TermPat>),
-    Ref(Box<TermPat>, TermMutability),
-    Lit(Box<Term>),
-    Range(Option<Box<Term>>, Option<Box<Term>>, TermRangeEnd),
-    Slice(Vec<TermPat>, Option<Box<TermPat>>, Vec<TermPat>),
+    Binding {
+        mode: TermBindingMode,
+        hir_id: HirIdWrapper,
+        ident: IdentWrapper,
+        pat: Option<Box<TermPat>>,
+    },
+    Struct {
+        path: TermQPath,
+        fields: Vec<TermPatField>,
+        rest: bool,
+    },
+    TupleStruct {
+        path: TermQPath,
+        pats: Vec<TermPat>,
+        dot_dot_pos: TermDotDotPos,
+    },
+    Or {
+        pats: Vec<TermPat>,
+    },
+    Path {
+        path: TermQPath,
+    },
+    Tuple {
+        pats: Vec<TermPat>,
+        dot_dot_pos: TermDotDotPos,
+    },
+    Box {
+        pat: Box<TermPat>,
+    },
+    Ref {
+        pat: Box<TermPat>,
+        mutability: TermMutability,
+    },
+    Lit {
+        term: Box<Term>,
+    },
+    Range {
+        lhs: Option<Box<Term>>,
+        rhs: Option<Box<Term>>,
+        range: TermRangeEnd,
+    },
+    Slice {
+        start: Vec<TermPat>,
+        mid: Option<Box<TermPat>>,
+        rest: Vec<TermPat>,
+    },
     Never,
-    Deref(Box<TermPat>),
+    Deref {
+        pat: Box<TermPat>,
+    },
     Err,
 }
 
@@ -450,11 +483,15 @@ pub enum TermRangeEnd {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct TermBindingMode(pub TermByRef, pub TermMutability);
+pub struct TermBindingMode {
+    pub by_ref: TermByRef,
+    pub r#mut: TermMutability,
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(tag = "serde_tag")]
 pub enum TermByRef {
-    Yes { mutable: bool },
+    Yes { r#mut: bool },
     No,
 }
 

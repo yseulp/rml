@@ -103,7 +103,12 @@ impl<'hir> FromHir<'hir, ExprKind<'hir>> for TermKind {
                             let c_param = &clo.body.params[0];
 
                             let ident = match &c_param.pat.kind {
-                                TermPatKind::Binding(_, _, ident, _) => ident.clone(),
+                                TermPatKind::Binding {
+                                    mode: _,
+                                    hir_id: _,
+                                    ident,
+                                    pat: _,
+                                } => ident.clone(),
                                 _ => unreachable!(),
                             };
 
@@ -504,42 +509,56 @@ impl<'hir> FromHir<'hir, PatKind<'hir>> for TermPatKind {
     fn from_hir(value: PatKind<'hir>, hir: Map<'hir>) -> Self {
         match value {
             PatKind::Wild => Self::Wild,
-            PatKind::Binding(ann, hid, ident, pat) => Self::Binding(
-                ann.into(),
-                hid.into(),
-                ident.into(),
-                pat.map(|p| Box::new(p.hir_into(hir))),
-            ),
-            PatKind::Struct(qp, fields, rest) => Self::Struct(
-                qp.hir_into(hir),
-                fields.iter().map(|f| f.hir_into(hir)).collect(),
+            PatKind::Binding(ann, hid, ident, pat) => Self::Binding {
+                mode: ann.into(),
+                hir_id: hid.into(),
+                ident: ident.into(),
+                pat: pat.map(|p| Box::new(p.hir_into(hir))),
+            },
+            PatKind::Struct(qp, fields, rest) => Self::Struct {
+                path: qp.hir_into(hir),
+                fields: fields.iter().map(|f| f.hir_into(hir)).collect(),
                 rest,
-            ),
-            PatKind::TupleStruct(qp, elems, ddp) => Self::TupleStruct(
-                qp.hir_into(hir),
-                elems.iter().map(|e| e.hir_into(hir)).collect(),
-                ddp.into(),
-            ),
-            PatKind::Or(pats) => Self::Or(pats.iter().map(|p| p.hir_into(hir)).collect()),
-            PatKind::Path(qp) => Self::Path(qp.hir_into(hir)),
-            PatKind::Tuple(pats, ddp) => {
-                Self::Tuple(pats.iter().map(|p| p.hir_into(hir)).collect(), ddp.into())
-            }
-            PatKind::Box(p) => Self::Box(Box::new(p.hir_into(hir))),
-            PatKind::Ref(p, m) => Self::Ref(Box::new(p.hir_into(hir)), m.into()),
-            PatKind::Lit(e) => Self::Lit(Box::new(e.hir_into(hir))),
-            PatKind::Range(from, to, re) => Self::Range(
-                from.map(|f| Box::new(f.hir_into(hir))),
-                to.map(|t| Box::new(t.hir_into(hir))),
-                re.into(),
-            ),
-            PatKind::Slice(start, mid, end) => Self::Slice(
-                start.iter().map(|p| p.hir_into(hir)).collect(),
-                mid.map(|m| Box::new(m.hir_into(hir))),
-                end.iter().map(|p| p.hir_into(hir)).collect(),
-            ),
+            },
+            PatKind::TupleStruct(qp, elems, ddp) => Self::TupleStruct {
+                path: qp.hir_into(hir),
+                pats: elems.iter().map(|e| e.hir_into(hir)).collect(),
+                dot_dot_pos: ddp.into(),
+            },
+            PatKind::Or(pats) => Self::Or {
+                pats: pats.iter().map(|p| p.hir_into(hir)).collect(),
+            },
+            PatKind::Path(qp) => Self::Path {
+                path: qp.hir_into(hir),
+            },
+            PatKind::Tuple(pats, ddp) => Self::Tuple {
+                pats: pats.iter().map(|p| p.hir_into(hir)).collect(),
+                dot_dot_pos: ddp.into(),
+            },
+            PatKind::Box(p) => Self::Box {
+                pat: Box::new(p.hir_into(hir)),
+            },
+            PatKind::Ref(p, m) => Self::Ref {
+                pat: Box::new(p.hir_into(hir)),
+                mutability: m.into(),
+            },
+            PatKind::Lit(e) => Self::Lit {
+                term: Box::new(e.hir_into(hir)),
+            },
+            PatKind::Range(from, to, re) => Self::Range {
+                lhs: from.map(|f| Box::new(f.hir_into(hir))),
+                rhs: to.map(|t| Box::new(t.hir_into(hir))),
+                range: re.into(),
+            },
+            PatKind::Slice(start, mid, end) => Self::Slice {
+                start: start.iter().map(|p| p.hir_into(hir)).collect(),
+                mid: mid.map(|m| Box::new(m.hir_into(hir))),
+                rest: end.iter().map(|p| p.hir_into(hir)).collect(),
+            },
             PatKind::Never => Self::Never,
-            PatKind::Deref(pat) => Self::Deref(Box::new(pat.hir_into(hir))),
+            PatKind::Deref(pat) => Self::Deref {
+                pat: Box::new(pat.hir_into(hir)),
+            },
             PatKind::Err(_) => Self::Err,
         }
     }
@@ -547,7 +566,10 @@ impl<'hir> FromHir<'hir, PatKind<'hir>> for TermPatKind {
 
 impl From<BindingMode> for TermBindingMode {
     fn from(value: BindingMode) -> Self {
-        Self(value.0.into(), value.1.into())
+        Self {
+            by_ref: value.0.into(),
+            r#mut: value.1.into(),
+        }
     }
 }
 
@@ -581,8 +603,8 @@ impl From<RangeEnd> for TermRangeEnd {
 impl From<ByRef> for TermByRef {
     fn from(value: ByRef) -> Self {
         match value {
-            ByRef::Yes(Mutability::Mut) => Self::Yes { mutable: true },
-            ByRef::Yes(Mutability::Not) => Self::Yes { mutable: false },
+            ByRef::Yes(Mutability::Mut) => Self::Yes { r#mut: true },
+            ByRef::Yes(Mutability::Not) => Self::Yes { r#mut: false },
             ByRef::No => Self::No,
         }
     }
