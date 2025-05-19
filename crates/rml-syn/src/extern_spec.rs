@@ -142,7 +142,7 @@ pub enum FlattenedExternSpec {
     Struct(FlattenedStructSpec),
     Enum(FlattenedEnumSpec),
     Trait(FlattenedTraitSpec),
-    Fn(FlattenedFnSpec),
+    Fn(Box<FlattenedFnSpec>),
 }
 
 /// A specification for an external struct.
@@ -295,13 +295,15 @@ fn flatten_helper(
             ident: e.ident,
             generics: e.generics,
         })),
-        ExternSpecItem::Fn(f) => flattened.push(FlattenedExternSpec::Fn(FlattenedFnSpec {
-            span: f.span(),
-            attrs: f.attrs,
-            prefix,
-            sig: f.sig,
-            ctxt: fn_ctxt,
-        })),
+        ExternSpecItem::Fn(f) => {
+            flattened.push(FlattenedExternSpec::Fn(Box::new(FlattenedFnSpec {
+                span: f.span(),
+                attrs: f.attrs,
+                prefix,
+                sig: f.sig,
+                ctxt: fn_ctxt,
+            })))
+        }
         ExternSpecItem::Impl(i) => {
             if prefix.path.segments.is_empty() {
                 prefix.qself = Some(syn::QSelf {

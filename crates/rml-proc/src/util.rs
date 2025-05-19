@@ -42,7 +42,7 @@ pub(crate) fn get_mut_ref_params(sig: &Signature) -> impl Iterator<Item = &FnArg
 /// Generates a random [Ident] with the `prefix`.
 pub(crate) fn gen_unique_ident(prefix: &str) -> Ident {
     let uuid = uuid::Uuid::new_v4();
-    let ident = format!("{}_{}", prefix, uuid).replace('-', "_");
+    let ident = format!("{prefix}_{uuid}").replace('-', "_");
 
     Ident::new(&ident, Span::call_site())
 }

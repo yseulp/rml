@@ -90,7 +90,7 @@ pub(crate) fn extern_spec(subject: ExternSpecItem, path: Option<Path>) -> Result
                 generics,
                 InvSubject::Trait,
             ),
-            FlattenedExternSpec::Fn(f) => handle_fn(subject_span, f),
+            FlattenedExternSpec::Fn(f) => handle_fn(subject_span, *f),
         })
         .try_collect()
 }

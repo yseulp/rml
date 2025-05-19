@@ -29,7 +29,7 @@ impl FnOrMethod {
 /// The subject or target of a specification case. Either a function/method, or
 /// a closure.
 pub(crate) enum ContractSubject {
-    FnOrMethod(FnOrMethod),
+    FnOrMethod(Box<FnOrMethod>),
     Closure(ExprClosure),
 }
 
@@ -88,14 +88,14 @@ impl Parse for ContractSubject {
             return Err(lookahead.error());
         };
 
-        Ok(ContractSubject::FnOrMethod(FnOrMethod {
+        Ok(ContractSubject::FnOrMethod(Box::new(FnOrMethod {
             defaultness,
             visibility: vis,
             attrs,
             sig,
             body: brace_token.map(|brace_token| Block { brace_token, stmts }),
             semi_token,
-        }))
+        })))
     }
 }
 

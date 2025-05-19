@@ -819,7 +819,7 @@ fn parse_term(
             .fork()
             .parse::<BinOp>()
             .ok()
-            .map_or(false, |op| Precedence::of(&op) >= base)
+            .is_some_and(|op| Precedence::of(&op) >= base)
             && !(input.peek(Token![==]) && (input.peek3(Token![>]) || input.peek3(Token![=])))
         {
             let op: BinOp = input.parse()?;
