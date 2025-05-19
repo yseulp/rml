@@ -1,29 +1,26 @@
-use rustc_ast::{AttrItem, AttrKind, Attribute};
-use rustc_hir::def_id::DefId;
+use rustc_hir::{def_id::DefId, AttrItem, Attribute};
 use rustc_middle::ty::TyCtxt;
 use rustc_span::Symbol;
 
 pub fn is_attr(attr: &Attribute, str: &str) -> bool {
-    match &attr.kind {
-        AttrKind::DocComment(..) => false,
-        AttrKind::Normal(attr) => {
-            let segments = &attr.item.path.segments;
-            segments.len() >= 2
-                && segments[0].ident.as_str() == "rml"
-                && segments[1].ident.as_str() == str
+    match &attr {
+        Attribute::Parsed(_) => false,
+        Attribute::Unparsed(item) => {
+            let segments = &item.path.segments;
+            segments.len() >= 2 && segments[0].as_str() == "rml" && segments[1].as_str() == str
         }
     }
 }
 
 pub fn is_spec_attr(attr: &Attribute, str: &str) -> bool {
-    match &attr.kind {
-        AttrKind::DocComment(..) => false,
-        AttrKind::Normal(attr) => {
-            let segments = &attr.item.path.segments;
+    match &attr {
+        Attribute::Parsed(_) => false,
+        Attribute::Unparsed(item) => {
+            let segments = &item.path.segments;
             segments.len() >= 3
-                && segments[0].ident.as_str() == "rml"
-                && segments[1].ident.as_str() == "spec"
-                && segments[2].ident.as_str() == str
+                && segments[0].as_str() == "rml"
+                && segments[1].as_str() == "spec"
+                && segments[2].as_str() == str
         }
     }
 }
@@ -76,7 +73,7 @@ pub fn get_spec_part<'a>(attrs: &'a [Attribute]) -> Option<(Symbol, &'a AttrItem
             continue;
         }
 
-        let segs: Vec<_> = attr.path.segments.iter().map(|s| s.ident).collect();
+        let segs = &attr.path.segments;
 
         if segs[0].as_str() == "rml" && segs[1].as_str() == "spec" {
             return Some((segs[2].name, attr));
@@ -102,7 +99,7 @@ pub fn get_attr<'a>(attrs: &'a [Attribute], path: &[&str]) -> Option<&'a AttrIte
             .segments
             .iter()
             .zip(path.iter())
-            .fold(true, |acc, (seg, s)| acc && seg.ident.as_str() == *s);
+            .fold(true, |acc, (seg, s)| acc && seg.as_str() == *s);
 
         if matches {
             return Some(attr);

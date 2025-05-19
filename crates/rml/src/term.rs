@@ -111,7 +111,7 @@ pub enum TermKind {
     Struct {
         path: TermQPath,
         fields: Vec<TermField>,
-        rest: Option<Box<Term>>,
+        rest: StructTailTerm,
     },
     /// An array literal constructed from one repeated element.
     ///
@@ -119,7 +119,7 @@ pub enum TermKind {
     /// second is the number of times to repeat it.
     Repeat {
         term: Box<Term>,
-        len: Box<TermArrayLen>,
+        len: Box<TermConstArg>,
     },
 
     // RML special kinds
@@ -131,6 +131,21 @@ pub enum TermKind {
     },
     /// A model term, e.g., `x@`.
     Model { kind: ModelKind, term: Box<Term> },
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum StructTailTerm {
+    /// A struct expression where all the fields are explicitly enumerated: `Foo
+    /// { a, b }`.
+    None,
+    /// A struct expression with a "base", an expression of the same type as the
+    /// outer struct that will be used to populate any fields not explicitly
+    /// mentioned: `Foo { ..base }`
+    Base(Box<Term>),
+    /// A struct expression with a `..` tail but no "base" expression. The
+    /// values from the struct fields' default values will be used to
+    /// populate any fields not explicitly mentioned: `Foo { .. }`.
+    DefaultFields(SpanWrapper),
 }
 
 /// The kind of a model term.
@@ -338,6 +353,7 @@ pub enum TermConstness {
 pub enum TermCaptureBy {
     Value { move_kw: SpanWrapper },
     Ref,
+    Use { use_kw: SpanWrapper },
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -420,6 +436,14 @@ pub struct TermPat {
 #[serde(tag = "serde_tag")]
 pub enum TermPatKind {
     Wild,
+    Missing,
+    Term {
+        term: PatTerm,
+    },
+    Guard {
+        pat: Box<TermPat>,
+        guard: Box<Term>,
+    },
     Binding {
         mode: TermBindingMode,
         hir_id: HirIdWrapper,
@@ -457,8 +481,8 @@ pub enum TermPatKind {
         term: Box<Term>,
     },
     Range {
-        lhs: Option<Box<Term>>,
-        rhs: Option<Box<Term>>,
+        lhs: Option<Box<PatTerm>>,
+        rhs: Option<Box<PatTerm>>,
         range: TermRangeEnd,
     },
     Slice {
@@ -471,6 +495,34 @@ pub enum TermPatKind {
         pat: Box<TermPat>,
     },
     Err,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PatTerm {
+    pub hir_id: HirIdWrapper,
+    pub span: SpanWrapper,
+    pub kind: PatTermKind,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum PatTermKind {
+    Lit {
+        lit: TermLit,
+        // FIXME: move this into `Lit` and handle negated literal expressions
+        // once instead of matching on unop neg expressions everywhere.
+        negated: bool,
+    },
+    ConstBlock(TermConstBlock),
+    /// A path pattern for a unit struct/variant or a (maybe-associated)
+    /// constant.
+    Path(TermQPath),
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TermConstBlock {
+    pub hir_id: HirIdWrapper,
+    pub def_id: LocalDefIdWrapper,
+    pub body: TermBody,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -590,13 +642,13 @@ pub enum TermGenericArg {
 pub struct TermConstArg {
     pub hir_id: HirIdWrapper,
     pub kind: TermConstArgKind,
-    pub is_desugared_from_effects: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum TermConstArgKind {
     Path(TermQPath),
     Anon(TermAnonConst),
+    Infer,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -609,15 +661,40 @@ pub struct TermInferArg {
 pub struct TermLifetime {
     pub hir_id: HirIdWrapper,
     pub ident: IdentWrapper,
-    pub res: TermLifetimeName,
+    pub kind: TermLifetimeKind,
+    pub source: TermLifetimeSource,
+    pub syntax: TermLifetimeSyntax,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum TermLifetimeName {
+pub enum TermLifetimeKind {
     Param(LocalDefIdWrapper),
     ImplicitObjectLifetimeDefault,
     Infer,
     Static,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum TermLifetimeSource {
+    Reference,
+    Path { angle_brackets: TermAngleBrackets },
+    OutlivesBound,
+    PreciseCapturing,
+    Other,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum TermAngleBrackets {
+    Missing,
+    Empty,
+    Full,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum TermLifetimeSyntax {
+    Hidden,
+    Anonymous,
+    Named,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -630,20 +707,39 @@ pub struct TermTy {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum TermTyKind {
     Slice(Box<TermTy>),
-    Array(Box<TermTy>, Box<TermArrayLen>),
+    Array(Box<TermTy>, Box<TermConstArg>),
     Ptr(Box<TermMutTy>),
     Ref(TermLifetime, Box<TermMutTy>),
     BareFn(TermBareFnTy),
     Never,
     Tup(Vec<TermTy>),
     Path(TermQPath),
-    OpaqueDef(TermOpaqueTy, Vec<TermGenericArg>),
+    OpaqueDef(TermOpaqueTy),
     TraitObject(Vec<TermPolyTraitRef>, TermLifetime, TermTraitObjectSyntax),
     Typeof(Box<TermAnonConst>),
     InferDelegation(DefIdWrapper),
     AnonAdt(ItemIdWrapper),
-    Pat(Box<TermTy>, TermPat),
+    Pat(Box<TermTy>, TermTyPat),
     Infer,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TermTyPat {
+    pub hir_id: HirIdWrapper,
+    pub kind: TermTyPatKind,
+    pub span: SpanWrapper,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum TermTyPatKind {
+    Range {
+        start: Box<TermConstArg>,
+        end: Box<TermConstArg>,
+    },
+    Or {
+        pats: Vec<TermTyPat>,
+    },
+    Err,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -658,17 +754,11 @@ pub struct TermOpaqueTy {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum TermArrayLen {
-    Infer(TermInferArg),
-    Body(TermConstArg),
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TermBareFnTy {
     pub abi: TermAbi,
     pub generic_params: Vec<TermGenericParam>,
     pub decl: TermFnDecl,
-    pub param_names: Vec<IdentWrapper>,
+    pub param_idents: Vec<Option<IdentWrapper>>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -710,16 +800,14 @@ pub enum TermAbi {
     PtxKernel,
     Msp430Interrupt,
     X86Interrupt,
-    AmdGpuKernel,
+    GpuKernel,
     EfiApi,
     AvrInterrupt,
     AvrNonBlockingInterrupt,
     CCmseNonSecureCall,
-    Wasm,
+    CCmseNonSecureEntry,
     System { unwind: bool },
-    RustIntrinsic,
     RustCall,
-    PlatformIntrinsic,
     Unadjusted,
     RustCold,
     RiscvInterruptM,
@@ -795,7 +883,6 @@ pub enum TermGenericParamKind {
     Const {
         ty: TermTy,
         default: Option<TermConstArg>,
-        is_host_effect: bool,
         synthetic: bool,
     },
 }

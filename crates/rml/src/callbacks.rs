@@ -4,7 +4,7 @@ use std::{cell::RefCell, fs, thread_local};
 
 use rustc_ast_pretty::pprust::PpAnn;
 use rustc_driver::{Callbacks, Compilation};
-use rustc_interface::{interface::Compiler, Config, Queries};
+use rustc_interface::{interface::Compiler, Config};
 use rustc_middle::ty::TyCtxt;
 
 use crate::{
@@ -42,44 +42,40 @@ impl Callbacks for ExtractSpec {
         });
     }
 
-    fn after_expansion<'tcx>(&mut self, c: &Compiler, queries: &'tcx Queries<'tcx>) -> Compilation {
+    fn after_expansion<'tcx>(&mut self, c: &Compiler, tcx: TyCtxt<'tcx>) -> Compilation {
         c.sess.dcx().abort_if_errors();
 
         if self.opts.print_expanded {
             // based on the implementation of rustc_driver::pretty::print_after_parsing
-            queries.global_ctxt().unwrap().enter(|tcx| {
-                let sess = &c.sess;
-                let krate = &tcx.resolver_for_lowering().borrow().1;
-                let src_name = sess.io.input.source_name();
-                let src = sess
-                    .source_map()
-                    .get_source_file(&src_name)
-                    .expect("get_source_file")
-                    .src
-                    .as_ref()
-                    .expect("src")
-                    .to_string();
-                print!(
-                    "{}",
-                    rustc_ast_pretty::pprust::print_crate(
-                        sess.source_map(),
-                        krate,
-                        src_name,
-                        src,
-                        &NoAnn,
-                        false,
-                        sess.edition(),
-                        &sess.psess.attr_id_generator,
-                    )
-                );
-            });
+            let sess = &c.sess;
+            let krate = &tcx.resolver_for_lowering().borrow().1;
+            let src_name = sess.io.input.source_name();
+            let src = sess
+                .source_map()
+                .get_source_file(&src_name)
+                .expect("get_source_file")
+                .src
+                .as_ref()
+                .expect("src")
+                .to_string();
+            print!(
+                "{}",
+                rustc_ast_pretty::pprust::print_crate(
+                    sess.source_map(),
+                    krate,
+                    src_name,
+                    src,
+                    &NoAnn,
+                    false,
+                    sess.edition(),
+                    &sess.psess.attr_id_generator,
+                )
+            );
         }
 
-        queries.global_ctxt().unwrap().enter(|tcx| {
-            let mut rcx = RmlCtxt::new(tcx, self.opts.clone());
-            rcx.validate();
-            unsafe { store_rcx(rcx) };
-        });
+        let mut rcx = RmlCtxt::new(tcx, self.opts.clone());
+        rcx.validate();
+        unsafe { store_rcx(rcx) };
 
         c.sess.dcx().abort_if_errors();
 
@@ -89,38 +85,36 @@ impl Callbacks for ExtractSpec {
     fn after_analysis<'tcx>(
         &mut self,
         _compiler: &rustc_interface::interface::Compiler,
-        queries: &'tcx Queries<'tcx>,
+        tcx: TyCtxt<'tcx>,
     ) -> Compilation {
-        queries.global_ctxt().unwrap().enter(|tcx| {
-            let rcx = unsafe { retrieve_rcx(tcx) };
-            let specs = rcx.get_specs();
-            if self.opts.print_specs_debug {
-                println!("== Function/method specs ==");
-                for spec in specs.fn_specs.values() {
-                    println!("{spec:#?}");
-                }
-                println!("== Struct invariants ==");
-                for invs in specs.struct_invs.values() {
-                    println!("{invs:#?}");
-                }
-                println!("== Enum invariants ==");
-                for invs in specs.enum_invs.values() {
-                    println!("{invs:#?}");
-                }
-                println!("== Trait invariants ==");
-                for invs in specs.trait_invs.values() {
-                    println!("{invs:#?}");
-                }
-                println!("== Loop specs ==");
-                for spec in specs.loop_specs.values() {
-                    println!("{spec:#?}");
-                }
+        let rcx = unsafe { retrieve_rcx(tcx) };
+        let specs = rcx.get_specs();
+        if self.opts.print_specs_debug {
+            println!("== Function/method specs ==");
+            for spec in specs.fn_specs.values() {
+                println!("{spec:#?}");
             }
+            println!("== Struct invariants ==");
+            for invs in specs.struct_invs.values() {
+                println!("{invs:#?}");
+            }
+            println!("== Enum invariants ==");
+            for invs in specs.enum_invs.values() {
+                println!("{invs:#?}");
+            }
+            println!("== Trait invariants ==");
+            for invs in specs.trait_invs.values() {
+                println!("{invs:#?}");
+            }
+            println!("== Loop specs ==");
+            for spec in specs.loop_specs.values() {
+                println!("{spec:#?}");
+            }
+        }
 
-            if let Some(of) = &self.opts.output_file {
-                output_specs(&specs, of, self.opts.pretty_print);
-            }
-        });
+        if let Some(of) = &self.opts.output_file {
+            output_specs(&specs, of, self.opts.pretty_print);
+        }
 
         Compilation::Continue
     }

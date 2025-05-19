@@ -1,5 +1,6 @@
 #![feature(rustc_private, register_tool)]
 
+extern crate rustc_abi;
 extern crate rustc_ast;
 extern crate rustc_ast_pretty;
 extern crate rustc_driver;

@@ -5,7 +5,7 @@ use std::collections::HashMap;
 
 pub(crate) use hir::{collect_hir_specs, HirSpecMap};
 use rustc_hir::{Block, Body, Expr, ExprKind, HirId, LetStmt, Param, StmtKind};
-use rustc_middle::{hir::map::Map, ty::TyCtxt};
+use rustc_middle::ty::TyCtxt;
 use rustc_span::def_id::DefId;
 use serde::{Deserialize, Serialize};
 
@@ -68,9 +68,9 @@ pub struct SpecCase {
     pub diverges: WithParams<Term>,
 }
 
-impl<'hir> SpecCase {
+impl<'tcx> SpecCase {
     pub fn new(
-        hir: Map<'hir>,
+        tcx: TyCtxt<'tcx>,
         hcase: &HirFnSpecCase,
         normal: &mut u64,
         panic: &mut u64,
@@ -79,25 +79,25 @@ impl<'hir> SpecCase {
             .pre
             .iter()
             .copied()
-            .map(|did| get_params_and_term(did, hir))
+            .map(|did| get_params_and_term(did, tcx))
             .collect();
         let post = hcase
             .post
             .iter()
             .copied()
-            .map(|did| get_params_and_term(did, hir))
+            .map(|did| get_params_and_term(did, tcx))
             .collect();
         let variant = hcase.variant.map(|did| {
-            let body = get_body(hir, did);
+            let body = get_body(tcx, did);
             match body.value.kind {
                 ExprKind::Block(Block { expr: Some(e), .. }, None) => WithParams::new(
-                    (body.params.iter().map(|p| p.hir_into(hir))).collect(),
-                    (*e).hir_into(hir),
+                    (body.params.iter().map(|p| p.hir_into(tcx))).collect(),
+                    (*e).hir_into(tcx),
                 ),
                 _ => unreachable!(),
             }
         });
-        let diverges = get_params_and_term(hcase.diverges.unwrap(), hir);
+        let diverges = get_params_and_term(hcase.diverges.unwrap(), tcx);
         let name = if let Some(sym) = hcase.name {
             sym.to_string()
         } else {
@@ -127,10 +127,10 @@ impl<'hir> SpecCase {
     }
 }
 
-fn get_params_and_term<'hir>(did: DefId, hir: Map<'hir>) -> WithParams<Term> {
-    let (params, e) = get_params_and_expr_from_did(hir, did);
-    let ps: Vec<TermParam> = params.iter().map(|p| p.hir_into(hir)).collect();
-    let t: Term = e.hir_into(hir);
+fn get_params_and_term<'tcx>(did: DefId, tcx: TyCtxt<'tcx>) -> WithParams<Term> {
+    let (params, e) = get_params_and_expr_from_did(tcx, did);
+    let ps: Vec<TermParam> = params.iter().map(|p| p.hir_into(tcx)).collect();
+    let t: Term = e.hir_into(tcx);
     WithParams::new(ps, t)
 }
 
@@ -143,8 +143,8 @@ pub struct FnSpec {
     pub cases: Vec<SpecCase>,
 }
 
-impl<'hir> FnSpec {
-    pub fn new(target: DefId, hir: Map<'hir>, hspec: &HirFnSpec) -> FnSpec {
+impl<'tcx> FnSpec {
+    pub fn new(target: DefId, tcx: TyCtxt<'tcx>, hspec: &HirFnSpec) -> FnSpec {
         let mut normal_count = 0;
         let mut panic_count = 0;
         Self {
@@ -152,7 +152,7 @@ impl<'hir> FnSpec {
             cases: hspec
                 .cases
                 .iter()
-                .map(|c| SpecCase::new(hir, c, &mut normal_count, &mut panic_count))
+                .map(|c| SpecCase::new(tcx, c, &mut normal_count, &mut panic_count))
                 .collect(),
         }
     }
@@ -172,14 +172,14 @@ pub struct ItemInvs {
     pub invariants: Vec<WithParams<Term>>,
 }
 
-impl<'hir> ItemInvs {
-    pub fn new(target: DefId, hir: Map<'hir>, invs: &HirItemInvs) -> Self {
+impl<'tcx> ItemInvs {
+    pub fn new(target: DefId, tcx: TyCtxt<'tcx>, invs: &HirItemInvs) -> Self {
         Self {
             target: target.into(),
             invariants: invs
                 .invariants
                 .iter()
-                .map(|i| get_params_and_term(*i, hir))
+                .map(|i| get_params_and_term(*i, tcx))
                 .collect(),
         }
     }
@@ -199,26 +199,26 @@ pub struct LoopSpec {
 }
 
 impl LoopSpec {
-    pub fn new<'hir>(target: HirId, hir: Map<'hir>, spec: &HirLoopSpec) -> Self {
+    pub fn new<'tcx>(target: HirId, tcx: TyCtxt<'tcx>, spec: &HirLoopSpec) -> Self {
         Self {
             target: target.into(),
             invariants: spec
                 .invariants
                 .iter()
-                .map(|did| get_params_and_term(*did, hir))
+                .map(|did| get_params_and_term(*did, tcx))
                 .collect(),
             modifies: spec.modifies.map(|did| {
-                let (params, e) = get_params_and_expr_from_did(hir, did);
+                let (params, e) = get_params_and_expr_from_did(tcx, did);
                 WithParams::new(
-                    params.iter().map(|p| p.hir_into(hir)).collect(),
-                    e.hir_into(hir),
+                    params.iter().map(|p| p.hir_into(tcx)).collect(),
+                    e.hir_into(tcx),
                 )
             }),
             variant: spec.variant.map(|did| {
-                let (params, e) = get_return_from_did(hir, did);
+                let (params, e) = get_return_from_did(tcx, did);
                 WithParams::new(
-                    params.iter().map(|p| p.hir_into(hir)).collect(),
-                    e.hir_into(hir),
+                    params.iter().map(|p| p.hir_into(tcx)).collect(),
+                    e.hir_into(tcx),
                 )
             }),
         }
@@ -273,38 +273,36 @@ pub struct SpecMap {
 
 impl<'hir> SpecMap {
     pub fn new(tcx: TyCtxt<'hir>, hir_smap: &HirSpecMap) -> SpecMap {
-        let hir = tcx.hir();
-
         let mut fn_specs = HashMap::with_capacity(hir_smap.fn_specs.len());
         for (did, hspec) in &hir_smap.fn_specs {
-            let spec = FnSpec::new(*did, hir, hspec);
+            let spec = FnSpec::new(*did, tcx, hspec);
             let did_w = (*did).into();
             fn_specs.insert(did_w, spec);
         }
 
         let mut struct_invs = HashMap::with_capacity(hir_smap.struct_invs.len());
         for (did, invs) in &hir_smap.struct_invs {
-            let invs = ItemInvs::new(*did, hir, invs);
+            let invs = ItemInvs::new(*did, tcx, invs);
             let did_w = (*did).into();
             struct_invs.insert(did_w, invs);
         }
 
         let mut enum_invs = HashMap::with_capacity(hir_smap.enum_invs.len());
         for (did, invs) in &hir_smap.enum_invs {
-            let invs = ItemInvs::new(*did, hir, invs);
+            let invs = ItemInvs::new(*did, tcx, invs);
             let did_w = (*did).into();
             enum_invs.insert(did_w, invs);
         }
 
         let mut trait_invs = HashMap::with_capacity(hir_smap.trait_invs.len());
         for (did, invs) in &hir_smap.trait_invs {
-            let invs = ItemInvs::new(*did, hir, invs);
+            let invs = ItemInvs::new(*did, tcx, invs);
             let did_w = (*did).into();
             trait_invs.insert(did_w, invs);
         }
         let mut loop_specs = HashMap::with_capacity(hir_smap.loop_specs.len());
         for (hir_id, hspec) in &hir_smap.loop_specs {
-            let spec = LoopSpec::new(*hir_id, hir, hspec);
+            let spec = LoopSpec::new(*hir_id, tcx, hspec);
             let hir_id_w: TermHirId = (*hir_id).into();
             loop_specs.insert(hir_id_w, spec);
         }
@@ -351,8 +349,8 @@ impl<'hir> SpecMap {
 }
 
 /// Get the expression from the function at `did`.
-fn get_params_and_expr_from_did(hir: Map<'_>, did: DefId) -> (&[Param], &Expr) {
-    let body = get_body(hir, did);
+fn get_params_and_expr_from_did(tcx: TyCtxt<'_>, did: DefId) -> (&[Param], &Expr) {
+    let body = get_body(tcx, did);
     match body.value.kind {
         ExprKind::Block(Block { stmts, .. }, None) => match stmts[0].kind {
             StmtKind::Let(LetStmt { init: Some(e), .. }) => (body.params, e),
@@ -363,8 +361,8 @@ fn get_params_and_expr_from_did(hir: Map<'_>, did: DefId) -> (&[Param], &Expr) {
 }
 
 /// Get the returned expression from the function at `did`.
-fn get_return_from_did(hir: Map<'_>, did: DefId) -> (&[Param], &Expr) {
-    let body = get_body(hir, did);
+fn get_return_from_did(tcx: TyCtxt<'_>, did: DefId) -> (&[Param], &Expr) {
+    let body = get_body(tcx, did);
     match body.value.kind {
         ExprKind::Block(Block { expr: Some(e), .. }, None) => (body.params, e),
         _ => unreachable!(),
@@ -372,6 +370,6 @@ fn get_return_from_did(hir: Map<'_>, did: DefId) -> (&[Param], &Expr) {
 }
 
 /// Get the body for function `did`.
-fn get_body(hir: Map<'_>, did: DefId) -> &Body<'_> {
-    hir.body_owned_by(did.expect_local())
+fn get_body(tcx: TyCtxt<'_>, did: DefId) -> &Body<'_> {
+    tcx.hir_body_owned_by(did.expect_local())
 }

@@ -15,7 +15,7 @@ use std::{env, panic, panic::PanicHookInfo, process::Command};
 use cargo_rml::options::{Args, RmlArgs};
 use clap::*;
 use rml::callbacks::*;
-use rustc_driver::{RunCompiler, DEFAULT_LOCALE_RESOURCES};
+use rustc_driver::{run_compiler, DEFAULT_LOCALE_RESOURCES};
 use rustc_errors::emitter::HumanEmitter;
 use rustc_interface::interface::try_print_query_stack;
 use rustc_session::{config::ErrorOutputType, EarlyDiagCtxt};
@@ -107,9 +107,7 @@ fn setup_plugin() {
     // eprintln!("{is_wrapper} {primary_package} {has_contracts}");
 
     if normal_rustc || !(user_asked_for || has_contracts) {
-        RunCompiler::new(&args, &mut DefaultCallbacks {})
-            .run()
-            .unwrap();
+        run_compiler(&args, &mut DefaultCallbacks {});
     } else {
         args.push("-Cpanic=abort".to_owned());
         args.push("-Coverflow-checks=off".to_owned());
@@ -122,7 +120,7 @@ fn setup_plugin() {
 
         let mut callbacks = ExtractSpec::new(rml_args.to_options());
 
-        RunCompiler::new(&args, &mut callbacks).run().unwrap();
+        run_compiler(&args, &mut callbacks);
     }
 }
 

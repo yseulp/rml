@@ -1,5 +1,7 @@
 #![feature(stmt_expr_attributes)]
 #![feature(proc_macro_hygiene)]
+#![allow(clippy::all)]
+#![allow(dead_code)]
 
 extern crate rml_contracts;
 use rml_contracts::*;

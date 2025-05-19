@@ -185,7 +185,7 @@ pub fn collect_hir_specs(tcx: TyCtxt<'_>) -> HirSpecMap {
     let mut all_loop_mods = HashMap::new();
     let mut all_loop_vars = HashMap::new();
 
-    for did in tcx.hir().body_owners() {
+    for did in tcx.hir_body_owners() {
         let did = did.to_def_id();
 
         for attr in tcx.get_attrs_unchecked(did) {
@@ -239,7 +239,7 @@ pub fn collect_hir_specs(tcx: TyCtxt<'_>) -> HirSpecMap {
         }
     }
 
-    for id in tcx.hir().items() {
+    for id in tcx.hir_crate_items(()).free_items() {
         let did = id.owner_id.to_def_id();
         for attr in tcx.get_attrs_unchecked(did) {
             if util::is_attr(attr, "struct_inv_ref") {
@@ -352,7 +352,7 @@ fn collect_loop_specs(
         specs: &mut specs,
     };
 
-    tcx.hir().visit_all_item_likes_in_crate(&mut coll);
+    tcx.hir_visit_all_item_likes_in_crate(&mut coll);
 
     specs
 }
@@ -363,11 +363,12 @@ struct LoopSpecCollector<'hir, 'a> {
 }
 
 impl<'v, 'a> intravisit::Visitor<'v> for LoopSpecCollector<'v, 'a> {
-    type Map = <Self::NestedFilter as intravisit::nested_filter::NestedFilter<'v>>::Map;
+    type MaybeTyCtxt =
+        <Self::NestedFilter as intravisit::nested_filter::NestedFilter<'v>>::MaybeTyCtxt;
     type NestedFilter = rustc_middle::hir::nested_filter::OnlyBodies;
 
-    fn nested_visit_map(&mut self) -> Self::Map {
-        self.tcx.hir()
+    fn maybe_tcx(&mut self) -> Self::MaybeTyCtxt {
+        self.tcx
     }
 
     fn visit_expr(&mut self, ex: &'v rustc_hir::Expr<'v>) {
@@ -376,7 +377,7 @@ impl<'v, 'a> intravisit::Visitor<'v> for LoopSpecCollector<'v, 'a> {
             let mut mod_ref = None;
             let mut var_ref = None;
 
-            for attr in self.tcx.hir().attrs(ex.hir_id) {
+            for attr in self.tcx.hir_attrs(ex.hir_id) {
                 if util::is_attr(attr, "loop_inv_ref") {
                     let name = attr.value_str().unwrap();
                     inv_refs.push(name);

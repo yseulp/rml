@@ -32,9 +32,12 @@ fn should_suppress_borrowck<'tcx>(tcx: TyCtxt<'tcx>, did: DefId) -> bool {
 /// Create an empty loop.
 pub(crate) fn make_loop<'tcx>(_: TyCtxt<'tcx>) -> IndexVec<BasicBlock, BasicBlockData<'tcx>> {
     let mut body = IndexVec::new();
-    body.push(BasicBlockData::new(Some(Terminator {
-        source_info: SourceInfo::outermost(rustc_span::DUMMY_SP),
-        kind: TerminatorKind::Return,
-    })));
+    body.push(BasicBlockData::new(
+        Some(Terminator {
+            source_info: SourceInfo::outermost(rustc_span::DUMMY_SP),
+            kind: TerminatorKind::Return,
+        }),
+        false,
+    ));
     body
 }

@@ -50,7 +50,9 @@ pub(crate) fn gen_unique_ident(prefix: &str) -> Ident {
 /// Extract all attributes with identifier `attr`.
 pub(crate) fn extract_attrs(attrs: &mut Vec<Attribute>, attr: &str) -> Vec<Attribute> {
     attrs
-        .extract_if(|a| a.path().get_ident().map(|i| i == attr).unwrap_or(false))
+        .extract_if(.., |a| {
+            a.path().get_ident().map(|i| i == attr).unwrap_or(false)
+        })
         .collect()
 }
 
