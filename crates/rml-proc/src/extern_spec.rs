@@ -1,7 +1,7 @@
 use core::fmt;
 
 use proc_macro2::{Ident, Span, TokenStream as TS2};
-use quote::{quote, quote_spanned, ToTokens};
+use quote::{ToTokens, quote, quote_spanned};
 use rml_syn::{
     attrs::{AttributeInvariant, AttributeSpec},
     extern_spec::{
@@ -10,8 +10,8 @@ use rml_syn::{
     },
 };
 use syn::{
-    parse_quote, spanned::Spanned, Attribute, ExprPath, FnArg, Generics, PatType, Path, Result,
-    ReturnType, Token,
+    Attribute, ExprPath, FnArg, Generics, PatType, Path, Result, ReturnType, Token, parse_quote,
+    spanned::Spanned,
 };
 
 use crate::{
@@ -145,7 +145,7 @@ fn handle_fn(
                 let spec_id = gen_unique_ident(&sig.ident.to_string());
                 let result = match &sig.output {
                     ReturnType::Default => parse_quote! { result : () },
-                    ReturnType::Type(_, ref ty) => parse_quote! { result : #ty },
+                    ReturnType::Type(_, ty) => parse_quote! { result : #ty },
                 };
                 let mut spec = spec.validate()?;
                 spec_case_refs.push(spec_id.to_string());

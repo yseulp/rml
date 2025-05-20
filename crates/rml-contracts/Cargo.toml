@@ -2,7 +2,7 @@
 name = "rml-contracts"
 authors = ["Daniel Drodt <daniel.drodt@tu-darmstadt.de>"]
 version = "0.1.0"
-edition = "2021"
+edition = "2024"
 
 [dependencies]
 rml-proc = { path = "../rml-proc" }

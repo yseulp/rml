@@ -2,7 +2,7 @@
 name = "rml-proc"
 authors = ["Daniel Drodt <daniel.drodt@tu-darmstadt.de>"]
 version = "0.1.0"
-edition = "2021"
+edition = "2024"
 
 [lib]
 proc-macro = true
