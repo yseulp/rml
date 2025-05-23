@@ -1,4 +1,4 @@
-use rustc_hir::{def_id::DefId, AttrItem, Attribute};
+use rustc_hir::{AttrItem, Attribute, def_id::DefId};
 use rustc_middle::ty::TyCtxt;
 use rustc_span::Symbol;
 
@@ -67,7 +67,9 @@ pub fn get_spec_part<'a>(attrs: &'a [Attribute]) -> Option<(Symbol, &'a AttrItem
             continue;
         }
 
-        let attr = attr.get_normal_item();
+        let Attribute::Unparsed(attr) = attr else {
+            continue;
+        };
 
         if attr.path.segments.len() < 3 {
             continue;
@@ -88,7 +90,9 @@ pub fn get_attr<'a>(attrs: &'a [Attribute], path: &[&str]) -> Option<&'a AttrIte
             continue;
         }
 
-        let attr = attr.get_normal_item();
+        let Attribute::Unparsed(attr) = attr else {
+            continue;
+        };
 
         if attr.path.segments.len() != path.len() {
             continue;
