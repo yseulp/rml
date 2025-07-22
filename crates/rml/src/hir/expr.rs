@@ -78,6 +78,9 @@ pub enum ExprKind {
         block: Block,
         label: Option<Label>,
     },
+    GhostBlock {
+        block: Block,
+    },
     Assign {
         left: Expr,
         right: Expr,

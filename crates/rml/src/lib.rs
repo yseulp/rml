@@ -24,6 +24,7 @@ pub mod callbacks;
 pub(crate) mod check;
 pub mod ctx;
 pub mod error;
+pub(crate) mod ghost;
 pub mod hir;
 pub mod locset;
 pub mod spec;

@@ -8,7 +8,7 @@ use rustc_span::{
     symbol::Ident as HirIdent,
 };
 
-use crate::{spec::{collect_hir_specs, SpecMap}, util::{get_attr, is_spec}, FromHir, HirInto};
+use crate::{ghost::{convert_ghost_block, get_ghost_expr}, spec::{collect_hir_specs, SpecMap}, util::{get_attr, is_spec}, FromHir, HirInto};
 
 use Ctor;
 use Def;
@@ -1531,10 +1531,14 @@ impl From<&hir::DotDotPos> for DotDotPos {
 
 impl<'hir> FromHir<'hir, &'hir hir::Expr<'hir>> for Expr {
     fn from_hir(value: &'hir hir::Expr<'hir>, tcx: TyCtxt<'hir>) -> Self {
-        Expr {
-            hir_id: value.hir_id.into(),
-            kind: Box::new((&value.kind).hir_into(tcx)),
-            span: value.span.into(),
+        if let Some(body_id) = get_ghost_expr(tcx, value) {
+            convert_ghost_block(tcx, body_id)
+        } else {
+            Expr {
+                hir_id: value.hir_id.into(),
+                kind: Box::new((&value.kind).hir_into(tcx)),
+                span: value.span.into(),
+            }
         }
     }
 }
