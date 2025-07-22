@@ -34,24 +34,47 @@ pub mod well_founded;
 pub use ghost::Ghost;
 pub use logic::{int::Int, ops::IndexLogic, seq::Seq};
 pub use model::{DeepModel, ShallowModel};
-pub use well_founded::{well_founded_check, WellFounded};
+pub use well_founded::{WellFounded, well_founded_check};
 
 #[cfg(rml)]
 pub mod ghost;
 
 #[cfg(not(rml))]
 pub mod ghost {
-    pub struct Ghost<T>(std::marker::PhantomData<T>)
+    use std::{
+        marker::PhantomData,
+        ops::{Deref, DerefMut},
+    };
+
+    pub struct Ghost<T>(PhantomData<T>)
     where
         T: ?Sized;
 
     impl<T> Ghost<T> {
-        pub fn new() -> Ghost<T> {
-            Ghost(std::marker::PhantomData)
+        pub fn new(_: T) -> Ghost<T> {
+            Self(PhantomData)
+        }
+
+        pub fn phantom() -> Ghost<T> {
+            Self(PhantomData)
         }
 
         pub fn from_fn<F: Fn() -> Ghost<T>>(_: F) -> Ghost<T> {
-            Ghost(std::marker::PhantomData)
+            Ghost(PhantomData)
+        }
+    }
+
+    impl<T: ?Sized> DerefMut for Ghost<T> {
+        fn deref_mut(&mut self) -> &mut Self::Target {
+            panic!()
+        }
+    }
+
+    impl<T: ?Sized> Deref for Ghost<T> {
+        type Target = T;
+
+        fn deref(&self) -> &Self::Target {
+            panic!()
         }
     }
 }
@@ -59,8 +82,8 @@ pub mod ghost {
 #[cfg(rml)]
 mod macros {
     pub use rml_proc::{
-        extern_spec, invariant, logic, modifies, proof_assert, pure, rml, spec, strictly_pure,
-        trusted, variant,
+        extern_spec, ghost, invariant, logic, modifies, proof_assert, pure, rml, spec,
+        strictly_pure, trusted, variant,
     };
 
     pub mod stubs {
@@ -104,7 +127,7 @@ mod macros {
 #[cfg(not(rml))]
 mod macros {
     pub use rml_proc_dummy::{
-        extern_spec, invariant, logic, modifies, proof_assert, pure, rml, spec, strictly_pure,
-        trusted, variant,
+        extern_spec, ghost, invariant, logic, modifies, proof_assert, pure, rml, spec,
+        strictly_pure, trusted, variant,
     };
 }

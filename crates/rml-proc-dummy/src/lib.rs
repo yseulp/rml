@@ -5,12 +5,12 @@
 
 extern crate proc_macro;
 use proc_macro::TokenStream as TS1;
-use proc_macro2::Span;
+use proc_macro2::{Group, Span};
 use quote::quote;
 use rml_syn::{
     SpecContent, TBlock, Term, extern_spec::ExternSpecItem, locset::LocSet, subject::LogicSubject,
 };
-use syn::{Expr, Path, parse_macro_input};
+use syn::{Block, Expr, Path, parse_macro_input};
 
 /// A specification case for a function. The attribute takes a [SpecContent]
 /// and must be attached to a function or method, which need not have a body.
@@ -106,10 +106,18 @@ pub fn proof_assert(assertion: TS1) -> TS1 {
 
 #[proc_macro]
 pub fn ghost(content: TS1) -> TS1 {
-    let _ = parse_macro_input!(content as Expr);
+    let g = Group::new(proc_macro2::Delimiter::Brace, content.clone().into());
+    let stmts = parse_macro_input!(content with Block::parse_within);
+    let block = Block {
+        brace_token: syn::token::Brace {
+            span: g.delim_span(),
+        },
+        stmts,
+    };
+
     // let y = ; -> would cause a compile error, so return a placeholder instead
     quote! {
-        ::rml_contracts::ghost::Ghost::new()
+        if false {::rml_contracts::ghost::Ghost::new(#block)} else {::rml_contracts::ghost::Ghost::phantom()}
     }
     .into()
 }

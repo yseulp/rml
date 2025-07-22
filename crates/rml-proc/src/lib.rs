@@ -7,12 +7,12 @@
 
 use func::fn_spec_item;
 use proc_macro::TokenStream as TS1;
-use proc_macro2::{Span, TokenStream as TS2};
+use proc_macro2::{Group, Span, TokenStream as TS2, extra::DelimSpan};
 use quote::{quote, quote_spanned};
 use rml_syn::{
     Encode, SpecContent, TBlock, Term, extern_spec::ExternSpecItem, subject::LogicSubject,
 };
-use syn::{Expr, Path, ReturnType, parse_macro_input, parse_quote, spanned::Spanned};
+use syn::{Block, Expr, Path, ReturnType, Token, parse_macro_input, parse_quote, spanned::Spanned};
 
 mod extern_spec;
 mod func;
@@ -244,16 +244,23 @@ pub fn proof_assert(assertion: TS1) -> TS1 {
 
 #[proc_macro]
 pub fn ghost(content: TS1) -> TS1 {
-    let expr = parse_macro_input!(content as Expr);
+    let g = Group::new(proc_macro2::Delimiter::Brace, content.clone().into());
+    let stmts = parse_macro_input!(content with Block::parse_within);
+    let block = Block {
+        brace_token: syn::token::Brace {
+            span: g.delim_span(),
+        },
+        stmts,
+    };
 
     TS1::from(quote! {
         {
             #[allow(unused_must_use, unused_variables)]
             let _ = {
                 #[rml::decl::ghost]
-                || #expr
+                || #block
             };
-            Ghost(PhantomData::new())
+            if false {::rml_contracts::ghost::Ghost::new(#block)} else {::rml_contracts::ghost::Ghost::phantom()}
         }
     })
 }

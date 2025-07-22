@@ -175,6 +175,9 @@ dependencies = [
 [[package]]
 name = "ghost-example"
 version = "0.1.0"
+dependencies = [
+ "rml-contracts",
+]
 
 [[package]]
 name = "hashbrown"
