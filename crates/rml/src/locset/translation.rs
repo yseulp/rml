@@ -3,9 +3,9 @@ use rustc_middle::ty::TyCtxt;
 use rustc_span::Symbol;
 
 use super::{LocSet, LocSetKind};
-use crate::term::{
-    translation::{FromHir, HirInto},
-    Term, TermQPath,
+use crate::{
+    FromHir, HirInto,
+    term::{Term, TermQPath},
 };
 
 impl<'tcx> FromHir<'tcx, &'tcx Expr<'tcx>> for LocSet {

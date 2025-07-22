@@ -9,7 +9,6 @@ use rustc_ast::{
     Mutability, StrStyle, TraitObjectSyntax, UintTy,
 };
 use rustc_hir::{
-    def::{CtorKind, CtorOf, DefKind, NonMacroAttrKind, Res},
     AngleBrackets, AnonConst, Arm, BareFnTy, BinOp, BinOpKind, Block, BlockCheckMode, Body,
     Closure, ClosureBinder, ConstArg, ConstArgKind, ConstBlock, Constness, DotDotPos, Expr,
     ExprField, ExprKind, FnDecl, FnRetTy, GenericArg, GenericArgs, GenericArgsParentheses,
@@ -18,6 +17,7 @@ use rustc_hir::{
     Lit, MatchSource, MutTy, OpaqueTy, Param, ParamName, Pat, PatExpr, PatExprKind, PatField,
     PatKind, Path, PathSegment, PolyTraitRef, PrimTy, QPath, RangeEnd, Stmt, StmtKind,
     StructTailExpr, TraitRef, Ty, TyKind, TyPat, TyPatKind, UnOp, UnsafeSource,
+    def::{CtorKind, CtorOf, DefKind, NonMacroAttrKind, Res},
 };
 use rustc_middle::ty::TyCtxt;
 use rustc_span::{MacroKind, Symbol};
@@ -39,41 +39,7 @@ use super::{
     TermTraitRef, TermTy, TermTyKind, TermTyPat, TermTyPatKind, TermUintTy, TermUnOp,
     TermUnsafeSource,
 };
-
-/// Allows translating from `T` to `Self`, where `T` is a HIR structure. Since
-/// some structures reference bodies, we require access to the HIR.
-pub trait FromHir<'tcx, T>
-where
-    T: Sized,
-{
-    /// Translate from `value` to `Self`, where `T` is a HIR structure. Since
-    /// some structures reference bodies, we require access to the HIR via
-    /// `tcx`.
-    fn from_hir(value: T, tcx: TyCtxt<'tcx>) -> Self;
-}
-
-/// Allows translating from `Self` to `T`, where `Self` is a HIR structure.
-/// Since some structures reference bodies, we require access to the HIR.
-///
-/// **Do not implement this directly.** Use [FromHir] instead.
-pub trait HirInto<'tcx, T>
-where
-    T: Sized,
-{
-    /// Translate from `self` to `T`, where `self` is a HIR structure. Since
-    /// some structures reference bodies, we require access to the HIR via
-    /// `tcx`.
-    fn hir_into(self, tcx: TyCtxt<'tcx>) -> T;
-}
-
-impl<'tcx, T, U> HirInto<'tcx, U> for T
-where
-    U: FromHir<'tcx, T>,
-{
-    fn hir_into(self, tcx: TyCtxt<'tcx>) -> U {
-        U::from_hir(self, tcx)
-    }
-}
+use crate::{FromHir, HirInto};
 
 impl<'tcx> FromHir<'tcx, &'tcx Expr<'tcx>> for Term {
     fn from_hir(value: &'tcx Expr<'tcx>, tcx: TyCtxt<'tcx>) -> Self {
@@ -696,7 +662,7 @@ impl<'tcx, A> FromHir<'tcx, &'tcx TyKind<'tcx, A>> for TermTyKind {
             ),
             TyKind::Typeof(c) => Self::Typeof(Box::new((*c).hir_into(tcx))),
             TyKind::Infer(..) => Self::Infer,
-            TyKind::InferDelegation(did, _) => Self::InferDelegation((*did).into()),
+            TyKind::InferDelegation(did, _) => Self::InferDelegation(did.into()),
             TyKind::Pat(ty, pat) => Self::Pat(Box::new((*ty).hir_into(tcx)), (*pat).hir_into(tcx)),
             TyKind::Err(_) => unreachable!(),
             TyKind::UnsafeBinder(_unsafe_binder_ty) => todo!(),
@@ -1216,22 +1182,22 @@ where
         match value {
             Res::Def(dk, did) => Self::Def {
                 def: dk.into(),
-                id: did.into(),
+                id: (&did).into(),
             },
             Res::PrimTy(ty) => Self::PrimTy { ty: ty.into() },
             Res::SelfTyParam { trait_ } => Self::SelfTyParam {
-                trait_: trait_.into(),
+                trait_: (&trait_).into(),
             },
             Res::SelfTyAlias {
                 alias_to,
                 forbid_generic,
                 is_trait_impl,
             } => Self::SelfTyAlias {
-                alias_to: alias_to.into(),
+                alias_to: (&alias_to).into(),
                 forbid_generic,
                 is_trait_impl,
             },
-            Res::SelfCtor(c) => Self::SelfCtor { id: c.into() },
+            Res::SelfCtor(c) => Self::SelfCtor { id: (&c).into() },
             Res::Local(l) => Self::Local { id: l.into() },
             Res::ToolMod => Self::ToolMod,
             Res::NonMacroAttr(n) => Self::NonMacroAttr { kind: n.into() },

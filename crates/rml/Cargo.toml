@@ -8,6 +8,7 @@ edition = "2024"
 rml-syn = { path = "../rml-syn" }
 serde = { version = "1.0", features = ["derive", "rc"] }
 serde_json = "1.0"
+paste = "1.0.15"
 
 [package.metadata.rust-analyzer]
 rustc_private = true

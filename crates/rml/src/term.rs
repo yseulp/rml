@@ -2,30 +2,25 @@
 
 use std::sync::Arc;
 
-use serde::{Deserialize, Serialize};
-use wrappers::{LocalDefId as LocalDefIdWrapper, Span as SpanWrapper};
+use serde::Serialize;
 
-use self::wrappers::{
-    DefId as DefIdWrapper, HirId as HirIdWrapper, Ident as IdentWrapper, ItemId as ItemIdWrapper,
-    Symbol as SymbolWrapper,
-};
+use crate::hir::{DefId, HirId, Ident, ItemId, LocalDefId, Span, Symbol};
 
 pub mod translation;
-pub mod wrappers;
 
 /// A term extracted from an expression that is an encoded term from rml_syn.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
 pub struct Term {
     /// Id of the original expression.
-    pub hir_id: HirIdWrapper,
+    pub hir_id: HirId,
     /// Kind of the term.
     pub kind: TermKind,
     /// Span of the original expression.
-    pub span: SpanWrapper,
+    pub span: Span,
 }
 
 /// Kind of the [Term].
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
 #[serde(tag = "serde_tag")]
 pub enum TermKind {
     /// Array term, e.g., `[e1, e2, ..., eN]`.
@@ -35,13 +30,13 @@ pub enum TermKind {
     /// A method call, e.g., `x.foo::<'static, Bar, Baz>(a, b, c, d)`.
     ///
     /// The [TermPathSegment] is the path of the method, [Term] is the callee,
-    /// `Vec<Term>` are the arguments, and [SpanWrapper] is the original
+    /// `Vec<Term>` are the arguments, and [Span] is the original
     /// expressions span.
     MethodCall {
         path: TermPathSegment,
         callee: Box<Term>,
         args: Vec<Term>,
-        span: SpanWrapper,
+        span: Span,
     },
     /// A tuple, e.g., `(e1, ..., eN)`.
     Tup { terms: Vec<Term> },
@@ -83,16 +78,13 @@ pub enum TermKind {
     Block { block: TermBlock },
     /// Access of a named (e.g., `obj.foo`) or unnamed (e.g., `obj.0`) struct or
     /// tuple field.
-    Field {
-        term: Box<Term>,
-        field: IdentWrapper,
-    },
+    Field { term: Box<Term>, field: Ident },
     /// An indexing operation (`foo[2]`). Similar to [TermKind::MethodCall], the
-    /// final [SpanWrapper] represents the span of the brackets and index.
+    /// final [Span] represents the span of the brackets and index.
     Index {
         term: Box<Term>,
         idx: Box<Term>,
-        span: SpanWrapper,
+        span: Span,
     },
     /// Path to a definition, possibly containing lifetime or type parameters.
     Path { path: TermQPath },
@@ -133,7 +125,7 @@ pub enum TermKind {
     Model { kind: ModelKind, term: Box<Term> },
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
 pub enum StructTailTerm {
     /// A struct expression where all the fields are explicitly enumerated: `Foo
     /// { a, b }`.
@@ -145,11 +137,11 @@ pub enum StructTailTerm {
     /// A struct expression with a `..` tail but no "base" expression. The
     /// values from the struct fields' default values will be used to
     /// populate any fields not explicitly mentioned: `Foo { .. }`.
-    DefaultFields(SpanWrapper),
+    DefaultFields(Span),
 }
 
 /// The kind of a model term.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
 pub enum ModelKind {
     /// A shallow model, i.e., type parameters are _not_ altered.
     ///
@@ -162,21 +154,21 @@ pub enum ModelKind {
 }
 
 /// A binary operator on terms.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
 pub struct TermBinOp {
     node: TermBinOpKind,
-    span: SpanWrapper,
+    span: Span,
 }
 
 /// A unary operator on terms.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
 pub enum TermUnOp {
     Deref,
     Not,
     Neg,
 }
 /// Different binary operator kinds.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
 pub enum TermBinOpKind {
     /// `a + b`.
     Add,
@@ -222,21 +214,18 @@ pub enum TermBinOpKind {
 }
 
 /// A literal.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
 pub struct TermLit {
     pub node: TermLitKind,
-    pub span: SpanWrapper,
+    pub span: Span,
 }
 
 /// Kinds of term literal.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
 #[serde(tag = "serde_tag")]
 pub enum TermLitKind {
     /// String literal, e.g., `"hello"`.
-    Str {
-        symbol: SymbolWrapper,
-        style: TermStrStyle,
-    },
+    Str { symbol: Symbol, style: TermStrStyle },
     /// Byte string literal, e.g., `b"hello"`.
     ByteStr {
         bytes: Arc<[u8]>,
@@ -255,7 +244,7 @@ pub enum TermLitKind {
     Int { value: u128, ty: TermLitIntType },
     /// Float literal, e.g., `42.5f64`.
     Float {
-        symbol: SymbolWrapper,
+        symbol: Symbol,
         ty: TermLitFloatType,
     },
     /// Bool literal, i.e., `true` or `false`.
@@ -263,7 +252,7 @@ pub enum TermLitKind {
 }
 
 /// Integer literal type.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
 #[serde(tag = "serde_tag")]
 pub enum TermLitIntType {
     /// `i8`, `i16`, ...
@@ -274,21 +263,21 @@ pub enum TermLitIntType {
     Unsuffixed,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
 #[serde(tag = "serde_tag")]
 pub enum TermLitFloatType {
     Suffixed { ty: TermFloatTy },
     Unsuffixed,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
 #[serde(tag = "serde_tag")]
 pub enum TermStrStyle {
     Cooked,
     Raw { number: u8 },
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
 pub enum TermBorrowKind {
     Ref,
     Raw,
@@ -297,142 +286,142 @@ pub enum TermBorrowKind {
 /// Matches may be declared by the user or are created when lowering the AST to
 /// HIR. This enum denotes whether this is the former
 /// ([TermMatchSource::Normal]) or the latter (including where it comes from).
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
 pub enum TermMatchSource {
     Normal,
     Postfix,
     ForLoopDesugar,
-    TryDesugar(HirIdWrapper),
+    TryDesugar(HirId),
     AwaitDesugar,
     FormatArgs,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
 pub struct TermLet {
-    pub span: SpanWrapper,
+    pub span: Span,
     pub pat: TermPat,
     pub ty: Option<TermTy>,
     pub init: Box<Term>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
 pub struct TermArm {
-    pub hir_id: HirIdWrapper,
-    pub span: SpanWrapper,
+    pub hir_id: HirId,
+    pub span: Span,
     pub pat: TermPat,
     pub guard: Option<Term>,
     pub body: Box<Term>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
 pub struct TermClosure {
-    pub def_id: LocalDefIdWrapper,
+    pub def_id: LocalDefId,
     pub binder: TermClosureBinder,
     pub constness: TermConstness,
     pub capture_clause: TermCaptureBy,
     pub bound_generic_params: Vec<TermGenericParam>,
     pub fn_decl: TermFnDecl,
     pub body: TermBody,
-    pub fn_decl_span: SpanWrapper,
-    pub fn_arg_span: Option<SpanWrapper>,
+    pub fn_decl_span: Span,
+    pub fn_arg_span: Option<Span>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
 pub enum TermClosureBinder {
     Default,
-    For { span: SpanWrapper },
+    For { span: Span },
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
 pub enum TermConstness {
     Const,
     NotConst,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
 pub enum TermCaptureBy {
-    Value { move_kw: SpanWrapper },
+    Value { move_kw: Span },
     Ref,
-    Use { use_kw: SpanWrapper },
+    Use { use_kw: Span },
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
 pub struct TermBlock {
     pub stmts: Vec<TermStmt>,
     pub term: Option<Box<Term>>,
-    pub hir_id: HirIdWrapper,
+    pub hir_id: HirId,
     pub rules: TermBlockCheckMode,
-    pub span: SpanWrapper,
+    pub span: Span,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
 pub enum TermBlockCheckMode {
     DefaultBlock,
     UnsafeBlock(TermUnsafeSource),
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
 pub enum TermUnsafeSource {
     CompilerGenerated,
     UserProvided,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
 pub struct TermStmt {
-    pub hir_id: HirIdWrapper,
+    pub hir_id: HirId,
     pub kind: TermStmtKind,
-    pub span: SpanWrapper,
+    pub span: Span,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
 pub enum TermStmtKind {
     Let(TermLetStmt),
-    Item(ItemIdWrapper),
+    Item(ItemId),
     Term(Box<Term>),
     Semi(Box<Term>),
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
 pub struct TermLetStmt {
     pub pat: TermPat,
     pub ty: Option<TermTy>,
     pub init: Box<Term>,
-    pub hir_id: HirIdWrapper,
-    pub span: SpanWrapper,
+    pub hir_id: HirId,
+    pub span: Span,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
 pub struct TermField {
-    pub hir_id: HirIdWrapper,
-    pub ident: IdentWrapper,
+    pub hir_id: HirId,
+    pub ident: Ident,
     pub term: Term,
-    pub span: SpanWrapper,
+    pub span: Span,
     pub is_shorthand: bool,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
 pub struct TermBody {
     pub params: Vec<TermParam>,
     pub value: Box<Term>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
 pub struct TermParam {
-    pub hir_id: HirIdWrapper,
+    pub hir_id: HirId,
     pub pat: TermPat,
-    pub ty_span: SpanWrapper,
-    pub span: SpanWrapper,
+    pub ty_span: Span,
+    pub span: Span,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
 pub struct TermPat {
-    pub hir_id: HirIdWrapper,
+    pub hir_id: HirId,
     pub kind: TermPatKind,
-    pub span: SpanWrapper,
+    pub span: Span,
     pub default_binding_modes: bool,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
 #[serde(tag = "serde_tag")]
 pub enum TermPatKind {
     Wild,
@@ -446,8 +435,8 @@ pub enum TermPatKind {
     },
     Binding {
         mode: TermBindingMode,
-        hir_id: HirIdWrapper,
-        ident: IdentWrapper,
+        hir_id: HirId,
+        ident: Ident,
         pat: Option<Box<TermPat>>,
     },
     Struct {
@@ -497,14 +486,14 @@ pub enum TermPatKind {
     Err,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
 pub struct PatTerm {
-    pub hir_id: HirIdWrapper,
-    pub span: SpanWrapper,
+    pub hir_id: HirId,
+    pub span: Span,
     pub kind: PatTermKind,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
 pub enum PatTermKind {
     Lit {
         lit: TermLit,
@@ -518,96 +507,96 @@ pub enum PatTermKind {
     Path(TermQPath),
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
 pub struct TermConstBlock {
-    pub hir_id: HirIdWrapper,
-    pub def_id: LocalDefIdWrapper,
+    pub hir_id: HirId,
+    pub def_id: LocalDefId,
     pub body: TermBody,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
 pub struct TermDotDotPos(pub u32);
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
 pub enum TermRangeEnd {
     Included,
     Excluded,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
 pub struct TermBindingMode {
     pub by_ref: TermByRef,
     pub r#mut: TermMutability,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
 #[serde(tag = "serde_tag")]
 pub enum TermByRef {
     Yes { r#mut: bool },
     No,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
 pub struct TermPatField {
-    pub hir_id: HirIdWrapper,
-    pub ident: IdentWrapper,
+    pub hir_id: HirId,
+    pub ident: Ident,
     pub pat: TermPat,
     pub is_shorthand: bool,
-    pub span: SpanWrapper,
+    pub span: Span,
 }
 
-#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, Serialize, PartialEq, Eq)]
 pub enum QuantorKind {
     Exists,
     Forall,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
 pub struct QuantorParam {
-    pub hir_id: HirIdWrapper,
-    pub ident: IdentWrapper,
+    pub hir_id: HirId,
+    pub ident: Ident,
     pub ty: TermTy,
-    pub span: SpanWrapper,
-    pub ty_span: SpanWrapper,
+    pub span: Span,
+    pub ty_span: Span,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
 pub struct TermPathSegment {
-    pub ident: IdentWrapper,
-    pub hir_id: HirIdWrapper,
+    pub ident: Ident,
+    pub hir_id: HirId,
     pub res: TermRes,
     pub args: Option<TermGenericArgs>,
     pub infer_args: bool,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
 pub struct TermTypeBinding {
-    pub hir_id: HirIdWrapper,
-    pub ident: IdentWrapper,
+    pub hir_id: HirId,
+    pub ident: Ident,
     pub gen_args: TermGenericArgs,
     pub kind: TermTypeBindingKind,
-    pub span: SpanWrapper,
+    pub span: Span,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
 pub enum TermTypeBindingKind {
     Constraint { bounds: Vec<TermGenericBound> },
     Equality { hir_term: HirTerm },
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
 pub enum HirTerm {
     Ty(TermTy),
     Const(TermConstArg),
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
 pub enum TermGenericBound {
     Trait(TermPolyTraitRef),
     Outlives(TermLifetime),
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
 pub enum TermTraitBoundModifier {
     None,
     Negative,
@@ -615,22 +604,22 @@ pub enum TermTraitBoundModifier {
     MaybeConst,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
 pub struct TermGenericArgs {
     pub args: Vec<TermGenericArg>,
     // pub constraints: ,
     pub parenthesized: TermGenericArgsParentheses,
-    pub span_ext: SpanWrapper,
+    pub span_ext: Span,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
 pub enum TermGenericArgsParentheses {
     No,
     ReturnTypeNotation,
     ParenSugar,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
 pub enum TermGenericArg {
     Lifetime(TermLifetime),
     Type(TermTy),
@@ -638,43 +627,43 @@ pub enum TermGenericArg {
     Infer(TermInferArg),
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
 pub struct TermConstArg {
-    pub hir_id: HirIdWrapper,
+    pub hir_id: HirId,
     pub kind: TermConstArgKind,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
 pub enum TermConstArgKind {
     Path(TermQPath),
     Anon(TermAnonConst),
     Infer,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
 pub struct TermInferArg {
-    pub hir_id: HirIdWrapper,
-    pub span: SpanWrapper,
+    pub hir_id: HirId,
+    pub span: Span,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
 pub struct TermLifetime {
-    pub hir_id: HirIdWrapper,
-    pub ident: IdentWrapper,
+    pub hir_id: HirId,
+    pub ident: Ident,
     pub kind: TermLifetimeKind,
     pub source: TermLifetimeSource,
     pub syntax: TermLifetimeSyntax,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
 pub enum TermLifetimeKind {
-    Param(LocalDefIdWrapper),
+    Param(LocalDefId),
     ImplicitObjectLifetimeDefault,
     Infer,
     Static,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
 pub enum TermLifetimeSource {
     Reference,
     Path { angle_brackets: TermAngleBrackets },
@@ -683,28 +672,28 @@ pub enum TermLifetimeSource {
     Other,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
 pub enum TermAngleBrackets {
     Missing,
     Empty,
     Full,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
 pub enum TermLifetimeSyntax {
     Hidden,
     Anonymous,
     Named,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
 pub struct TermTy {
-    pub hir_id: HirIdWrapper,
+    pub hir_id: HirId,
     pub kind: TermTyKind,
-    pub span: SpanWrapper,
+    pub span: Span,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
 pub enum TermTyKind {
     Slice(Box<TermTy>),
     Array(Box<TermTy>, Box<TermConstArg>),
@@ -717,20 +706,20 @@ pub enum TermTyKind {
     OpaqueDef(TermOpaqueTy),
     TraitObject(Vec<TermPolyTraitRef>, TermLifetime, TermTraitObjectSyntax),
     Typeof(Box<TermAnonConst>),
-    InferDelegation(DefIdWrapper),
-    AnonAdt(ItemIdWrapper),
+    InferDelegation(DefId),
+    AnonAdt(ItemId),
     Pat(Box<TermTy>, TermTyPat),
     Infer,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
 pub struct TermTyPat {
-    pub hir_id: HirIdWrapper,
+    pub hir_id: HirId,
     pub kind: TermTyPatKind,
-    pub span: SpanWrapper,
+    pub span: Span,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
 pub enum TermTyPatKind {
     Range {
         start: Box<TermConstArg>,
@@ -742,26 +731,26 @@ pub enum TermTyPatKind {
     Err,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
 pub struct TermOpaqueTy {
-    pub hir_id: HirIdWrapper,
-    pub def_id: LocalDefIdWrapper,
+    pub hir_id: HirId,
+    pub def_id: LocalDefId,
     // pub generics
     // pub bounds
     // pub origin
     // pub lifetime_mapping,
-    pub span: SpanWrapper,
+    pub span: Span,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
 pub struct TermBareFnTy {
     pub abi: TermAbi,
     pub generic_params: Vec<TermGenericParam>,
     pub decl: TermFnDecl,
-    pub param_idents: Vec<Option<IdentWrapper>>,
+    pub param_idents: Vec<Option<Ident>>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
 pub struct TermFnDecl {
     pub inputs: Vec<TermTy>,
     pub output: TermFnRetTy,
@@ -770,13 +759,13 @@ pub struct TermFnDecl {
     pub lifetime_elision_allowed: bool,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
 pub enum TermFnRetTy {
-    DefaultReturn(SpanWrapper),
+    DefaultReturn(Span),
     Return(Box<TermTy>),
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
 pub enum TermImplicitSelfKind {
     Imm,
     Mut,
@@ -785,7 +774,7 @@ pub enum TermImplicitSelfKind {
     None,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
 pub enum TermAbi {
     Rust,
     C { unwind: bool },
@@ -814,64 +803,64 @@ pub enum TermAbi {
     RiscvInterruptS,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
 pub struct TermMutTy {
     pub ty: TermTy,
     pub mutbl: TermMutability,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
 pub struct TermAnonConst {
-    pub hir_id: HirIdWrapper,
-    pub def_id: LocalDefIdWrapper,
+    pub hir_id: HirId,
+    pub def_id: LocalDefId,
     pub body: Term,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
 pub enum TermMutability {
     Not,
     Mut,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
 pub enum TermTraitObjectSyntax {
     Dyn,
     DynStar,
     None,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
 pub struct TermTraitRef {
     pub path: TermPath,
-    pub hir_ref_id: HirIdWrapper,
+    pub hir_ref_id: HirId,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
 pub struct TermPath<R = TermRes> {
-    pub span: SpanWrapper,
+    pub span: Span,
     pub res: R,
     pub segments: Vec<TermPathSegment>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
 pub struct TermGenericParam {
-    pub hir_id: HirIdWrapper,
-    pub def_id: LocalDefIdWrapper,
+    pub hir_id: HirId,
+    pub def_id: LocalDefId,
     pub name: TermParamName,
-    pub span: SpanWrapper,
+    pub span: Span,
     pub pure_wrt_drop: bool,
     pub kind: TermGenericParamKind,
-    pub colon_span: Option<SpanWrapper>,
+    pub colon_span: Option<Span>,
     pub source: TermGenericParamSource,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
 pub enum TermParamName {
-    Plain(IdentWrapper),
+    Plain(Ident),
     Fresh,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
 pub enum TermGenericParamKind {
     Lifetime {
         kind: TermLifetimeParamKind,
@@ -887,20 +876,20 @@ pub enum TermGenericParamKind {
     },
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
 pub enum TermLifetimeParamKind {
     Explicit,
     Elided,
     Error,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
 pub enum TermGenericParamSource {
     Generics,
     Binder,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
 #[serde(tag = "serde_tag")]
 pub enum TermQPath {
     Resolved {
@@ -913,37 +902,37 @@ pub enum TermQPath {
     },
     LangItem {
         item: TermLangItem,
-        span: SpanWrapper,
+        span: Span,
     },
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
 pub struct TermPolyTraitRef {
     pub bound_generic_params: Vec<TermGenericParam>,
     pub trait_ref: TermTraitRef,
-    pub span: SpanWrapper,
+    pub span: Span,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
 #[serde(tag = "serde_tag")]
-pub enum TermRes<Id = HirIdWrapper> {
+pub enum TermRes<Id = HirId> {
     Def {
         def: TermDefKind,
-        id: DefIdWrapper,
+        id: DefId,
     },
     PrimTy {
         ty: TermPrimTy,
     },
     SelfTyParam {
-        trait_: DefIdWrapper,
+        trait_: DefId,
     },
     SelfTyAlias {
-        alias_to: DefIdWrapper,
+        alias_to: DefId,
         forbid_generic: bool,
         is_trait_impl: bool,
     },
     SelfCtor {
-        id: DefIdWrapper,
+        id: DefId,
     },
     Local {
         id: Id,
@@ -955,15 +944,15 @@ pub enum TermRes<Id = HirIdWrapper> {
     Err,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
 pub enum TermNonMacroAttrKind {
-    Builtin(SymbolWrapper),
+    Builtin(Symbol),
     Tool,
     DeriveHelper,
     DeriveHelperCompat,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
 pub enum TermDefKind {
     Mod,
     Struct,
@@ -999,7 +988,7 @@ pub enum TermDefKind {
     SyntheticCoroutineBody,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
 pub enum TermPrimTy {
     Int(TermIntTy),
     Uint(TermUintTy),
@@ -1009,7 +998,7 @@ pub enum TermPrimTy {
     Char,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
 pub enum TermIntTy {
     Isize,
     I8,
@@ -1019,7 +1008,7 @@ pub enum TermIntTy {
     I128,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
 pub enum TermUintTy {
     Usize,
     U8,
@@ -1029,7 +1018,7 @@ pub enum TermUintTy {
     U128,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
 pub enum TermFloatTy {
     F16,
     F32,
@@ -1037,19 +1026,19 @@ pub enum TermFloatTy {
     F128,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
 pub enum TermCtorOf {
     Struct,
     Variant,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
 pub enum TermCtorKind {
     Fn,
     Const,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
 pub enum TermMacroKind {
     Bang,
     Attr,
@@ -1058,7 +1047,7 @@ pub enum TermMacroKind {
 
 macro_rules! basic_enum {
     ($name:ident, $p:path, $($vars:ident),*) => {
-        #[derive(Debug, Clone, Serialize, Deserialize)]
+        #[derive(Debug, Clone, Serialize,  PartialEq, Eq)]
         pub enum $name {
             $($vars),*
         }

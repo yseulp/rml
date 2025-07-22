@@ -2,29 +2,29 @@
 
 mod translation;
 
-use serde::{Deserialize, Serialize};
+use serde::Serialize;
 
-use crate::term::{
-    wrappers::{HirId as HirIdWrapper, Ident as IdentWrapper, Span as SpanWrapper},
-    Term, TermQPath,
+use crate::{
+    hir::{HirId, Ident, Span},
+    term::{Term, TermQPath},
 };
 
 /// Location set information. Extracted from a expression.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize)]
 pub struct LocSet {
     /// HIR id of the expression the location set is extracted from.
-    pub hir_id: HirIdWrapper,
+    pub hir_id: HirId,
     /// Kind of the location set.
     pub kind: LocSetKind,
     /// Original span of the expression.
-    pub span: SpanWrapper,
+    pub span: Span,
 }
 
 /// Kind of the location set.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize)]
 pub enum LocSetKind {
     /// A field location set, like `expr.field`.
-    Field(Box<Term>, IdentWrapper),
+    Field(Box<Term>, Ident),
     /// A field wildcard for all fields of a expression, e.g., `expr.*`.
     FieldWildcard(Box<Term>),
     /// An index location set, e.g., `expr[i], expr[i..j], expr[_]`.

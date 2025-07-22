@@ -3,26 +3,24 @@
 
 use std::collections::HashMap;
 
-pub(crate) use hir::{collect_hir_specs, HirSpecMap};
+pub(crate) use hir::{HirSpecMap, collect_hir_specs};
 use rustc_hir::{Block, Body, Expr, ExprKind, HirId, LetStmt, Param, StmtKind};
 use rustc_middle::ty::TyCtxt;
 use rustc_span::def_id::DefId;
-use serde::{Deserialize, Serialize};
+use serde::Serialize;
 
 use self::hir::{HirFnSpec, HirFnSpecCase, HirItemInvs, HirLoopSpec};
 use crate::{
+    HirInto,
+    hir::{DefId as DefIdW, HirId as HirIdW},
     locset::LocSet,
-    term::{
-        translation::HirInto,
-        wrappers::{DefId as TermDefId, HirId as TermHirId},
-        Term, TermParam,
-    },
+    term::{Term, TermParam},
 };
 
 pub(crate) mod hir;
 
 /// The kind of a function specification.
-#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, Serialize, PartialEq, Eq)]
 pub enum SpecKind {
     /// Normal execution (no panics).
     Normal,
@@ -30,7 +28,7 @@ pub enum SpecKind {
     Panic,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
 pub struct WithParams<T>
 where
     T: std::fmt::Debug + Clone + Serialize,
@@ -49,10 +47,10 @@ where
 }
 
 /// A case of a specification. Extracted from a spec function.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
 pub struct SpecCase {
     /// DefId of the spec function.
-    pub did: TermDefId,
+    pub did: DefIdW,
     /// Kind of the case. Defines the execution.
     pub kind: SpecKind,
     /// Name of the case.
@@ -116,7 +114,7 @@ impl<'tcx> SpecCase {
         };
 
         Self {
-            did: hcase.did.into(),
+            did: (&hcase.did).into(),
             kind: hcase.kind,
             name,
             pre,
@@ -138,7 +136,7 @@ fn get_params_and_term<'tcx>(did: DefId, tcx: TyCtxt<'tcx>) -> WithParams<Term> 
 #[derive(Debug, Clone, Serialize)]
 pub struct FnSpec {
     /// The specified function.
-    pub target: TermDefId,
+    pub target: DefIdW,
     /// All cases of the specification.
     pub cases: Vec<SpecCase>,
 }
@@ -148,7 +146,7 @@ impl<'tcx> FnSpec {
         let mut normal_count = 0;
         let mut panic_count = 0;
         Self {
-            target: target.into(),
+            target: (&target).into(),
             cases: hspec
                 .cases
                 .iter()
@@ -167,7 +165,7 @@ impl<'tcx> FnSpec {
 #[derive(Debug, Clone, Serialize)]
 pub struct ItemInvs {
     /// The item which the invariants describe.
-    pub target: TermDefId,
+    pub target: DefIdW,
     /// All invariants.
     pub invariants: Vec<WithParams<Term>>,
 }
@@ -175,7 +173,7 @@ pub struct ItemInvs {
 impl<'tcx> ItemInvs {
     pub fn new(target: DefId, tcx: TyCtxt<'tcx>, invs: &HirItemInvs) -> Self {
         Self {
-            target: target.into(),
+            target: (&target).into(),
             invariants: invs
                 .invariants
                 .iter()
@@ -189,7 +187,7 @@ impl<'tcx> ItemInvs {
 #[derive(Debug, Clone, Serialize)]
 pub struct LoopSpec {
     /// The specified loop.
-    pub target: TermHirId,
+    pub target: HirIdW,
     /// Invariants of the loop.
     pub invariants: Vec<WithParams<Term>>,
     /// What the loop may modify.
@@ -233,15 +231,15 @@ impl LoopSpec {
 #[derive(Debug, Clone, Serialize)]
 pub struct SerializableSpecMap<'s> {
     /// All specified functions and their specifications.
-    pub fn_specs: Vec<SerializableEntry<TermDefId, &'s FnSpec>>,
+    pub fn_specs: Vec<SerializableEntry<DefIdW, &'s FnSpec>>,
     /// All specified structs and their specifications.
-    pub struct_invs: Vec<SerializableEntry<TermDefId, &'s ItemInvs>>,
+    pub struct_invs: Vec<SerializableEntry<DefIdW, &'s ItemInvs>>,
     /// All specified enums and their specifications.
-    pub enum_invs: Vec<SerializableEntry<TermDefId, &'s ItemInvs>>,
+    pub enum_invs: Vec<SerializableEntry<DefIdW, &'s ItemInvs>>,
     /// All specified traits and their specifications.
-    pub trait_invs: Vec<SerializableEntry<TermDefId, &'s ItemInvs>>,
+    pub trait_invs: Vec<SerializableEntry<DefIdW, &'s ItemInvs>>,
     /// All specified loops and their specifications.
-    pub loop_specs: Vec<SerializableEntry<TermHirId, &'s LoopSpec>>,
+    pub loop_specs: Vec<SerializableEntry<HirIdW, &'s LoopSpec>>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -260,15 +258,15 @@ impl<K, V> SerializableEntry<K, V> {
 #[derive(Debug, Clone)]
 pub struct SpecMap {
     /// Map from specified functions to their specs.
-    pub fn_specs: HashMap<TermDefId, FnSpec>,
+    pub fn_specs: HashMap<DefIdW, FnSpec>,
     /// Map from specified structs to their invariants.
-    pub struct_invs: HashMap<TermDefId, ItemInvs>,
+    pub struct_invs: HashMap<DefIdW, ItemInvs>,
     /// Map from specified enums to their invariants.
-    pub enum_invs: HashMap<TermDefId, ItemInvs>,
+    pub enum_invs: HashMap<DefIdW, ItemInvs>,
     /// Map from specified traits to their invariants.
-    pub trait_invs: HashMap<TermDefId, ItemInvs>,
+    pub trait_invs: HashMap<DefIdW, ItemInvs>,
     /// Map from specified loops to their invariants.
-    pub loop_specs: HashMap<TermHirId, LoopSpec>,
+    pub loop_specs: HashMap<HirIdW, LoopSpec>,
 }
 
 impl<'hir> SpecMap {
@@ -276,34 +274,34 @@ impl<'hir> SpecMap {
         let mut fn_specs = HashMap::with_capacity(hir_smap.fn_specs.len());
         for (did, hspec) in &hir_smap.fn_specs {
             let spec = FnSpec::new(*did, tcx, hspec);
-            let did_w = (*did).into();
+            let did_w = did.into();
             fn_specs.insert(did_w, spec);
         }
 
         let mut struct_invs = HashMap::with_capacity(hir_smap.struct_invs.len());
         for (did, invs) in &hir_smap.struct_invs {
             let invs = ItemInvs::new(*did, tcx, invs);
-            let did_w = (*did).into();
+            let did_w = did.into();
             struct_invs.insert(did_w, invs);
         }
 
         let mut enum_invs = HashMap::with_capacity(hir_smap.enum_invs.len());
         for (did, invs) in &hir_smap.enum_invs {
             let invs = ItemInvs::new(*did, tcx, invs);
-            let did_w = (*did).into();
+            let did_w = did.into();
             enum_invs.insert(did_w, invs);
         }
 
         let mut trait_invs = HashMap::with_capacity(hir_smap.trait_invs.len());
         for (did, invs) in &hir_smap.trait_invs {
             let invs = ItemInvs::new(*did, tcx, invs);
-            let did_w = (*did).into();
+            let did_w = did.into();
             trait_invs.insert(did_w, invs);
         }
         let mut loop_specs = HashMap::with_capacity(hir_smap.loop_specs.len());
         for (hir_id, hspec) in &hir_smap.loop_specs {
             let spec = LoopSpec::new(*hir_id, tcx, hspec);
-            let hir_id_w: TermHirId = (*hir_id).into();
+            let hir_id_w: HirIdW = (*hir_id).into();
             loop_specs.insert(hir_id_w, spec);
         }
 
