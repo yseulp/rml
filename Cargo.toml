@@ -7,6 +7,7 @@ members = [
     "crates/example",
     "crates/cargo-rml",
     "crates/rml",
+    "crates/ghost-example",
 ]
 resolver = "2"
 default-members = ["crates/example"]

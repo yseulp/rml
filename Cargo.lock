@@ -173,6 +173,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "ghost-example"
+version = "0.1.0"
+
+[[package]]
 name = "hashbrown"
 version = "0.15.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -368,6 +372,7 @@ name = "rml-proc-dummy"
 version = "0.1.0"
 dependencies = [
  "proc-macro2",
+ "quote",
  "rml-syn",
  "syn",
 ]

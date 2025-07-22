@@ -10,9 +10,9 @@ use proc_macro::TokenStream as TS1;
 use proc_macro2::{Span, TokenStream as TS2};
 use quote::{quote, quote_spanned};
 use rml_syn::{
-    extern_spec::ExternSpecItem, subject::LogicSubject, Encode, SpecContent, TBlock, Term,
+    Encode, SpecContent, TBlock, Term, extern_spec::ExternSpecItem, subject::LogicSubject,
 };
-use syn::{parse_macro_input, parse_quote, spanned::Spanned, Path, ReturnType};
+use syn::{Expr, Path, ReturnType, parse_macro_input, parse_quote, spanned::Spanned};
 
 mod extern_spec;
 mod func;
@@ -239,6 +239,44 @@ pub fn proof_assert(assertion: TS1) -> TS1 {
                 }
             }
         }
+    })
+}
+
+#[proc_macro]
+pub fn ghost(content: TS1) -> TS1 {
+    let expr = parse_macro_input!(content as Expr);
+
+    TS1::from(quote! {
+        {
+            #[allow(unused_must_use, unused_variables)]
+            let _ = {
+                #[rml::decl::ghost]
+                || #expr
+            };
+            Ghost(PhantomData::new())
+        }
+    })
+}
+
+#[proc_macro]
+pub fn snapshot(assertion: TS1) -> TS1 {
+    let assert = parse_macro_input!(assertion with TBlock::parse_within);
+    let assert_body = assert
+        .into_iter()
+        .map(|stmt| {
+            let sp = stmt.span();
+            let stmt_encoded = stmt.encode();
+            quote_spanned! {sp  => #stmt_encoded}
+        })
+        .collect::<TS2>();
+
+    TS1::from(quote! {
+        ::rml_contracts::__stubs::snapshot_from_fn(
+            #[rml::no_translate]
+            #[rml::spec]
+            #[rml::spec::snapshot]
+            ||  ::rml_contracts::snapshot::Snapshot::new({#assert_body})
+        )
     })
 }
 

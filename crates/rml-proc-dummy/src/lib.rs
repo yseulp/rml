@@ -6,10 +6,11 @@
 extern crate proc_macro;
 use proc_macro::TokenStream as TS1;
 use proc_macro2::Span;
+use quote::quote;
 use rml_syn::{
-    extern_spec::ExternSpecItem, locset::LocSet, subject::LogicSubject, SpecContent, TBlock, Term,
+    SpecContent, TBlock, Term, extern_spec::ExternSpecItem, locset::LocSet, subject::LogicSubject,
 };
-use syn::{parse_macro_input, Path};
+use syn::{Expr, Path, parse_macro_input};
 
 /// A specification case for a function. The attribute takes a [SpecContent]
 /// and must be attached to a function or method, which need not have a body.
@@ -101,6 +102,25 @@ pub fn rml(tokens: TS1) -> TS1 {
 pub fn proof_assert(assertion: TS1) -> TS1 {
     let _ = parse_macro_input!(assertion with TBlock::parse_within);
     TS1::new()
+}
+
+#[proc_macro]
+pub fn ghost(content: TS1) -> TS1 {
+    let _ = parse_macro_input!(content as Expr);
+    // let y = ; -> would cause a compile error, so return a placeholder instead
+    quote! {
+        ::rml_contracts::ghost::Ghost::new()
+    }
+    .into()
+}
+
+#[proc_macro]
+pub fn snapshot(assertion: TS1) -> TS1 {
+    let _ = parse_macro_input!(assertion with TBlock::parse_within);
+    quote::quote! {
+        ::rml_contracts::snapshot::Snapshot::from_fn(|| std::process::abort())
+    }
+    .into()
 }
 
 /// Specifies external data structures or functions. Takes an optional [Path] to
