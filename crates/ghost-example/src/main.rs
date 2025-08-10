@@ -49,9 +49,21 @@ fn allowed() {
         ghost_vec.len()
     };
 
-    // TODO
     let ms = MyStruct { f1: vec![0] };
-    // let gms: Ghost<MyStruct> = ghost! {snapshot!(ms)};
+    let gms: Ghost<MyStruct> = ghost! {snapshot!(ms)};
 }
+
+fn not_allowed(){
+    let s: String = String::from("hello"); 
+    ghost!{
+        s.len()
+    }; 
+
+    let v = vec![1,2,3]; 
+    ghost!{
+        v.len()
+    };
+}
+
 
 fn main() {}

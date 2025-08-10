@@ -123,12 +123,11 @@ pub fn ghost(content: TS1) -> TS1 {
 }
 
 #[proc_macro]
-pub fn snapshot(assertion: TS1) -> TS1 {
-    let _ = parse_macro_input!(assertion with TBlock::parse_within);
-    quote::quote! {
-        ::rml_contracts::snapshot::Snapshot::from_fn(|| std::process::abort())
-    }
-    .into()
+pub fn snapshot(input: TS1) -> TS1 {
+    let expr = parse_macro_input!(input as syn::Expr); 
+    quote!{
+        ::rml_contracts::snapshot::snapshot(#expr)
+    }.into()
 }
 
 /// Specifies external data structures or functions. Takes an optional [Path] to

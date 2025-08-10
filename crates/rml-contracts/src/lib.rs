@@ -2,25 +2,27 @@
 
 //! Procedural (attribute) macros to specify Rust code. Either generates
 //! additional specification functions, methods, and closures, or changes
-//! nothing at all, depending on whether `--cfg rml` is set. Do not set this
-//! flag yourself, use `cargo-rml` instead.
+//! nothing at all, depending on whether --cfg rml is set. Do not set this
+//! flag yourself, use cargo-rml instead.
 //!
 //! # Usage
 //!
 //! To specify contracts, import this crate like this:
-//! ```
+//! 
 //! extern crate rml_contracts;
 //! use rml_contracts::*;
-//! ```
+//!
+
 //! This will add the necessary attributes, definition of logic-only types, and
 //! add some specification to standard library items.
 //!
 //! If you want to add attributes to loops or closures to specify them, you must
 //! add the following features to your crate:
-//! ```
+//! 
 //! #![feature(stmt_expr_attributes)]
 //! #![feature(proc_macro_hygiene)]
-//! ```
+//!
+
 
 extern crate self as rml_contracts;
 
@@ -35,6 +37,49 @@ pub use ghost::Ghost;
 pub use logic::{int::Int, ops::IndexLogic, seq::Seq};
 pub use model::{DeepModel, ShallowModel};
 pub use well_founded::{WellFounded, well_founded_check};
+
+#[cfg(rml)]
+pub mod snapshot;
+#[cfg(not(rml))]
+pub mod snapshot {
+    use std::{marker::PhantomData, ops::{Deref, DerefMut}};
+    pub struct Snapshot<T: ?Sized>(PhantomData<T>);
+
+    impl<T> Snapshot<T> {
+
+        pub fn new(_: T) -> Self {
+            Self(PhantomData)
+        }
+
+        pub fn phantom() -> Self {
+            Self(PhantomData)
+        }
+
+        pub fn from_fn(_: fn() -> T) -> Self {
+            Self(PhantomData)
+        }
+    }
+
+    pub fn snapshot<T>(_v: T) -> T {
+        panic!()
+    } 
+
+    impl<T: ?Sized> Deref for Snapshot<T> {
+        type Target = T;
+        fn deref(&self) -> &Self::Target {
+            panic!()
+        }
+    }
+
+    impl<T: ?Sized> DerefMut for Snapshot<T> {
+        fn deref_mut(&mut self) -> &mut Self::Target {
+            panic!()
+        }
+    }
+}
+
+
+
 
 #[cfg(rml)]
 pub mod ghost;
@@ -83,7 +128,7 @@ pub mod ghost {
 mod macros {
     pub use rml_proc::{
         extern_spec, ghost, invariant, logic, modifies, proof_assert, pure, rml, spec,
-        strictly_pure, trusted, variant,
+        strictly_pure, trusted, variant, snapshot, 
     };
 
     pub mod stubs {
@@ -128,6 +173,6 @@ mod macros {
 mod macros {
     pub use rml_proc_dummy::{
         extern_spec, ghost, invariant, logic, modifies, proof_assert, pure, rml, spec,
-        strictly_pure, trusted, variant,
+        strictly_pure, trusted, variant, snapshot
     };
 }
