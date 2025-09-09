@@ -51,24 +51,15 @@ impl<T: ?Sized> Ghost<T> {
     }
 
     #[trusted]
-    #[strictly_pure]    #[trusted]
-    #[logic]
+    #[strictly_pure]
     pub fn inner(self) -> T
     where
         T: Sized, // TODO: don't require T: Sized here. Problem: return type is T.
     {
-        panic!()
-    }
-    pub fn from_fn<F: Fn() -> Ghost<T>>(_: F) -> Ghost<T> {
         panic!()
     }
 
-    #[trusted]
-    #[logic]
-    pub fn inner(self) -> T
-    where
-        T: Sized, // TODO: don't require T: Sized here. Problem: return type is T.
-    {
+    pub fn from_fn<F: Fn() -> Ghost<T>>(_: F) -> Ghost<T> {
         panic!()
     }
 }
