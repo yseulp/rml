@@ -282,7 +282,7 @@ pub fn snapshot(assertion: TS1) -> TS1 {
             #[rml::no_translate]
             #[rml::spec]
             #[rml::spec::snapshot]
-            ||  ::rml_contracts::snapshot::Snapshot::new({#assert_body})
+            ||  {#assert_body}
         )
     })
 }
