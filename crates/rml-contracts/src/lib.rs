@@ -171,7 +171,7 @@ mod macros {
 
         #[rml::decl::logic]
         #[rml::decl::internal]
-        #[rustc_diagnostic_item = "rml_final_value"]
+        #[rustc_diagnostic_item = "rml_snapshot_from_fn"]
         fn snapshot_from_fn<T, F>(f: F) -> Snapshot<T> where F: Fn() -> Snapshot<T> {
             f()
         }

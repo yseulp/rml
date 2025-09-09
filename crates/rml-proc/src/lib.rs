@@ -278,7 +278,7 @@ pub fn snapshot(assertion: TS1) -> TS1 {
         .collect::<TS2>();
 
     TS1::from(quote! {
-        ::rml_contracts::__stubs::snapshot_from_fn(
+        ::rml_contracts::stubs::snapshot_from_fn(
             #[rml::no_translate]
             #[rml::spec]
             #[rml::spec::snapshot]
