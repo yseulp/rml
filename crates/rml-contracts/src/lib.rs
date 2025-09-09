@@ -132,6 +132,8 @@ mod macros {
     };
 
     pub mod stubs {
+        use crate::snapshot::Snapshot;
+
         #[rml::decl::logic]
         #[rml::decl::internal]
         #[rustc_diagnostic_item = "rml_exists"]
@@ -165,6 +167,13 @@ mod macros {
         #[rustc_diagnostic_item = "rml_final_value"]
         pub fn final_value<T>(t: T) -> T {
             t
+        }
+
+        #[rml::decl::logic]
+        #[rml::decl::internal]
+        #[rustc_diagnostic_item = "rml_final_value"]
+        fn snapshot_from_fn<T, F>(f: F) -> Snapshot<T> where F: Fn() -> Snapshot<T> {
+            f()
         }
     }
 }
