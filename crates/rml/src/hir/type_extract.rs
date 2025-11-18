@@ -8,7 +8,7 @@ use super::{
     pat::PatKind,
     visit::{Visit, visit_body, visit_expr, visit_item_kind, visit_pat},
 };
-use crate::HirInto;
+use crate::{HirInto, hir::visit::visit_closure};
 
 pub fn extract_types(m: &Mod, tcx: TyCtxt) -> HashMap<HirId, Ty> {
     let mut c = Collector::new(tcx);
@@ -84,5 +84,10 @@ impl<'a, 'tcx> Visit<'a> for Collector<'tcx> {
         }
 
         visit_pat(self, t);
+    }
+
+    fn visit_closure(&mut self, t: &'a super::expr::Closure) {
+        self.last_body_id = Some(t.body_id);
+        visit_closure(self, t);
     }
 }

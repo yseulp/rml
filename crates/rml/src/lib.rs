@@ -80,8 +80,6 @@ pub struct Options {
     pub in_cargo: bool,
     /// Whether to write expanded (i.e., expanded macros) to `stdout`.
     pub print_expanded: bool,
-    /// Whether to print the [Debug] output of the collected specifications.
-    pub print_specs_debug: bool,
     /// Whether to pretty print the output.
     pub pretty_print: bool,
 }

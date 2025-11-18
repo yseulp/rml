@@ -11,7 +11,13 @@ pub(crate) fn get_ghost_expr(tcx: TyCtxt, expr: &rustc_hir::Expr) -> Option<rust
                     && l.init.is_some()
                 {
                     let e = l.init.unwrap();
-                    if let rustc_hir::ExprKind::Closure(c) = e.kind {
+                    if let rustc_hir::ExprKind::Block(b, None) = e.kind
+                        && b.stmts.is_empty()
+                        && let Some(rustc_hir::Expr {
+                            kind: rustc_hir::ExprKind::Closure(c),
+                            ..
+                        }) = b.expr
+                    {
                         let did = c.def_id.to_def_id();
                         if is_ghost(tcx, did) {
                             return Some(c.body);

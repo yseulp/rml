@@ -3,8 +3,8 @@
 use rustc_middle::ty::TyCtxt;
 
 use crate::{
-    spec::{collect_hir_specs, HirSpecMap, SpecMap},
     Options,
+    hir::{Crate, conversion::convert},
 };
 
 /// The context necessary for RML. Stored between callback phases.
@@ -13,8 +13,8 @@ pub struct RmlCtxt<'tcx> {
     pub tcx: TyCtxt<'tcx>,
     /// Options.
     pub(crate) _opts: Options,
-    /// All specification cases
-    specs: HirSpecMap,
+    /// The converted crate.
+    krate: Crate,
 }
 
 impl<'tcx> RmlCtxt<'tcx> {
@@ -22,12 +22,11 @@ impl<'tcx> RmlCtxt<'tcx> {
         Self {
             tcx,
             _opts: opts,
-            specs: collect_hir_specs(tcx),
+            krate: convert(tcx),
         }
     }
 
-    /// Get specifications.
-    pub fn get_specs(&self) -> SpecMap {
-        SpecMap::new(self.tcx, &self.specs)
+    pub fn get_krate(&self) -> &Crate {
+        &self.krate
     }
 }

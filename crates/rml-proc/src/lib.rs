@@ -7,12 +7,12 @@
 
 use func::fn_spec_item;
 use proc_macro::TokenStream as TS1;
-use proc_macro2::{Group, Span, TokenStream as TS2, extra::DelimSpan};
+use proc_macro2::{Group, Span, TokenStream as TS2};
 use quote::{quote, quote_spanned};
 use rml_syn::{
     Encode, SpecContent, TBlock, Term, extern_spec::ExternSpecItem, subject::LogicSubject,
 };
-use syn::{Block, Expr, Path, ReturnType, Token, parse_macro_input, parse_quote, spanned::Spanned};
+use syn::{Block, Path, ReturnType, parse_macro_input, parse_quote, spanned::Spanned};
 
 mod extern_spec;
 mod func;

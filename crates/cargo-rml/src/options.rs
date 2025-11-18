@@ -42,7 +42,6 @@ impl RmlArgs {
             output_file,
             in_cargo: cargo_rml,
             print_expanded: self.print_expanded,
-            print_specs_debug: self.print_specs_debug,
             pretty_print: self.pretty_print,
         }
     }

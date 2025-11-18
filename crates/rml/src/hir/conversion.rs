@@ -1862,6 +1862,7 @@ impl<'hir> FromHir<'hir, &'hir hir::Closure<'hir>> for Closure {
             capture_clause: value.capture_clause.into(),
             bound_generic_params: value.bound_generic_params.hir_into(tcx),
             fn_decl: value.fn_decl.hir_into(tcx),
+            body_id: value.body,
             body: tcx.hir_body(value.body).hir_into(tcx),
             fn_decl_span: value.fn_decl_span.into(),
             fn_arg_span: value.fn_arg_span.map(Into::into),

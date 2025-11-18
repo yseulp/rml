@@ -8,21 +8,18 @@
 //! # Usage
 //!
 //! To specify contracts, import this crate like this:
-//! 
+//!
 //! extern crate rml_contracts;
 //! use rml_contracts::*;
-//!
 
 //! This will add the necessary attributes, definition of logic-only types, and
 //! add some specification to standard library items.
 //!
 //! If you want to add attributes to loops or closures to specify them, you must
 //! add the following features to your crate:
-//! 
+//!
 //! #![feature(stmt_expr_attributes)]
 //! #![feature(proc_macro_hygiene)]
-//!
-
 
 extern crate self as rml_contracts;
 
@@ -42,11 +39,13 @@ pub use well_founded::{WellFounded, well_founded_check};
 pub mod snapshot;
 #[cfg(not(rml))]
 pub mod snapshot {
-    use std::{marker::PhantomData, ops::{Deref, DerefMut}};
+    use std::{
+        marker::PhantomData,
+        ops::{Deref, DerefMut},
+    };
     pub struct Snapshot<T: ?Sized>(PhantomData<T>);
 
     impl<T> Snapshot<T> {
-
         pub fn new(_: T) -> Self {
             Self(PhantomData)
         }
@@ -62,10 +61,11 @@ pub mod snapshot {
 
     pub fn snapshot<T>(_v: T) -> T {
         panic!()
-    } 
+    }
 
     impl<T: ?Sized> Deref for Snapshot<T> {
         type Target = T;
+
         fn deref(&self) -> &Self::Target {
             panic!()
         }
@@ -77,9 +77,6 @@ pub mod snapshot {
         }
     }
 }
-
-
-
 
 #[cfg(rml)]
 pub mod ghost;
@@ -127,8 +124,8 @@ pub mod ghost {
 #[cfg(rml)]
 mod macros {
     pub use rml_proc::{
-        extern_spec, ghost, invariant, logic, modifies, proof_assert, pure, rml, spec,
-        strictly_pure, trusted, variant, snapshot, 
+        extern_spec, ghost, invariant, logic, modifies, proof_assert, pure, rml, snapshot, spec,
+        strictly_pure, trusted, variant,
     };
 
     pub mod stubs {
@@ -157,6 +154,13 @@ mod macros {
 
         #[rml::decl::logic]
         #[rml::decl::internal]
+        #[rustc_diagnostic_item = "rml_impl"]
+        pub fn implication<T>(_: T, _: T) -> bool {
+            true
+        }
+
+        #[rml::decl::logic]
+        #[rml::decl::internal]
         #[rustc_diagnostic_item = "rml_old"]
         pub fn old<T>(t: T) -> T {
             t
@@ -172,7 +176,10 @@ mod macros {
         #[rml::decl::logic]
         #[rml::decl::internal]
         #[rustc_diagnostic_item = "rml_snapshot_from_fn"]
-        pub fn snapshot_from_fn<T, F>(f: F) -> T where F: Fn() -> T {
+        pub fn snapshot_from_fn<T, F>(f: F) -> T
+        where
+            F: Fn() -> T,
+        {
             f()
         }
     }
@@ -181,7 +188,7 @@ mod macros {
 #[cfg(not(rml))]
 mod macros {
     pub use rml_proc_dummy::{
-        extern_spec, ghost, invariant, logic, modifies, proof_assert, pure, rml, spec,
-        strictly_pure, trusted, variant, snapshot
+        extern_spec, ghost, invariant, logic, modifies, proof_assert, pure, rml, snapshot, spec,
+        strictly_pure, trusted, variant,
     };
 }

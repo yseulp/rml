@@ -1,11 +1,10 @@
 use syn::{
-    parse_quote_spanned,
-    punctuated::{Pair, Punctuated},
-    spanned::Spanned,
     AngleBracketedGenericArguments, Arm, Block, Expr, ExprArray, ExprBinary, ExprBlock, ExprCall,
     ExprCast, ExprClosure, ExprField, ExprGroup, ExprIf, ExprLet, ExprLit, ExprMatch,
     ExprMethodCall, ExprParen, ExprRange, ExprRepeat, ExprStruct, ExprTuple, ExprUnary, FieldValue,
-    GenericArgument, Local, LocalInit, Stmt,
+    GenericArgument, Local, LocalInit, Stmt, parse_quote_spanned,
+    punctuated::{Pair, Punctuated},
+    spanned::Spanned,
 };
 
 use super::Term;
@@ -162,7 +161,7 @@ impl Encode for Term {
             Term::Impl(TermImpl { hyp, cons, .. }) => {
                 let hyp = hyp.encode();
                 let cons = cons.encode();
-                parse_quote_spanned! { sp => ::rml_contracts::stubs::impl(#hyp, #cons)}
+                parse_quote_spanned! { sp => ::rml_contracts::stubs::implication(#hyp, #cons)}
             }
             Term::Index(TermIndex { term, index, .. }) => {
                 let expr = term.encode();

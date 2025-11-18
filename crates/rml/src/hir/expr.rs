@@ -247,6 +247,8 @@ pub struct Closure {
     pub capture_clause: CaptureBy,
     pub bound_generic_params: Vec<GenericParam>,
     pub fn_decl: FnDecl,
+    #[serde(skip)]
+    pub body_id: rustc_hir::BodyId,
     pub body: Body,
     pub fn_decl_span: Span,
     pub fn_arg_span: Option<Span>,

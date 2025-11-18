@@ -4,12 +4,10 @@ use std::{cell::RefCell, fs, thread_local};
 
 use rustc_ast_pretty::pprust::PpAnn;
 use rustc_driver::{Callbacks, Compilation};
-use rustc_interface::{interface::Compiler, Config};
+use rustc_interface::{Config, interface::Compiler};
 use rustc_middle::ty::TyCtxt;
 
-use crate::{
-    ctx::RmlCtxt, spec::SpecMap, suppress_borrowck::suppress_borrowck, Options, OutputFile,
-};
+use crate::{Options, OutputFile, ctx::RmlCtxt, hir::Crate, suppress_borrowck::suppress_borrowck};
 
 thread_local! {
     static RML_CTXT: RefCell<Option<RmlCtxt<'static>>> = RefCell::new(None);
@@ -88,32 +86,10 @@ impl Callbacks for ExtractSpec {
         tcx: TyCtxt<'tcx>,
     ) -> Compilation {
         let rcx = unsafe { retrieve_rcx(tcx) };
-        let specs = rcx.get_specs();
-        if self.opts.print_specs_debug {
-            println!("== Function/method specs ==");
-            for spec in specs.fn_specs.values() {
-                println!("{spec:#?}");
-            }
-            println!("== Struct invariants ==");
-            for invs in specs.struct_invs.values() {
-                println!("{invs:#?}");
-            }
-            println!("== Enum invariants ==");
-            for invs in specs.enum_invs.values() {
-                println!("{invs:#?}");
-            }
-            println!("== Trait invariants ==");
-            for invs in specs.trait_invs.values() {
-                println!("{invs:#?}");
-            }
-            println!("== Loop specs ==");
-            for spec in specs.loop_specs.values() {
-                println!("{spec:#?}");
-            }
-        }
+        let krate = rcx.get_krate();
 
         if let Some(of) = &self.opts.output_file {
-            output_specs(&specs, of, self.opts.pretty_print);
+            output_crate(krate, of, self.opts.pretty_print);
         }
 
         Compilation::Continue
@@ -148,13 +124,12 @@ pub unsafe fn retrieve_rcx(_tcx: TyCtxt<'_>) -> RmlCtxt<'_> {
     unsafe { std::mem::transmute(rcx) }
 }
 
-/// Write specs to output. Possibly pretty printed.
-fn output_specs(specs: &SpecMap, out_file: &OutputFile, pretty_print: bool) {
-    let specs = specs.serializable();
+/// Write crate to output. Possibly pretty printed.
+fn output_crate(krate: &Crate, out_file: &OutputFile, pretty_print: bool) {
     let json = if pretty_print {
-        serde_json::to_string_pretty(&specs)
+        serde_json::to_string_pretty(&krate)
     } else {
-        serde_json::to_string(&specs)
+        serde_json::to_string(&krate)
     }
     .expect("expected no serialization errors");
 
