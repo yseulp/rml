@@ -1,15 +1,15 @@
 use quote::ToTokens;
 use syn::{
-    braced, bracketed, ext::IdentExt, parenthesized, parse::ParseStream, punctuated::Punctuated,
-    token, Error, ExprMacro, ExprPath, Ident, Lit, Macro, Member, Path, PathArguments, PathSegment,
-    QSelf, RangeLimits, Result, Token, Type,
+    Error, ExprMacro, ExprPath, Ident, Lit, Macro, Member, Path, PathArguments, PathSegment, QSelf,
+    RangeLimits, Result, Token, Type, braced, bracketed, ext::IdentExt, parenthesized,
+    parse::ParseStream, punctuated::Punctuated, token,
 };
 
 use super::{
     FieldPat, Pat, PatIdent, PatOr, PatParen, PatRest, PatSlice, PatStruct, PatTuple,
     PatTupleStruct, PatWild,
 };
-use crate::{parse_delimiter, Term, TermLit, TermPath, TermRange};
+use crate::{Term, TermLit, TermPath, TermRange, parse_delimiter};
 
 impl Pat {
     /// Taken from `syn`

@@ -2,12 +2,12 @@
 
 use quote::ToTokens;
 use syn::{
-    bracketed, parenthesized,
+    MacroDelimiter, Token, bracketed, parenthesized,
     parse::{Parse, ParseStream},
-    token, MacroDelimiter, Token,
+    token,
 };
 
-use crate::{parse_delimiter, surround_delim, SpecContent, Term};
+use crate::{SpecContent, Term, parse_delimiter, surround_delim};
 
 mod kw {
     syn::custom_keyword!(pure);

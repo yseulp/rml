@@ -2,8 +2,8 @@ use proc_macro2::{Span, TokenStream as TS2};
 use quote::quote_spanned;
 use rml_syn::{LocSet, LocSetGroup, Spec};
 use syn::{
-    parse_quote, parse_quote_spanned, punctuated::Punctuated, spanned::Spanned, Attribute, FnArg,
-    Ident, Signature, Token,
+    Attribute, FnArg, Ident, Signature, Token, parse_quote, parse_quote_spanned,
+    punctuated::Punctuated, spanned::Spanned,
 };
 
 use crate::util::{

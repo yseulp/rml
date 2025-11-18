@@ -260,7 +260,11 @@ pub fn ghost(content: TS1) -> TS1 {
                 #[rml::decl::ghost]
                 || #block
             };
-            if false {::rml_contracts::ghost::Ghost::new(#block)} else {::rml_contracts::ghost::Ghost::phantom()}
+            if false {
+                ::rml_contracts::ghost::Ghost::new(#block)
+            } else {
+                ::rml_contracts::ghost::Ghost::phantom()
+            }
         }
     })
 }

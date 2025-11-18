@@ -53,17 +53,16 @@ fn allowed() {
     let gms: Ghost<MyStruct> = ghost! {snapshot!(ms)};
 }
 
-fn not_allowed(){
-    let s: String = String::from("hello"); 
-    ghost!{
+fn not_allowed() {
+    let s: String = String::from("hello");
+    ghost! {
         s.len()
-    }; 
+    };
 
-    let v = vec![1,2,3]; 
-    ghost!{
+    let v = vec![1, 2, 3];
+    ghost! {
         v.len()
     };
 }
-
 
 fn main() {}

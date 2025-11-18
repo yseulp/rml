@@ -2,13 +2,13 @@ use proc_macro2::{Ident, Span, TokenStream as TS2};
 use quote::quote;
 use rml_syn::Term;
 use syn::{
-    parse_quote, parse_quote_spanned, spanned::Spanned, Attribute, Generics, ItemFn, ItemImpl,
-    ItemTrait, Meta, Path, Result, TraitItemFn,
+    Attribute, Generics, ItemFn, ItemImpl, ItemTrait, Meta, Path, Result, TraitItemFn, parse_quote,
+    parse_quote_spanned, spanned::Spanned,
 };
 
 use crate::{
     subject::ItemKind,
-    util::{extract_attrs, gen_bool_spec_fn, gen_self_params, gen_unique_ident, EMPTY_GENERICS},
+    util::{EMPTY_GENERICS, extract_attrs, gen_bool_spec_fn, gen_self_params, gen_unique_ident},
 };
 
 /// Generate an `impl` with the methods `fns`.

@@ -3,11 +3,11 @@ use std::iter;
 use proc_macro2::TokenStream as TS2;
 use quote::{ToTokens, TokenStreamExt};
 use syn::{
-    braced,
+    AttrStyle, Attribute, Block, Expr, ExprClosure, ExprForLoop, ExprLoop, ExprWhile, ItemEnum,
+    ItemStruct, ItemTrait, Label, Lifetime, Result, Signature, Token, Visibility, braced,
     parse::{self, Parse},
     spanned::Spanned,
-    token, AttrStyle, Attribute, Block, Expr, ExprClosure, ExprForLoop, ExprLoop, ExprWhile,
-    ItemEnum, ItemStruct, ItemTrait, Label, Lifetime, Result, Signature, Token, Visibility,
+    token,
 };
 
 /// A function or method, which may either have a body or a semicolon.
@@ -103,6 +103,7 @@ trait FilterAttrs<'a> {
     type Ret: Iterator<Item = &'a Attribute>;
 
     fn outer(self) -> Self::Ret;
+    #[allow(dead_code)]
     fn inner(self) -> Self::Ret;
 }
 

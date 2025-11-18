@@ -6,8 +6,8 @@
 use proc_macro2::TokenStream as TS2;
 use quote::{ToTokens, TokenStreamExt};
 use syn::{
-    parse::{self, Parse},
     Attribute, ItemFn, Result, Signature, Token, Type, Visibility,
+    parse::{self, Parse},
 };
 
 use crate::FilterAttrs;
@@ -36,13 +36,13 @@ impl Parse for LogicSubject {
         let sig: Signature = input.parse()?;
         match sig.output {
             syn::ReturnType::Default => {
-                return Err(input.error("logic functions must have a return type"))
+                return Err(input.error("logic functions must have a return type"));
             }
             syn::ReturnType::Type(_, box Type::Never(_)) => {
-                return Err(input.error("logic functions cannot return `!`"))
+                return Err(input.error("logic functions cannot return `!`"));
             }
             syn::ReturnType::Type(_, box Type::Tuple(t)) if t.elems.is_empty() => {
-                return Err(input.error("logic functions must have a return type other than `()`"))
+                return Err(input.error("logic functions must have a return type other than `()`"));
             }
             _ => {}
         };

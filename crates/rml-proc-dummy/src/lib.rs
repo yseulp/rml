@@ -10,7 +10,7 @@ use quote::quote;
 use rml_syn::{
     SpecContent, TBlock, Term, extern_spec::ExternSpecItem, locset::LocSet, subject::LogicSubject,
 };
-use syn::{Block, Expr, Path, parse_macro_input};
+use syn::{Block, Path, parse_macro_input};
 
 /// A specification case for a function. The attribute takes a [SpecContent]
 /// and must be attached to a function or method, which need not have a body.
@@ -117,17 +117,22 @@ pub fn ghost(content: TS1) -> TS1 {
 
     // let y = ; -> would cause a compile error, so return a placeholder instead
     quote! {
-        if false {::rml_contracts::ghost::Ghost::new(#block)} else {::rml_contracts::ghost::Ghost::phantom()}
+        if false {
+            ::rml_contracts::ghost::Ghost::new(#block)
+        } else {
+            ::rml_contracts::ghost::Ghost::phantom()
+        }
     }
     .into()
 }
 
 #[proc_macro]
 pub fn snapshot(input: TS1) -> TS1 {
-    let expr = parse_macro_input!(input as syn::Expr); 
-    quote!{
+    let expr = parse_macro_input!(input as syn::Expr);
+    quote! {
         ::rml_contracts::snapshot::snapshot(#expr)
-    }.into()
+    }
+    .into()
 }
 
 /// Specifies external data structures or functions. Takes an optional [Path] to

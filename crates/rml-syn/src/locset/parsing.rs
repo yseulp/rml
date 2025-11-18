@@ -1,8 +1,8 @@
-use syn::{bracketed, parse::Parse, punctuated::Punctuated, token, Token};
+use syn::{Token, bracketed, parse::Parse, punctuated::Punctuated, token};
 
 use super::{
-    kw, LocSet, LocSetField, LocSetFieldWildcard, LocSetGroup, LocSetIndex, LocSetNothing,
-    LocSetPath,
+    LocSet, LocSetField, LocSetFieldWildcard, LocSetGroup, LocSetIndex, LocSetNothing, LocSetPath,
+    kw,
 };
 use crate::{Term, TermPath};
 

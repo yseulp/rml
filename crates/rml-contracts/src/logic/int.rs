@@ -3,6 +3,7 @@ use crate::{
     *,
 };
 
+#[allow(dead_code)]
 pub struct Int(*mut ());
 
 impl Int {

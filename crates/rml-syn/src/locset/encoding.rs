@@ -1,4 +1,4 @@
-use syn::{parse_quote_spanned, spanned::Spanned, Expr};
+use syn::{Expr, parse_quote_spanned, spanned::Spanned};
 
 use super::{
     LocSet, LocSetField, LocSetFieldWildcard, LocSetGroup, LocSetIndex, LocSetNothing, LocSetPath,

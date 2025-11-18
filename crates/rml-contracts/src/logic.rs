@@ -1,3 +1,8 @@
+#![allow(
+    clippy::non_canonical_clone_impl,
+    clippy::non_canonical_partial_ord_impl
+)]
+
 pub mod int;
 pub mod locset;
 pub mod ops;

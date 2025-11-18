@@ -1,9 +1,8 @@
 use std::{cmp::Ordering, mem};
 
 use syn::{
-    braced, bracketed, parenthesized,
+    Error, Lifetime, LitFloat, PathArguments, braced, bracketed, parenthesized,
     parse::{Parse, ParseStream, Result},
-    Error, Lifetime, LitFloat, PathArguments,
 };
 
 use super::*;
@@ -368,10 +367,10 @@ fn trailer_helper(input: ParseStream, mut e: Term) -> Result<Term> {
             let mut dot_token: Token![.] = input.parse()?;
 
             let float_token: Option<LitFloat> = input.parse()?;
-            if let Some(float_token) = float_token {
-                if multi_index(&mut e, &mut dot_token, float_token)? {
-                    continue;
-                }
+            if let Some(float_token) = float_token
+                && multi_index(&mut e, &mut dot_token, float_token)?
+            {
+                continue;
             }
 
             let member: Member = input.parse()?;
@@ -401,19 +400,19 @@ fn trailer_helper(input: ParseStream, mut e: Term) -> Result<Term> {
                 None
             };
 
-            if turbofish.is_some() || input.peek(token::Paren) {
-                if let Member::Named(method) = member {
-                    let content;
-                    e = Term::MethodCall(TermMethodCall {
-                        receiver: Box::new(e),
-                        dot_token,
-                        method,
-                        turbofish,
-                        paren_token: parenthesized!(content in input),
-                        args: content.parse_terminated(Term::parse, Token![,])?,
-                    });
-                    continue;
-                }
+            if (turbofish.is_some() || input.peek(token::Paren))
+                && let Member::Named(method) = member
+            {
+                let content;
+                e = Term::MethodCall(TermMethodCall {
+                    receiver: Box::new(e),
+                    dot_token,
+                    method,
+                    turbofish,
+                    paren_token: parenthesized!(content in input),
+                    args: content.parse_terminated(Term::parse, Token![,])?,
+                });
+                continue;
             }
 
             e = Term::Field(TermField {

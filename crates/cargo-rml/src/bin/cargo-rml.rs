@@ -2,7 +2,7 @@
 
 use std::{
     env,
-    process::{exit, Command},
+    process::{Command, exit},
 };
 
 use cargo_rml::options::Args;

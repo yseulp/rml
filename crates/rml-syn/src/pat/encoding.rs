@@ -1,5 +1,5 @@
 use super::*;
-use crate::{term::encoding::encode_punctuated, Encode};
+use crate::{Encode, term::encoding::encode_punctuated};
 
 impl Encode for Pat {
     type Target = syn::Pat;

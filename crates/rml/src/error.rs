@@ -1,25 +1,25 @@
 //! Error handling.
-use rustc_session::{EarlyDiagCtxt, Session};
-use rustc_span::{Span, DUMMY_SP};
+use rustc_session::EarlyDiagCtxt;
+use rustc_span::{DUMMY_SP, Span};
 
 /// Collects all errors encountered by RML.
 #[derive(Debug)]
 pub struct Error {
-    span: Span,
-    msg: String,
+    _span: Span,
+    _msg: String,
 }
 
 impl Error {
     /// Create error with a `span` and the message `msg`.
     pub(crate) fn new(span: Span, msg: impl Into<String>) -> Self {
         Error {
-            span,
-            msg: msg.into(),
+            _span: span,
+            _msg: msg.into(),
         }
     }
 
     /// Emit the error through `rustc`.
-    pub(crate) fn emit(self, diag: &EarlyDiagCtxt) -> ! {
+    pub(crate) fn emit(self, _diag: &EarlyDiagCtxt) -> ! {
         todo!("error reporting")
     }
 }

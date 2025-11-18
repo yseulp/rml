@@ -15,10 +15,10 @@ use std::{env, panic, panic::PanicHookInfo, process::Command};
 use cargo_rml::options::{Args, RmlArgs};
 use clap::*;
 use rml::callbacks::*;
-use rustc_driver::{run_compiler, DEFAULT_LOCALE_RESOURCES};
+use rustc_driver::{DEFAULT_LOCALE_RESOURCES, run_compiler};
 use rustc_errors::emitter::HumanEmitter;
 use rustc_interface::interface::try_print_query_stack;
-use rustc_session::{config::ErrorOutputType, EarlyDiagCtxt};
+use rustc_session::{EarlyDiagCtxt, config::ErrorOutputType};
 use termcolor::{ColorChoice, StandardStream};
 
 const BUG_REPORT_URL: &str = "https://github.com/Drodt/rml/issues/new";

@@ -3,17 +3,16 @@
 use proc_macro2::{Delimiter, TokenTree};
 use quote::ToTokens;
 use syn::{
-    braced, bracketed, parenthesized,
+    LitStr, MacroDelimiter, Result, Token, braced, bracketed, parenthesized,
     parse::{Parse, ParseStream},
     parse_quote_spanned,
     punctuated::Punctuated,
     spanned::Spanned,
     token::{self, Brace, Bracket, Paren},
-    LitStr, MacroDelimiter, Result, Token,
 };
 
 use self::validation::check_final;
-use crate::{locset::LocSet, Term};
+use crate::{Term, locset::LocSet};
 
 mod validation;
 
@@ -287,7 +286,7 @@ impl SpecContent {
                 return Err(syn::Error::new(
                     span,
                     "Specification has no post condition of any kind",
-                ))
+                ));
             }
         };
 

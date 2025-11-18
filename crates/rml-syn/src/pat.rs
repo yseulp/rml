@@ -4,7 +4,7 @@
 
 use proc_macro2::TokenStream;
 use syn::{
-    punctuated::Punctuated, token, ExprMacro as PatMacro, Ident, Member, Path, QSelf, Token, Type,
+    ExprMacro as PatMacro, Ident, Member, Path, QSelf, Token, Type, punctuated::Punctuated, token,
 };
 
 use super::{TermLit as PatLit, TermPath as PatPath, TermRange as PatRange};

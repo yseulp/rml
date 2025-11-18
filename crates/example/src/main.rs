@@ -46,11 +46,7 @@ fn no_name(a: i32, b: i32) -> i32 {
 #[spec(name = "anchor", requires(n == 0), ensures(result == 0), ensures(no_name(1, 1) != 0))]
 #[spec(name = "step", requires(n > 0), variant(n), ensures(result == 0))]
 fn rec(n: u128) -> u128 {
-    if n == 0 {
-        0
-    } else {
-        rec(n - 1)
-    }
+    if n == 0 { 0 } else { rec(n - 1) }
 }
 
 #[spec(requires(n >= 0), ensures(result == n))]

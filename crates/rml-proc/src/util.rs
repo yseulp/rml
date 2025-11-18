@@ -1,13 +1,12 @@
 use proc_macro2::Span;
 use rml_syn::{
-    visit::{MutVisitable, VisitMut},
     Encode, LocSet, Term,
+    visit::{MutVisitable, VisitMut},
 };
 use syn::{
-    parse_quote, parse_quote_spanned,
-    punctuated::{Pair, Punctuated},
     Attribute, FnArg, Generics, Ident, ItemFn, Pat, PatType, Path, Receiver, Signature, Stmt,
-    Token, Type, TypeReference,
+    Token, Type, TypeReference, parse_quote, parse_quote_spanned,
+    punctuated::{Pair, Punctuated},
 };
 
 /// Default, empty generics.

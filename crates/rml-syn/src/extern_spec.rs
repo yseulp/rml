@@ -6,11 +6,11 @@ use std::mem;
 
 use proc_macro2::Span;
 use syn::{
+    Error, ExprPath, Generics, Ident, Path, PathArguments, PathSegment, Result, Signature, Token,
+    Type, TypeParamBound,
     punctuated::Punctuated,
     spanned::Spanned,
     token::{self},
-    Error, ExprPath, Generics, Ident, Path, PathArguments, PathSegment, Result, Signature, Token,
-    Type, TypeParamBound,
 };
 
 use crate::attrs::{AttributeInvariant, FnAttribute};

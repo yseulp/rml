@@ -51,6 +51,7 @@ impl fmt::Display for Purity {
 }
 
 impl<'tcx> RmlCtxt<'tcx> {
+    #[allow(unreachable_code)]
     pub fn check_purity(&self, did: LocalDefId) {
         let tcx = self.tcx;
         let (thir, expr) = tcx

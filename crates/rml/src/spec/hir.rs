@@ -1,11 +1,11 @@
 use std::collections::{HashMap, HashSet};
 
 use rustc_hir::{
-    intravisit::{self},
     ExprKind, HirId,
+    intravisit::{self},
 };
 use rustc_middle::ty::TyCtxt;
-use rustc_span::{def_id::DefId, Symbol};
+use rustc_span::{Symbol, def_id::DefId};
 
 use super::SpecKind;
 use crate::util;

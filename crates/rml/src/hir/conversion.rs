@@ -1,5 +1,7 @@
 use std::{cell::RefCell, collections::HashMap, num::NonZero, ops::Deref};
 
+use Ctor;
+use Def;
 use rustc_hir as hir;
 use rustc_middle::ty::TyCtxt;
 use rustc_span::{
@@ -7,21 +9,22 @@ use rustc_span::{
     def_id::{DefIndex as HirDefIndex, LocalDefId as HirLocalDefId},
     symbol::Ident as HirIdent,
 };
-
-use crate::{ghost::{convert_ghost_block, get_ghost_expr}, spec::{collect_hir_specs, SpecMap}, util::{get_attr, is_spec}, FromHir, HirInto};
-
-use Ctor;
-use Def;
 use type_extract::extract_types;
 
 use super::*;
+use crate::{
+    FromHir, HirInto,
+    ghost::{convert_ghost_block, get_ghost_expr},
+    spec::{SpecMap, collect_hir_specs},
+    util::{get_attr, is_spec},
+};
 
 thread_local! {static SPEC_MAP: RefCell<Option<SpecMap>> = RefCell::new(None);}
 
 pub fn convert(tcx: TyCtxt<'_>) -> Crate {
     SPEC_MAP.with(|smap| {
-        *smap.borrow_mut() = Some(SpecMap::new(tcx, &collect_hir_specs(tcx))); 
-        let m   = tcx.hir_root_module();
+        *smap.borrow_mut() = Some(SpecMap::new(tcx, &collect_hir_specs(tcx)));
+        let m = tcx.hir_root_module();
         let top_mod = m.hir_into(tcx);
         let types = extract_types(&top_mod, tcx)
             .into_iter()
@@ -33,7 +36,9 @@ pub fn convert(tcx: TyCtxt<'_>) -> Crate {
 
 impl From<rustc_hir::ItemId> for ItemId {
     fn from(value: rustc_hir::ItemId) -> Self {
-        Self { owner_id: value.owner_id.into() }
+        Self {
+            owner_id: value.owner_id.into(),
+        }
     }
 }
 
@@ -57,8 +62,11 @@ impl<'hir> FromHir<'hir, &'hir hir::Mod<'hir>> for Mod {
                     SPEC_MAP.with_borrow_mut(|r| {
                         let smap = r.as_mut().unwrap();
                         match &mut item.kind {
-                            ItemKind::Fn {spec_cases, ..} => {
-                                if let Some(spec) = smap.fn_specs.remove(&DefId{ index: id.owner_id.def_id.local_def_index.into(), krate: CrateNum(0) }) {
+                            ItemKind::Fn { spec_cases, .. } => {
+                                if let Some(spec) = smap.fn_specs.remove(&DefId {
+                                    index: id.owner_id.def_id.local_def_index.into(),
+                                    krate: CrateNum(0),
+                                }) {
                                     *spec_cases = spec.cases;
                                 }
                             }
@@ -86,7 +94,7 @@ impl From<HirSpan> for Span {
         Span {
             lo: value.lo().into(),
             hi: value.hi().into(),
-            //ctxt: value.ctxt().into(),
+            // ctxt: value.ctxt().into(),
             parent: value.parent().map(|p| p.into()),
         }
     }
@@ -183,8 +191,8 @@ impl<'hir> FromHir<'hir, hir::def::Res> for Res {
                 is_trait_impl,
             } => Self::SelfTyAlias {
                 alias_to: (&alias_to).into(),
-                forbid_generic: forbid_generic,
-                is_trait_impl: is_trait_impl,
+                forbid_generic,
+                is_trait_impl,
             },
             rustc_hir::def::Res::SelfCtor(def_id) => Self::SelfCtor((&def_id).into()),
             rustc_hir::def::Res::Local(id) => Self::Local { id: id.into() },
@@ -237,7 +245,7 @@ impl<'hir> FromHir<'hir, &'hir hir::ItemKind<'hir>> for ItemKind {
                 generics: (*generics).hir_into(tcx),
                 body_id: body.clone(),
                 body: tcx.hir_body(*body).hir_into(tcx),
-                spec_cases: vec![]
+                spec_cases: vec![],
             },
             hir::ItemKind::Mod(ident, m) => Self::Mod {
                 ident: (*ident).into(),
@@ -307,7 +315,8 @@ impl<'hir> FromHir<'hir, &'hir hir::FnSig<'hir>> for FnSig {
 impl From<hir::FnHeader> for FnHeader {
     fn from(value: hir::FnHeader) -> Self {
         FnHeader {
-            safety: matches!(value.safety, hir::HeaderSafety::Normal(hir::Safety::Safe)), // TODO: handled other case
+            safety: matches!(value.safety, hir::HeaderSafety::Normal(hir::Safety::Safe)),
+            // TODO: handled other case
             constness: matches!(value.constness, hir::Constness::Const),
             asyncness: matches!(value.asyncness, hir::IsAsync::Async(_)),
         }
@@ -2266,9 +2275,9 @@ impl<'tcx> FromHir<'tcx, &rustc_middle::ty::Ty<'tcx>> for Ty {
                 def_id: did.into(),
                 args: args.into_iter().map(|a| (&a).hir_into(tcx)).collect(),
             },
-            rustc_type_ir::TyKind::CoroutineClosure(_, _) => Self::CoroutineClosure {},
-            rustc_type_ir::TyKind::Coroutine(_, _) => Self::Coroutine {},
-            rustc_type_ir::TyKind::CoroutineWitness(_, _) => Self::CoroutineWitness {},
+            rustc_type_ir::TyKind::CoroutineClosure(..) => Self::CoroutineClosure {},
+            rustc_type_ir::TyKind::Coroutine(..) => Self::Coroutine {},
+            rustc_type_ir::TyKind::CoroutineWitness(..) => Self::CoroutineWitness {},
             rustc_type_ir::TyKind::Never => Self::Never,
             rustc_type_ir::TyKind::Tuple(tys) => Self::Tuple {
                 tys: tys.iter().map(|ty| (&ty).hir_into(tcx)).collect(),
@@ -2286,7 +2295,7 @@ impl<'tcx> FromHir<'tcx, &rustc_middle::ty::Ty<'tcx>> for Ty {
                 placeholder: p.hir_into(tcx),
             },
             rustc_type_ir::TyKind::Infer(_) => {
-                //panic!("Infer types should probably not be encountered at this point")
+                // panic!("Infer types should probably not be encountered at this point")
                 Self::Infer {}
             }
             rustc_type_ir::TyKind::UnsafeBinder(..) => todo!("Ty::UnsafeBinder"),

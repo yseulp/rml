@@ -1,5 +1,6 @@
 use crate::*;
 
+#[allow(dead_code)]
 pub struct LocSet(*mut ());
 
 impl LocSet {

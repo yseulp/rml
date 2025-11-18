@@ -2,8 +2,8 @@ use proc_macro2::Span;
 use syn::spanned::Spanned;
 
 use crate::{
-    visit::{visit_term, Visit, Visitable},
     Spec,
+    visit::{Visit, Visitable, visit_term},
 };
 
 pub fn check_final(spec: &Spec) -> Option<Span> {

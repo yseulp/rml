@@ -1,8 +1,8 @@
 use proc_macro2::TokenStream as TS2;
-use quote::{quote_spanned, ToTokens};
+use quote::{ToTokens, quote_spanned};
 use rml_syn::{Encode, LocSet, Term};
 use syn::{
-    parse::Parse, parse_quote_spanned, spanned::Spanned, Attribute, Expr, Ident, Meta, Result, Stmt,
+    Attribute, Expr, Ident, Meta, Result, Stmt, parse::Parse, parse_quote_spanned, spanned::Spanned,
 };
 
 use crate::{gen_unique_ident, subject::LoopKind, util::extract_attrs};
