@@ -225,7 +225,10 @@ pub struct CrateNum(pub u32);
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 /// the second field is true iff it is a function ctor
-pub struct Ctor(pub CtorOf, pub bool);
+pub struct Ctor {
+    pub of: CtorOf,
+    pub is_fn_ctor: bool,
+}
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(tag = "serde_tag")]
@@ -561,6 +564,8 @@ pub enum ConstArgKind {
 pub struct AnonConst {
     pub hir_id: HirId,
     pub def_id: LocalDefId,
+    #[serde(skip)]
+    pub body_id: rustc_hir::BodyId,
     pub body: Body,
     pub span: Span,
 }

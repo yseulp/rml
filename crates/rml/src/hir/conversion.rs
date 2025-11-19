@@ -1287,10 +1287,16 @@ impl From<&hir::def::DefKind> for DefKind {
                 nested: *nested,
             },
             hir::def::DefKind::Ctor(of, hir::def::CtorKind::Fn) => Self::Ctor {
-                ctor: Ctor(of.into(), true),
+                ctor: Ctor {
+                    of: of.into(),
+                    is_fn_ctor: true,
+                },
             },
             hir::def::DefKind::Ctor(of, hir::def::CtorKind::Const) => Self::Ctor {
-                ctor: Ctor(of.into(), false),
+                ctor: Ctor {
+                    of: of.into(),
+                    is_fn_ctor: false,
+                },
             },
             hir::def::DefKind::AssocFn => Self::AssocFn,
             hir::def::DefKind::AssocConst => Self::AssocConst,
@@ -1413,6 +1419,7 @@ impl<'hir> FromHir<'hir, &'hir hir::AnonConst> for AnonConst {
         AnonConst {
             hir_id: value.hir_id.into(),
             def_id: value.def_id.into(),
+            body_id: value.body,
             body: tcx.hir_body(value.body).hir_into(tcx),
             span: value.span.into(),
         }
@@ -2289,7 +2296,7 @@ impl<'tcx> FromHir<'tcx, &rustc_middle::ty::Ty<'tcx>> for Ty {
                 ty: float_ty.into(),
             },
             rustc_type_ir::TyKind::Adt(def, args) => Self::Adt {
-                def: def.into(),
+                def: convert_adt_def(def, tcx, value),
                 args: args.iter().map(|a| (&a).hir_into(tcx)).collect(),
             },
             rustc_type_ir::TyKind::Foreign(did) => Self::Foreign { def_id: did.into() },
@@ -2358,48 +2365,127 @@ impl<'tcx> FromHir<'tcx, &rustc_middle::ty::Ty<'tcx>> for Ty {
     }
 }
 
-impl<'tcx> From<&rustc_middle::ty::AdtDef<'tcx>> for AdtDef {
-    fn from(value: &rustc_middle::ty::AdtDef<'tcx>) -> Self {
-        let og_variants = value.variants();
-        let mut variants = HashMap::with_capacity(og_variants.len());
-        for idx in og_variants.indices() {
-            let def = &og_variants[idx];
-            variants.insert(VariantIdx(idx.as_u32()), def.into());
+fn convert_adt_def<'tcx>(
+    value: &rustc_middle::ty::AdtDef<'tcx>,
+    tcx: TyCtxt<'tcx>,
+    ty: &rustc_middle::ty::Ty<'tcx>,
+) -> AdtDef {
+    let og_variants = value.variants();
+    let mut variants = HashMap::with_capacity(og_variants.len());
+    for idx in og_variants.indices() {
+        let def = &og_variants[idx];
+        variants.insert(VariantIdx(idx.as_u32()), convert_variant_def(def, tcx, ty));
+    }
+    let item = if value.did().is_local() {
+        None
+    } else {
+        Some(tcx.generics_of(value.did()).into())
+    };
+    AdtDef {
+        did: (&value.did()).into(),
+        variants,
+        flags: AdtFlags(value.flags().bits()),
+        kind: value.adt_kind().into(),
+        path_str: tcx.def_path_str(value.did()),
+        foreign_generics: item,
+    }
+}
+
+fn convert_variant_def<'tcx>(
+    value: &rustc_middle::ty::VariantDef,
+    tcx: TyCtxt<'tcx>,
+    ty: &rustc_middle::ty::Ty<'tcx>,
+) -> VariantDef {
+    let og_fields = &value.fields;
+    let mut fields = HashMap::with_capacity(og_fields.len());
+    for idx in og_fields.indices() {
+        let def = &og_fields[idx];
+        fields.insert(FieldIdx(idx.as_u32()), convert_field_def(def, tcx, ty));
+    }
+    VariantDef {
+        def_id: (&value.def_id).into(),
+        ctor: value
+            .ctor
+            .as_ref()
+            .map(|(kind, did)| (kind.into(), did.into())),
+        name: value.name.into(),
+        discr: value.discr.into(),
+        fields,
+    }
+}
+
+fn convert_field_def<'tcx>(
+    value: &rustc_middle::ty::FieldDef,
+    tcx: TyCtxt<'tcx>,
+    ty: &rustc_middle::ty::Ty<'tcx>,
+) -> TyFieldDef {
+    let rustc_middle::ty::TyKind::Adt(_, args) = ty.kind() else {
+        panic!("expected ADT")
+    };
+    TyFieldDef {
+        did: (&value.did).into(),
+        name: value.name.into(),
+        inst_ty: (&value.ty(tcx, args)).hir_into(tcx),
+        ty: (&tcx.type_of(value.did).instantiate_identity()).hir_into(tcx),
+    }
+}
+
+impl From<&rustc_middle::ty::Generics> for TyGenerics {
+    fn from(value: &rustc_middle::ty::Generics) -> Self {
+        let mut params = Vec::with_capacity(value.own_params.len());
+        for p in value.own_params.iter() {
+            params.push(p.into());
         }
         Self {
-            did: (&value.did()).into(),
-            variants,
-            flags: AdtFlags(value.flags().bits()),
+            parent: value.parent.as_ref().map(Into::into),
+            parent_count: value.parent_count,
+            params,
+            has_self: value.has_self,
+            has_self_bound_regions: value.has_late_bound_regions.map(Into::into),
         }
     }
 }
 
-impl From<&rustc_middle::ty::VariantDef> for VariantDef {
-    fn from(value: &rustc_middle::ty::VariantDef) -> Self {
-        let og_fields = &value.fields;
-        let mut fields = HashMap::with_capacity(og_fields.len());
-        for idx in og_fields.indices() {
-            let def = &og_fields[idx];
-            fields.insert(FieldIdx(idx.as_u32()), def.into());
-        }
+impl From<&rustc_middle::ty::GenericParamDef> for TyGenericParamDef {
+    fn from(value: &rustc_middle::ty::GenericParamDef) -> Self {
         Self {
+            name: value.name.into(),
             def_id: (&value.def_id).into(),
-            ctor: value
-                .ctor
-                .as_ref()
-                .map(|(kind, did)| (kind.into(), did.into())),
-            name: value.name.into(),
-            discr: value.discr.into(),
-            fields,
+            index: value.index,
+            pure_wrt_drop: value.pure_wrt_drop,
+            kind: (&value.kind).into(),
         }
     }
 }
 
-impl From<&rustc_middle::ty::FieldDef> for TyFieldDef {
-    fn from(value: &rustc_middle::ty::FieldDef) -> Self {
-        Self {
-            did: (&value.did).into(),
-            name: value.name.into(),
+impl From<&rustc_middle::ty::GenericParamDefKind> for TyGenericParamDefKind {
+    fn from(value: &rustc_middle::ty::GenericParamDefKind) -> Self {
+        match value {
+            rustc_middle::ty::GenericParamDefKind::Lifetime => Self::Lifetime,
+            rustc_middle::ty::GenericParamDefKind::Type {
+                has_default,
+                synthetic,
+            } => Self::Type {
+                has_default: *has_default,
+                synthetic: *synthetic,
+            },
+            rustc_middle::ty::GenericParamDefKind::Const {
+                has_default,
+                synthetic,
+            } => Self::Const {
+                has_default: *has_default,
+                synthetic: *synthetic,
+            },
+        }
+    }
+}
+
+impl From<rustc_middle::ty::AdtKind> for AdtKind {
+    fn from(value: rustc_middle::ty::AdtKind) -> Self {
+        match value {
+            rustc_middle::ty::AdtKind::Struct => Self::Struct,
+            rustc_middle::ty::AdtKind::Union => Self::Union,
+            rustc_middle::ty::AdtKind::Enum => Self::Enum,
         }
     }
 }

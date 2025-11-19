@@ -50,7 +50,9 @@ create_visitor_traits! {
   let_stmt: LetStmt,
   param: Param,
   pat: Pat,
-  pat_expr: PatExpr
+  pat_expr: PatExpr,
+  const_arg: ConstArg,
+  anon_const: AnonConst
 }
 
 pub fn visit_mod<'a, V: Visit<'a> + ?Sized>(v: &mut V, x: &'a Mod) {
@@ -276,8 +278,9 @@ pub fn visit_expr<'a, V: Visit<'a> + ?Sized>(v: &mut V, x: &'a Expr) {
                 v.visit_expr(base);
             }
         }
-        ExprKind::Repeat { expr, .. } => {
+        ExprKind::Repeat { expr, len } => {
             v.visit_expr(expr);
+            v.visit_const_arg(len);
         }
         ExprKind::Yield { expr, .. } => {
             v.visit_expr(expr);
@@ -343,4 +346,16 @@ pub fn visit_pat_expr<'a, V: Visit<'a> + ?Sized>(v: &mut V, x: &'a PatExpr) {
         PatExprKind::ConstBlock { block: cb } => v.visit_body(&cb.body),
         PatExprKind::Path { .. } => {}
     }
+}
+
+pub fn visit_const_arg<'a, V: Visit<'a> + ?Sized>(v: &mut V, x: &'a ConstArg) {
+    match &x.kind {
+        ConstArgKind::Path { .. } => {}
+        ConstArgKind::Anon { ac } => v.visit_anon_const(ac),
+        ConstArgKind::Infer { .. } => {}
+    }
+}
+
+pub fn visit_anon_const<'a, V: Visit<'a> + ?Sized>(v: &mut V, x: &'a AnonConst) {
+    v.visit_body(&x.body);
 }

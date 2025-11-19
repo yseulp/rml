@@ -101,10 +101,20 @@ pub struct AdtDef {
     pub variants: HashMap<VariantIdx, VariantDef>,
     pub flags: AdtFlags,
     // pub repr: ReprOptions,
+    pub kind: AdtKind,
+    pub path_str: String,
+    pub foreign_generics: Option<TyGenerics>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct AdtFlags(pub u16);
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+pub enum AdtKind {
+    Struct,
+    Union,
+    Enum,
+}
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Hash)]
 pub struct VariantIdx(pub u32);
@@ -125,6 +135,8 @@ pub struct FieldIdx(pub u32);
 pub struct TyFieldDef {
     pub did: DefId,
     pub name: Symbol,
+    pub inst_ty: Ty,
+    pub ty: Ty,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
@@ -373,3 +385,29 @@ pub struct IntVid(pub u32);
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct FloatVid(pub u32);
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+pub struct TyGenerics {
+    pub parent: Option<DefId>,
+    pub parent_count: usize,
+    pub params: Vec<TyGenericParamDef>,
+    pub has_self: bool,
+    pub has_self_bound_regions: Option<Span>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+pub struct TyGenericParamDef {
+    pub name: Symbol,
+    pub def_id: DefId,
+    pub index: u32,
+    pub pure_wrt_drop: bool,
+    pub kind: TyGenericParamDefKind,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(tag = "serde_tag")]
+pub enum TyGenericParamDefKind {
+    Lifetime,
+    Type { has_default: bool, synthetic: bool },
+    Const { has_default: bool, synthetic: bool },
+}

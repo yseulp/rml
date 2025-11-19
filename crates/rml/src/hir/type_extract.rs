@@ -10,7 +10,11 @@ use super::{
 };
 use crate::{
     HirInto,
-    hir::{DefId, ty::AdtDef, visit::visit_closure},
+    hir::{
+        DefId,
+        ty::AdtDef,
+        visit::{visit_anon_const, visit_closure},
+    },
 };
 
 pub fn extract_extra_info(m: &Mod, tcx: TyCtxt) -> (HashMap<HirId, Ty>, HashMap<DefId, AdtDef>) {
@@ -49,6 +53,11 @@ impl<'a, 'tcx> Visit<'a> for Collector<'tcx> {
             _ => (),
         }
         visit_item_kind(self, t)
+    }
+
+    fn visit_anon_const(&mut self, t: &'a super::AnonConst) {
+        self.last_body_id = Some(t.body_id.clone());
+        visit_anon_const(self, t);
     }
 
     fn visit_body(&mut self, body: &'a super::Body) {
