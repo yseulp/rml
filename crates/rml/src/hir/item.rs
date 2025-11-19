@@ -160,13 +160,21 @@ pub struct Variant {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(tag = "serde_tag")]
 pub enum VariantData {
     Struct {
         fields: Vec<FieldDef>,
         recovered: bool,
     },
-    Tuple(Vec<FieldDef>, HirId, LocalDefId),
-    Unit(HirId, LocalDefId),
+    Tuple {
+        def: Vec<FieldDef>,
+        hir_id: HirId,
+        local_def_id: LocalDefId,
+    },
+    Unit {
+        hir_id: HirId,
+        local_def_id: LocalDefId,
+    },
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
@@ -206,9 +214,10 @@ pub struct Impl {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(tag = "serde_tag")]
 pub enum ImplPolarity {
     Positive,
-    Negative(Span),
+    Negative { span: Span },
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
@@ -280,13 +289,15 @@ pub struct TyPat {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(tag = "serde_tag")]
 pub enum TyPatKind {
-    Range(ConstArg, ConstArg),
-    Or(Vec<TyPat>),
+    Range { start: ConstArg, end: ConstArg },
+    Or { pats: Vec<TyPat> },
     Err,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(tag = "serde_tag")]
 pub enum AssocItemKind {
     Const,
     Fn { has_self: bool },
@@ -301,8 +312,9 @@ pub enum TraitObjectSyntax {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(tag = "serde_tag")]
 pub enum InferDelegationKind {
-    Input(usize),
+    Input { id: usize },
     Output,
 }
 
@@ -331,9 +343,10 @@ pub struct FnDecl {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(tag = "serde_tag")]
 pub enum FnRetTy {
-    DefaultReturn(Span),
-    Return(HirTy),
+    DefaultReturn { span: Span },
+    Return { ty: HirTy },
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
@@ -348,8 +361,9 @@ pub enum ImplicitSelfKind {
 pub type UsePath = Path<Vec<Res>>;
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(tag = "serde_tag")]
 pub enum UseKind {
-    Single(Ident),
+    Single { ident: Ident },
     Glob,
     ListStem,
 }

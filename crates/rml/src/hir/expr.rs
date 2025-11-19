@@ -1,4 +1,5 @@
 use super::*;
+use crate::spec::LoopSpec;
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct Expr {
@@ -65,6 +66,7 @@ pub enum ExprKind {
         label: Option<Label>,
         src: LoopSource,
         span: Span,
+        spec: Option<LoopSpec>,
     },
     Match {
         expr: Expr,
@@ -147,6 +149,7 @@ pub enum ExprKind {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(tag = "serde_tag")]
 pub enum StructTailExpr {
     None,
     Base { base: Box<Expr> },
@@ -185,9 +188,10 @@ pub enum LitKind {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(tag = "serde_tag")]
 pub enum StrStyle {
     Cooked,
-    Raw(u8),
+    Raw { depth: u8 },
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
@@ -199,8 +203,9 @@ pub enum LitIntType {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(tag = "serde_tag")]
 pub enum LitFloatType {
-    Suffixed(FloatTy),
+    Suffixed { ty: FloatTy },
     Unsuffixed,
 }
 
@@ -230,11 +235,12 @@ pub struct Arm {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(tag = "serde_tag")]
 pub enum MatchSource {
     Normal,
     Postfix,
     ForLoopDesugar,
-    TryDesugar(HirId),
+    TryDesugar { hir_id: HirId },
     AwaitDesugar,
     FormatArgs,
 }
@@ -256,12 +262,14 @@ pub struct Closure {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(tag = "serde_tag")]
 pub enum ClosureBinder {
     Default,
     For { span: Span },
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(tag = "serde_tag")]
 pub enum CaptureBy {
     Value { move_kw: Span },
     Ref,
@@ -360,6 +368,7 @@ pub struct ExprField {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(tag = "serde_tag")]
 pub enum YieldSource {
     Await { expr: Option<HirId> },
     Yield,

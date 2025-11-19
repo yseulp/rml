@@ -8,16 +8,20 @@ use super::{
     pat::PatKind,
     visit::{Visit, visit_body, visit_expr, visit_item_kind, visit_pat},
 };
-use crate::{HirInto, hir::visit::visit_closure};
+use crate::{
+    HirInto,
+    hir::{DefId, ty::AdtDef, visit::visit_closure},
+};
 
-pub fn extract_types(m: &Mod, tcx: TyCtxt) -> HashMap<HirId, Ty> {
+pub fn extract_extra_info(m: &Mod, tcx: TyCtxt) -> (HashMap<HirId, Ty>, HashMap<DefId, AdtDef>) {
     let mut c = Collector::new(tcx);
     c.visit_mod(m);
-    c.map
+    (c.ty_map, c.adt_map)
 }
 
 struct Collector<'tcx> {
-    map: HashMap<HirId, Ty>,
+    ty_map: HashMap<HirId, Ty>,
+    adt_map: HashMap<DefId, AdtDef>,
     last_body_id: Option<BodyId>,
     tcx: TyCtxt<'tcx>,
     hir_ids: HashSet<HirId>,
@@ -27,7 +31,8 @@ impl<'tcx> Collector<'tcx> {
     fn new(tcx: TyCtxt<'tcx>) -> Self {
         Self {
             tcx,
-            map: Default::default(),
+            ty_map: Default::default(),
+            adt_map: Default::default(),
             hir_ids: Default::default(),
             last_body_id: None,
         }
@@ -66,7 +71,11 @@ impl<'a, 'tcx> Visit<'a> for Collector<'tcx> {
                 continue;
             }
             let ty: Ty = ty.hir_into(self.tcx);
-            self.map.insert(hir_id, ty);
+            if let Ty::Adt { def, .. } = &ty {
+                let def = def.clone();
+                self.adt_map.insert(def.did.clone(), def);
+            }
+            self.ty_map.insert(hir_id, ty);
         }
     }
 

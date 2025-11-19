@@ -184,7 +184,7 @@ impl<'tcx> ItemInvs {
 }
 
 /// Specification for a loop.
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
 pub struct LoopSpec {
     /// The specified loop.
     pub target: HirIdW,

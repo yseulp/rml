@@ -10,7 +10,7 @@ use crate::{
 };
 
 /// Location set information. Extracted from a expression.
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
 pub struct LocSet {
     /// HIR id of the expression the location set is extracted from.
     pub hir_id: HirId,
@@ -21,7 +21,7 @@ pub struct LocSet {
 }
 
 /// Kind of the location set.
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
 pub enum LocSetKind {
     /// A field location set, like `expr.field`.
     Field(Box<Term>, Ident),

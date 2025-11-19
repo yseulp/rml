@@ -134,21 +134,34 @@ pub enum CtorKind {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(tag = "serde_tag")]
 pub enum VariantDiscr {
-    Explicit(DefId),
-    Relative(u32),
+    Explicit { def_id: DefId },
+    Relative { idx: u32 },
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(tag = "serde_tag")]
 pub enum Const {
-    Param(ParamConst),
+    Param {
+        pc: ParamConst,
+    },
     Infer, //(InferConst),
-    Bound(DebruijnIndex, BoundVar),
+    Bound {
+        idx: DebruijnIndex,
+        bound_var: BoundVar,
+    },
     Placeholder, //(Placeholder<BoundVar>),
-    Unevaluated(UnevaluatedConst),
-    Value(Value),
+    Unevaluated {
+        uc: UnevaluatedConst,
+    },
+    Value {
+        value: Value,
+    },
     Error,
-    Expr(ConstExpr),
+    Expr {
+        expr: ConstExpr,
+    },
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
@@ -164,10 +177,11 @@ pub struct ParamConst {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(tag = "serde_tag")]
 pub enum InferConst {
-    Var(ConstVid),
-    EffectVar(EffectVid),
-    Fresh(u32),
+    Var { id: ConstVid },
+    EffectVar { id: EffectVid },
+    Fresh { idx: u32 },
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
@@ -180,11 +194,12 @@ pub struct ConstExpr {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(tag = "serde_tag")]
 pub enum ConstExprKind {
-    Binop(BinOpKind),
-    UnOp(UnOp),
+    Binop { kind: BinOpKind },
+    UnOp { op: UnOp },
     FunctionCall,
-    Cast(CastKind),
+    Cast { kind: CastKind },
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
@@ -206,9 +221,10 @@ pub struct UnevaluatedConst {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(tag = "serde_tag")]
 pub enum ValTree {
-    Leaf(ScalarInt),
-    Branch(Vec<ValTree>),
+    Leaf { scalar_int: ScalarInt },
+    Branch { branches: Vec<ValTree> },
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
@@ -218,6 +234,7 @@ pub struct ScalarInt {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(tag = "serde_tag")]
 pub enum Pattern {
     Range { start: Const, end: Const },
     Or { pats: Vec<Pattern> },
@@ -230,22 +247,25 @@ pub struct Binder<T> {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(tag = "serde_tag")]
 pub enum BoundVarKind {
-    Ty(BoundTyKind),
-    Region(BoundRegionKind),
+    Ty { kind: BoundTyKind },
+    Region { region: BoundRegionKind },
     Const,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(tag = "serde_tag")]
 pub enum BoundTyKind {
     Anon,
-    Param(DefId, Symbol),
+    Param { def_id: DefId, symbol: Symbol },
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(tag = "serde_tag")]
 pub enum BoundRegionKind {
     Anon,
-    Named(DefId, Symbol),
+    Named { def_id: DefId, symbol: Symbol },
     ClosureEnv,
 }
 
@@ -255,10 +275,11 @@ pub struct FnSigTys {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(tag = "serde_tag")]
 pub enum ExistentialPredicate {
-    Trait(ExistentialTraitRef),
-    Projection(ExistentialProjection),
-    AutoTrait(DefId),
+    Trait { pred: ExistentialTraitRef },
+    Projection { pred: ExistentialProjection },
+    AutoTrait { def_id: DefId },
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
@@ -275,6 +296,7 @@ pub struct ExistentialProjection {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(tag = "serde_tag")]
 pub enum TyTerm {
     Ty { ty: Ty },
     Const { c: Const },
@@ -301,10 +323,11 @@ pub struct AliasTy {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(tag = "serde_tag")]
 pub enum GenericTyArgKind {
     Lifetime, //(Region)
-    Type(Ty),
-    Const(Const),
+    Type { ty: Ty },
+    Const { r#const: Const },
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
@@ -332,13 +355,14 @@ pub struct Placeholder<T> {
 pub struct UniverseIndex(pub u32);
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(tag = "serde_tag")]
 pub enum InferTy {
-    TyVar(TyVid),
-    IntVar(IntVid),
-    FloatVar(FloatVid),
-    FreshTy(u32),
-    FreshIntTy(u32),
-    FreshFloatTy(u32),
+    TyVar { id: TyVid },
+    IntVar { id: IntVid },
+    FloatVar { id: FloatVid },
+    FreshTy { id: u32 },
+    FreshIntTy { id: u32 },
+    FreshFloatTy { id: u32 },
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]

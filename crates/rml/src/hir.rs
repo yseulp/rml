@@ -18,6 +18,7 @@ pub mod visit;
 pub struct Crate {
     pub top_mod: Mod,
     pub types: Vec<HirIdTypeMapping>,
+    pub adts: Vec<DefIdAdtMapping>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
@@ -31,6 +32,21 @@ impl From<(HirId, Ty)> for HirIdTypeMapping {
         Self {
             hir_id: value.0,
             ty: value.1,
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+pub struct DefIdAdtMapping {
+    pub def_id: DefId,
+    pub def: AdtDef,
+}
+
+impl From<(DefId, AdtDef)> for DefIdAdtMapping {
+    fn from(value: (DefId, AdtDef)) -> Self {
+        Self {
+            def_id: value.0,
+            def: value.1,
         }
     }
 }
@@ -339,11 +355,12 @@ pub struct GenericArgs {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(tag = "serde_tag")]
 pub enum GenericArg {
-    Lifetime(Lifetime),
-    Type(HirTy),
-    Const(ConstArg),
-    Infer(InferArg),
+    Lifetime { lifetime: Lifetime },
+    Type { ty: HirTy },
+    Const { c: ConstArg },
+    Infer { infer: InferArg },
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
@@ -369,16 +386,25 @@ pub struct AssocItemConstraint {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(tag = "serde_tag")]
 pub enum AssocItemConstraintKind {
     Equality { term: Term },
     Bound { bounds: Vec<GenericBound> },
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(tag = "serde_tag")]
 pub enum GenericBound {
-    Trait(PolyTraitRef),
-    Outlives(Lifetime),
-    Use(Vec<PreciseCapturingArg>, Span),
+    Trait {
+        trait_ref: PolyTraitRef,
+    },
+    Outlives {
+        lifetime: Lifetime,
+    },
+    Use {
+        args: Vec<PreciseCapturingArg>,
+        span: Span,
+    },
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
@@ -407,13 +433,15 @@ pub enum GenericParamSource {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(tag = "serde_tag")]
 pub enum ParamName {
-    Plain(Ident),
+    Plain { ident: Ident },
     Fresh,
     Error,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(tag = "serde_tag")]
 pub enum GenericParamKind {
     Lifetime {
         kind: LifetimeParamKind,
@@ -430,9 +458,10 @@ pub enum GenericParamKind {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(tag = "serde_tag")]
 pub enum LifetimeParamKind {
     Explicit,
-    Elided(MissingLifetimeKind),
+    Elided { kind: MissingLifetimeKind },
     Error,
 }
 
@@ -451,9 +480,10 @@ pub struct TraitRef {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(tag = "serde_tag")]
 pub enum PreciseCapturingArg {
-    Lifetime(Lifetime),
-    Param(PreciseCapturingNonLifetimeArg),
+    Lifetime { lifetime: Lifetime },
+    Param { arg: PreciseCapturingNonLifetimeArg },
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
@@ -473,8 +503,9 @@ pub struct PreciseCapturingNonLifetimeArg {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(tag = "serde_tag")]
 pub enum LifetimeKind {
-    Param(LocalDefId),
+    Param { id: LocalDefId },
     ImplicitObjectLifetimeDefault,
     Error,
     Infer,
@@ -482,6 +513,7 @@ pub enum LifetimeKind {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(tag = "serde_tag")]
 pub enum LifetimeSource {
     Reference,
     Path { angle_brackets: AngleBrackets },
@@ -505,9 +537,10 @@ pub enum LifetimeSyntax {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(tag = "serde_tag")]
 pub enum Term {
-    Ty(HirTy),
-    Const(ConstArg),
+    Ty { ty: HirTy },
+    Const { c: ConstArg },
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
@@ -517,10 +550,11 @@ pub struct ConstArg {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(tag = "serde_tag")]
 pub enum ConstArgKind {
-    Path(QPath),
-    Anon(AnonConst),
-    Infer(Span),
+    Path { path: QPath },
+    Anon { ac: AnonConst },
+    Infer { span: Span },
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]

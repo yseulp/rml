@@ -28,6 +28,7 @@ pub struct LetStmt {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(tag = "serde_tag")]
 pub enum LocalSource {
     Normal,
     AsyncFn,
