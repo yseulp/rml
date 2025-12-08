@@ -125,9 +125,15 @@ impl From<HirDefIndex> for DefIndex {
 
 impl<'hir> FromHir<'hir, &'hir hir::Item<'hir>> for Item {
     fn from_hir(value: &'hir hir::Item<'hir>, tcx: TyCtxt<'hir>) -> Self {
+        let mut kind = (&value.kind).hir_into(tcx);
+        if let ItemKind::Fn { ty_generics, .. } = &mut kind {
+            let g = tcx.generics_of(value.owner_id);
+
+            *ty_generics = Some(g.into());
+        }
         Item {
             owner_id: value.owner_id.into(),
-            kind: (&value.kind).hir_into(tcx),
+            kind,
             span: value.span.into(),
             vis_span: value.vis_span.into(),
         }
@@ -249,6 +255,7 @@ impl<'hir> FromHir<'hir, &'hir hir::ItemKind<'hir>> for ItemKind {
                 body_id: body.clone(),
                 body: tcx.hir_body(*body).hir_into(tcx),
                 spec_cases: vec![],
+                ty_generics: None,
             },
             hir::ItemKind::Mod(ident, m) => Self::Mod {
                 ident: (*ident).into(),

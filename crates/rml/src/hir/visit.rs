@@ -52,7 +52,11 @@ create_visitor_traits! {
   pat: Pat,
   pat_expr: PatExpr,
   const_arg: ConstArg,
-  anon_const: AnonConst
+  anon_const: AnonConst,
+  hir_ty: HirTy,
+  mut_hir_ty: MutHirTy,
+  bare_fn_hir_ty: BareFnHirTy,
+  fn_decl: FnDecl
 }
 
 pub fn visit_mod<'a, V: Visit<'a> + ?Sized>(v: &mut V, x: &'a Mod) {
@@ -78,7 +82,8 @@ pub fn visit_item_kind<'a, V: Visit<'a> + ?Sized>(v: &mut V, x: &'a ItemKind) {
         ItemKind::Const { body, .. } => {
             v.visit_body(body);
         }
-        ItemKind::Fn { body, .. } => {
+        ItemKind::Fn { body, sig, .. } => {
+            v.visit_fn_decl(&sig.decl);
             v.visit_body(body);
         }
         ItemKind::Mod { r#mod: m, .. } => v.visit_mod(m),
@@ -200,8 +205,9 @@ pub fn visit_expr<'a, V: Visit<'a> + ?Sized>(v: &mut V, x: &'a Expr) {
             v.visit_expr(expr);
         }
         ExprKind::Lit { .. } => {}
-        ExprKind::Cast { expr, .. } => {
+        ExprKind::Cast { expr, ty } => {
             v.visit_expr(expr);
+            v.visit_hir_ty(ty);
         }
         ExprKind::Type { expr, .. } => {
             v.visit_expr(expr);
@@ -296,6 +302,9 @@ pub fn visit_const_block<'a, V: Visit<'a> + ?Sized>(v: &mut V, x: &'a ConstBlock
 
 pub fn visit_let_expr<'a, V: Visit<'a> + ?Sized>(v: &mut V, x: &'a LetExpr) {
     v.visit_pat(&x.pat);
+    if let Some(ty) = &x.ty {
+        v.visit_hir_ty(ty);
+    }
     v.visit_expr(&x.init);
 }
 
@@ -335,6 +344,9 @@ pub fn visit_stmt<'a, V: Visit<'a> + ?Sized>(v: &mut V, x: &'a Stmt) {
 
 pub fn visit_let_stmt<'a, V: Visit<'a> + ?Sized>(v: &mut V, x: &'a LetStmt) {
     v.visit_pat(&x.pat);
+    if let Some(ty) = &x.ty {
+        v.visit_hir_ty(ty);
+    }
     if let Some(e) = &x.init {
         v.visit_expr(e);
     }
@@ -358,4 +370,51 @@ pub fn visit_const_arg<'a, V: Visit<'a> + ?Sized>(v: &mut V, x: &'a ConstArg) {
 
 pub fn visit_anon_const<'a, V: Visit<'a> + ?Sized>(v: &mut V, x: &'a AnonConst) {
     v.visit_body(&x.body);
+}
+
+pub fn visit_hir_ty<'a, V: Visit<'a> + ?Sized>(v: &mut V, x: &'a HirTy) {
+    match &*x.kind {
+        HirTyKind::InferDelegation { .. } => todo!(),
+        HirTyKind::Slice { ty } => v.visit_hir_ty(ty),
+        HirTyKind::Array { ty, len } => {
+            v.visit_hir_ty(ty);
+            v.visit_const_arg(len);
+        }
+        HirTyKind::Ptr { ty } => v.visit_mut_hir_ty(ty),
+        HirTyKind::Ref { ty, .. } => v.visit_mut_hir_ty(ty),
+        HirTyKind::BareFn { ty } => v.visit_bare_fn_hir_ty(ty),
+        HirTyKind::Never => {}
+        HirTyKind::Tup { tys } => {
+            for ty in tys {
+                v.visit_hir_ty(ty);
+            }
+        }
+        HirTyKind::AnonAdt { .. } => todo!(),
+        HirTyKind::Path { .. } => {}
+        HirTyKind::TraitObject { .. } => todo!(),
+        HirTyKind::Typeof { r#const } => v.visit_anon_const(r#const),
+        HirTyKind::Infer => {}
+        HirTyKind::Err => {}
+        HirTyKind::Pat { ty, .. } => v.visit_hir_ty(ty),
+        HirTyKind::OpaqueDef => todo!(),
+    };
+}
+
+pub fn visit_mut_hir_ty<'a, V: Visit<'a> + ?Sized>(v: &mut V, x: &'a MutHirTy) {
+    v.visit_hir_ty(&x.ty);
+}
+
+pub fn visit_bare_fn_hir_ty<'a, V: Visit<'a> + ?Sized>(_v: &mut V, _x: &'a BareFnHirTy) {
+    // TODO: Generic params?
+    // FnDecl?
+}
+
+pub fn visit_fn_decl<'a, V: Visit<'a> + ?Sized>(v: &mut V, x: &'a FnDecl) {
+    for ty in &x.inputs {
+        v.visit_hir_ty(ty);
+    }
+
+    if let FnRetTy::Return { ty } = &x.output {
+        v.visit_hir_ty(ty);
+    }
 }

@@ -13,7 +13,7 @@ use crate::{
     hir::{
         DefId,
         ty::AdtDef,
-        visit::{visit_anon_const, visit_closure},
+        visit::{visit_anon_const, visit_closure, visit_const_arg},
     },
 };
 
@@ -76,7 +76,7 @@ impl<'a, 'tcx> Visit<'a> for Collector<'tcx> {
                 owner: owner.clone(),
                 local_id: lid.into(),
             };
-            if !self.hir_ids.contains(&hir_id) {
+            if !self.hir_ids.remove(&hir_id) {
                 continue;
             }
             let ty: Ty = ty.hir_into(self.tcx);
@@ -107,5 +107,10 @@ impl<'a, 'tcx> Visit<'a> for Collector<'tcx> {
     fn visit_closure(&mut self, t: &'a super::expr::Closure) {
         self.last_body_id = Some(t.body_id);
         visit_closure(self, t);
+    }
+
+    fn visit_const_arg(&mut self, t: &'a super::ConstArg) {
+        self.hir_ids.insert(t.hir_id.clone());
+        visit_const_arg(self, t);
     }
 }

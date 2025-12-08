@@ -43,6 +43,7 @@ pub enum ItemKind {
         body: Body,
         /// All cases of the specification.
         spec_cases: Vec<SpecCase>,
+        ty_generics: Option<TyGenerics>,
     },
     // Macro(MacroDef, MacroKind),
     Mod {
