@@ -211,6 +211,8 @@ pub enum TermBinOpKind {
     ///
     /// `a === b`.
     LogEq,
+    /// `a ==> b`.
+    Implication,
 }
 
 /// A literal.
@@ -375,10 +377,10 @@ pub struct TermStmt {
 
 #[derive(Debug, Clone, Serialize, PartialEq, Eq)]
 pub enum TermStmtKind {
-    Let(TermLetStmt),
-    Item(ItemId),
-    Term(Box<Term>),
-    Semi(Box<Term>),
+    Let { r#let: TermLetStmt },
+    Item { id: ItemId },
+    Term { term: Box<Term> },
+    Semi { term: Box<Term> },
 }
 
 #[derive(Debug, Clone, Serialize, PartialEq, Eq)]
@@ -695,20 +697,51 @@ pub struct TermTy {
 
 #[derive(Debug, Clone, Serialize, PartialEq, Eq)]
 pub enum TermTyKind {
-    Slice(Box<TermTy>),
-    Array(Box<TermTy>, Box<TermConstArg>),
-    Ptr(Box<TermMutTy>),
-    Ref(TermLifetime, Box<TermMutTy>),
-    BareFn(TermBareFnTy),
+    Slice {
+        ty: Box<TermTy>,
+    },
+    Array {
+        ty: Box<TermTy>,
+        len: Box<TermConstArg>,
+    },
+    Ptr {
+        ty: Box<TermMutTy>,
+    },
+    Ref {
+        lifetime: TermLifetime,
+        ty: Box<TermMutTy>,
+    },
+    BareFn {
+        ty: TermBareFnTy,
+    },
     Never,
-    Tup(Vec<TermTy>),
-    Path(TermQPath),
-    OpaqueDef(TermOpaqueTy),
-    TraitObject(Vec<TermPolyTraitRef>, TermLifetime, TermTraitObjectSyntax),
-    Typeof(Box<TermAnonConst>),
-    InferDelegation(DefId),
-    AnonAdt(ItemId),
-    Pat(Box<TermTy>, TermTyPat),
+    Tup {
+        tys: Vec<TermTy>,
+    },
+    Path {
+        path: TermQPath,
+    },
+    OpaqueDef {
+        ty: TermOpaqueTy,
+    },
+    TraitObject {
+        refs: Vec<TermPolyTraitRef>,
+        lifetime: TermLifetime,
+        syntax: TermTraitObjectSyntax,
+    },
+    Typeof {
+        r#const: Box<TermAnonConst>,
+    },
+    InferDelegation {
+        def_id: DefId,
+    },
+    AnonAdt {
+        id: ItemId,
+    },
+    Pat {
+        ty: Box<TermTy>,
+        pat: TermTyPat,
+    },
     Infer,
 }
 
@@ -917,8 +950,7 @@ pub struct TermPolyTraitRef {
 #[serde(tag = "serde_tag")]
 pub enum TermRes<Id = HirId> {
     Def {
-        def: TermDefKind,
-        id: DefId,
+        def: TermDef,
     },
     PrimTy {
         ty: TermPrimTy,
@@ -945,6 +977,12 @@ pub enum TermRes<Id = HirId> {
 }
 
 #[derive(Debug, Clone, Serialize, PartialEq, Eq)]
+pub struct TermDef {
+    pub kind: TermDefKind,
+    pub id: DefId,
+}
+
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
 pub enum TermNonMacroAttrKind {
     Builtin(Symbol),
     Tool,
@@ -953,6 +991,7 @@ pub enum TermNonMacroAttrKind {
 }
 
 #[derive(Debug, Clone, Serialize, PartialEq, Eq)]
+#[serde(tag = "serde_tag")]
 pub enum TermDefKind {
     Mod,
     Struct,
@@ -968,11 +1007,18 @@ pub enum TermDefKind {
     Fn,
     Const,
     ConstParam,
-    Static(TermMutability),
-    Ctor(TermCtorOf, TermCtorKind),
+    Static {
+        mutability: TermMutability,
+    },
+    Ctor {
+        ctor_of: TermCtorOf,
+        kind: TermCtorKind,
+    },
     AssocFn,
     AssocConst,
-    Macro(TermMacroKind),
+    Macro {
+        kind: TermMacroKind,
+    },
     ExternCrate,
     Use,
     ForeignMod,
@@ -983,16 +1029,18 @@ pub enum TermDefKind {
     Field,
     LifetimeParam,
     GlobalAsm,
-    Impl { of_trait: bool },
+    Impl {
+        of_trait: bool,
+    },
     Closure,
     SyntheticCoroutineBody,
 }
 
 #[derive(Debug, Clone, Serialize, PartialEq, Eq)]
 pub enum TermPrimTy {
-    Int(TermIntTy),
-    Uint(TermUintTy),
-    Float(TermFloatTy),
+    Int { ty: TermIntTy },
+    Uint { ty: TermUintTy },
+    Float { ty: TermFloatTy },
     Str,
     Bool,
     Char,
