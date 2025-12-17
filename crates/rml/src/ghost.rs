@@ -1,6 +1,10 @@
 use rustc_middle::ty::TyCtxt;
 
-use crate::{HirInto, hir::expr::Expr, util::is_ghost};
+use crate::{
+    HirInto,
+    hir::expr::{Expr, ExprKind},
+    util::is_ghost,
+};
 
 pub(crate) fn get_ghost_expr(tcx: TyCtxt, expr: &rustc_hir::Expr) -> Option<rustc_hir::BodyId> {
     if let rustc_hir::ExprKind::Block(b, None) = expr.kind {
@@ -32,5 +36,10 @@ pub(crate) fn get_ghost_expr(tcx: TyCtxt, expr: &rustc_hir::Expr) -> Option<rust
 
 pub(crate) fn convert_ghost_block(tcx: TyCtxt, body_id: rustc_hir::BodyId) -> Expr {
     let body = tcx.hir_body(body_id);
-    body.value.hir_into(tcx)
+    let mut e: Expr = body.value.hir_into(tcx);
+    let ExprKind::Block { block, .. } = *e.kind else {
+        panic!("Expected block")
+    };
+    e.kind = Box::new(ExprKind::GhostBlock { block });
+    e
 }
