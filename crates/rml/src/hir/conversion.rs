@@ -15,6 +15,7 @@ use super::*;
 use crate::{
     FromHir, HirInto,
     ghost::{convert_ghost_block, get_ghost_expr},
+    snapshot::{convert_snapshot_block, get_snapshot_expr},
     spec::{SpecMap, collect_hir_specs},
     util::{get_attr, is_spec},
 };
@@ -1596,7 +1597,11 @@ impl<'hir> FromHir<'hir, &'hir hir::Expr<'hir>> for Expr {
     fn from_hir(value: &'hir hir::Expr<'hir>, tcx: TyCtxt<'hir>) -> Self {
         if let Some(body_id) = get_ghost_expr(tcx, value) {
             convert_ghost_block(tcx, body_id)
-        } else {
+        }
+        else if let Some(body_id) = get_snapshot_expr(tcx, value){
+            convert_snapshot(tcx, body_id)
+        }
+        else {
             let hir_id = value.hir_id.into();
             let mut kind = (&value.kind).hir_into(tcx);
             // Extract possible loop spec
