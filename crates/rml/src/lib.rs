@@ -27,6 +27,7 @@ pub mod error;
 pub(crate) mod ghost;
 pub mod hir;
 pub mod locset;
+pub(crate) mod snapshot;
 pub mod spec;
 pub mod suppress_borrowck;
 pub mod term;

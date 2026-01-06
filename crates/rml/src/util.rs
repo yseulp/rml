@@ -33,9 +33,12 @@ pub fn is_ghost(tcx: TyCtxt, def_id: DefId) -> bool {
     get_attr(tcx.get_attrs_unchecked(def_id), &["rml", "decl", "ghost"]).is_some()
 }
 pub fn is_snapshot(tcx: TyCtxt, def_id: DefId) -> bool {
-    get_attr(tcx.get_attrs_unchecked(def_id), &["rml", "spec", "snapshot"]).is_some()
+    get_attr(
+        tcx.get_attrs_unchecked(def_id),
+        &["rml", "spec", "snapshot"],
+    )
+    .is_some()
 }
-
 
 pub fn is_internal(tcx: TyCtxt, def_id: DefId) -> bool {
     get_attr(

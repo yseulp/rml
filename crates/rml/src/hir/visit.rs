@@ -241,8 +241,8 @@ pub fn visit_expr<'a, V: Visit<'a> + ?Sized>(v: &mut V, x: &'a Expr) {
         ExprKind::GhostBlock { block } => {
             v.visit_block(block);
         }
-        ExprKind::Snapshot{ expr, .. } => {
-            v.visit_expr(block); 
+        ExprKind::Snapshot { expr, .. } => {
+            v.visit_expr(expr);
         }
         ExprKind::Assign { left, right, .. } => {
             v.visit_expr(left);

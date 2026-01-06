@@ -83,9 +83,9 @@ pub enum ExprKind {
     GhostBlock {
         block: Block,
     },
-    Snapshot{
+    Snapshot {
         expr: Expr,
-    }
+    },
     Assign {
         left: Expr,
         right: Expr,
