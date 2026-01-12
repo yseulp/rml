@@ -26,7 +26,7 @@ pub fn extract_extra_info(m: &Mod, tcx: TyCtxt) -> (HashMap<HirId, Ty>, HashMap<
 struct Collector<'tcx> {
     ty_map: HashMap<HirId, Ty>,
     adt_map: HashMap<DefId, AdtDef>,
-    last_body_id: Option<BodyId>,
+    body_ids: Vec<BodyId>,
     tcx: TyCtxt<'tcx>,
     hir_ids: HashSet<HirId>,
 }
@@ -38,8 +38,12 @@ impl<'tcx> Collector<'tcx> {
             ty_map: Default::default(),
             adt_map: Default::default(),
             hir_ids: Default::default(),
-            last_body_id: None,
+            body_ids: Vec::with_capacity(2),
         }
+    }
+
+    fn push_body_id(&mut self, id: BodyId) {
+        self.body_ids.push(id);
     }
 }
 
@@ -47,21 +51,21 @@ impl<'a, 'tcx> Visit<'a> for Collector<'tcx> {
     fn visit_item_kind(&mut self, t: &'a super::ItemKind) {
         match t {
             ItemKind::Fn { body_id, .. } => {
-                self.last_body_id = Some(body_id.clone());
+                self.push_body_id(*body_id);
             }
-            ItemKind::Const { body_id, .. } => self.last_body_id = Some(body_id.clone()),
+            ItemKind::Const { body_id, .. } => self.push_body_id(*body_id),
             _ => (),
         }
         visit_item_kind(self, t)
     }
 
     fn visit_anon_const(&mut self, t: &'a super::AnonConst) {
-        self.last_body_id = Some(t.body_id.clone());
+        self.push_body_id(t.body_id);
         visit_anon_const(self, t);
     }
 
     fn visit_body(&mut self, body: &'a super::Body) {
-        let Some(id) = self.last_body_id.take() else {
+        let Some(id) = self.body_ids.pop() else {
             panic!("Encountered body {body:?} but no id was set");
         };
 
@@ -105,7 +109,7 @@ impl<'a, 'tcx> Visit<'a> for Collector<'tcx> {
     }
 
     fn visit_closure(&mut self, t: &'a super::expr::Closure) {
-        self.last_body_id = Some(t.body_id);
+        self.push_body_id(t.body_id);
         visit_closure(self, t);
     }
 
