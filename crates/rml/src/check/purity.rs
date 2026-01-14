@@ -5,6 +5,7 @@ use rustc_middle::{
     thir::{self, ExprKind, Thir},
     ty::{self, TyCtxt},
 };
+use rustc_session::{EarlyDiagCtxt, config::ErrorOutputType};
 
 use self::util::is_trusted;
 use crate::{
@@ -51,15 +52,16 @@ impl fmt::Display for Purity {
 }
 
 impl<'tcx> RmlCtxt<'tcx> {
-    #[allow(unreachable_code)]
     pub fn check_purity(&self, did: LocalDefId) {
         let tcx = self.tcx;
-        let (thir, expr) = tcx
-            .thir_body(did)
-            .unwrap_or_else(|_| Error::from(RmlErr).emit(todo!()));
+        let (thir, expr) = tcx.thir_body(did).unwrap_or_else(|_| {
+            Error::from(RmlErr::NoThirBodyForId(did))
+                .emit(&EarlyDiagCtxt::new(ErrorOutputType::default()))
+        });
         let thir = thir.borrow();
         if thir.exprs.is_empty() {
-            Error::new(tcx.def_span(did), "type checking failed").emit(todo!());
+            Error::new(tcx.def_span(did), "type checking failed")
+                .emit(&EarlyDiagCtxt::new(ErrorOutputType::default()));
         }
 
         let did = did.to_def_id();
