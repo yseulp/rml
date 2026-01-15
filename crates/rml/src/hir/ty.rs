@@ -122,10 +122,16 @@ pub struct VariantIdx(pub u32);
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct VariantDef {
     pub def_id: DefId,
-    pub ctor: Option<(CtorKind, DefId)>,
+    pub ctor: Option<VariantCtor>,
     pub name: Symbol,
     pub discr: VariantDiscr,
     pub fields: HashMap<FieldIdx, TyFieldDef>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+pub struct VariantCtor {
+    pub kind: CtorKind,
+    pub id: DefId,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Hash)]

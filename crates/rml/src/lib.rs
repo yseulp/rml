@@ -1,4 +1,4 @@
-#![feature(rustc_private, register_tool)]
+#![feature(rustc_private, register_tool, box_patterns)]
 
 use rustc_middle::ty::TyCtxt;
 

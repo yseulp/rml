@@ -2414,10 +2414,10 @@ fn convert_variant_def<'tcx>(
     }
     VariantDef {
         def_id: (&value.def_id).into(),
-        ctor: value
-            .ctor
-            .as_ref()
-            .map(|(kind, did)| (kind.into(), did.into())),
+        ctor: value.ctor.as_ref().map(|(kind, did)| VariantCtor {
+            kind: kind.into(),
+            id: did.into(),
+        }),
         name: value.name.into(),
         discr: value.discr.into(),
         fields,
