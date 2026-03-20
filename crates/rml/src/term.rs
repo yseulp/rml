@@ -696,6 +696,7 @@ pub struct TermTy {
 }
 
 #[derive(Debug, Clone, Serialize, PartialEq, Eq)]
+#[serde(tag = "serde_tag")]
 pub enum TermTyKind {
     Slice {
         ty: Box<TermTy>,
@@ -1014,8 +1015,18 @@ pub enum TermDefKind {
         ctor_of: TermCtorOf,
         kind: TermCtorKind,
     },
+    Static {
+        mutability: TermMutability,
+    },
+    Ctor {
+        ctor_of: TermCtorOf,
+        kind: TermCtorKind,
+    },
     AssocFn,
     AssocConst,
+    Macro {
+        kind: TermMacroKind,
+    },
     Macro {
         kind: TermMacroKind,
     },
@@ -1037,6 +1048,7 @@ pub enum TermDefKind {
 }
 
 #[derive(Debug, Clone, Serialize, PartialEq, Eq)]
+#[serde(tag = "serde_tag")]
 pub enum TermPrimTy {
     Int { ty: TermIntTy },
     Uint { ty: TermUintTy },
