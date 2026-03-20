@@ -1015,18 +1015,8 @@ pub enum TermDefKind {
         ctor_of: TermCtorOf,
         kind: TermCtorKind,
     },
-    Static {
-        mutability: TermMutability,
-    },
-    Ctor {
-        ctor_of: TermCtorOf,
-        kind: TermCtorKind,
-    },
     AssocFn,
     AssocConst,
-    Macro {
-        kind: TermMacroKind,
-    },
     Macro {
         kind: TermMacroKind,
     },
